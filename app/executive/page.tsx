@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   TrendingUp,
   TrendingDown,
@@ -18,6 +19,7 @@ import {
   ArrowDownRight,
   ShieldAlert,
   Briefcase,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -217,18 +219,23 @@ export default function ExecutivePage() {
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vue Dirigeant</h1>
-          <p className="text-muted-foreground">Vision globale et pilotage stratégique</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openDialog} className="gap-1.5">
-            <Settings className="h-3.5 w-3.5" />
-            Configurer
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Vue Dirigeant"
+        subtitle="Performance annuelle et indicateurs stratégiques"
+        icon={<TrendingUp className="h-5 w-5" />}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => { if (data) exportCsvFacturation(data); }} disabled={!data} className="gap-1.5">
+              <Download className="h-4 w-4 mr-1.5" />
+              Export facturation
+            </Button>
+            <Button variant="outline" size="sm" onClick={openDialog} className="gap-1.5">
+              <Settings className="h-3.5 w-3.5" />
+              Configurer
+            </Button>
+          </div>
+        }
+      />
 
       {/* ── 1. Performance Globale ─────────────────────────────── */}
       <Card>

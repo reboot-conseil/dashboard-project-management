@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { BarChart3, Users, TrendingUp } from "lucide-react";
+import { BarChart3, Users, TrendingUp, LayoutDashboard } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DashboardConsultants } from "@/components/dashboard/DashboardConsultants";
 import { DashboardOperationnel } from "@/components/dashboard/DashboardOperationnel";
 import { DashboardStrategique } from "@/components/dashboard/DashboardStrategique";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
+import { PageHeader } from "@/components/layout/page-header";
 
 // ── Types ─────────────────────────────────────────────────────────────
 type VueDashboard = "operationnel" | "consultants" | "strategique";
@@ -38,6 +39,11 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen p-6 md:p-10 max-w-7xl mx-auto">
+      <PageHeader
+        title="Dashboard"
+        subtitle="Vue d'ensemble de vos projets et consultants"
+        icon={<LayoutDashboard className="h-5 w-5" />}
+      />
       <Tabs value={vue} onValueChange={setVue}>
         <TabsList className="mb-6">
           <TabsTrigger value="operationnel" title="Vue Opérationnelle (Ctrl+1)">

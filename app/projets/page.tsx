@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FolderPlus,
+  FolderOpen,
   Eye,
   Pencil,
   Calendar,
@@ -17,7 +18,10 @@ import {
   ArrowDown,
   SlidersHorizontal,
   X,
+  Download,
+  Plus,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -385,16 +389,23 @@ export default function ProjetsPage() {
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Gestion des Projets
-        </h1>
-        <Button onClick={handleAdd}>
-          <FolderPlus className="h-4 w-4" />
-          Nouveau projet
-        </Button>
-      </div>
+      <PageHeader
+        title="Projets"
+        subtitle={`${projets.length} projet${projets.length > 1 ? "s" : ""}`}
+        icon={<FolderOpen className="h-5 w-5" />}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportCsvProjets(projets)}>
+              <Download className="h-4 w-4 mr-1.5" />
+              Exporter
+            </Button>
+            <Button size="sm" onClick={handleAdd}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Nouveau projet
+            </Button>
+          </div>
+        }
+      />
 
       {/* Filtres statut */}
       <div className="flex flex-wrap gap-2">
