@@ -15,7 +15,6 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
-  Calendar,
   CalendarDays,
   ChevronLeft,
   ChevronRight,

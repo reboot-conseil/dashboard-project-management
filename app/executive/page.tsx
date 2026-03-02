@@ -230,7 +230,7 @@ export default function ExecutivePage() {
               Export facturation
             </Button>
             <Button variant="outline" size="sm" onClick={openDialog} className="gap-1.5">
-              <Settings className="h-3.5 w-3.5" />
+              <Settings className="h-4 w-4 mr-1.5" />
               Configurer
             </Button>
           </div>
