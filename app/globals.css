@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+/* ── Dark mode variant (Tailwind v4) ─────────────────────────── */
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Surfaces */
+  --color-background:     #f8fafc;
+  --color-surface:        #ffffff;
+  --color-surface-raised: #f1f5f9;
+
+  /* Brand */
+  --color-primary:        #2563eb;
+  --color-primary-hover:  #1d4ed8;
+  --color-accent:         #7c3aed;
+
+  /* Sémantique */
+  --color-success:        #16a34a;
+  --color-warning:        #ea580c;
+  --color-destructive:    #dc2626;
+  --color-info:           #0891b2;
+
+  /* Foregrounds sémantiques */
+  --color-primary-foreground:     #ffffff;
+  --color-accent-foreground:      #ffffff;
+  --color-success-foreground:     #ffffff;
+  --color-warning-foreground:     #ffffff;
+  --color-destructive-foreground: #ffffff;
+
+  /* Text */
+  --color-foreground:           #0f172a;
+  --color-muted-foreground:     #64748b;
+  --color-card-foreground:      #0f172a;
+  --color-secondary-foreground: #0f172a;
+
+  /* Surfaces (compat aliases) */
+  --color-card:      #ffffff;
+  --color-muted:     #f1f5f9;
+  --color-secondary: #f1f5f9;
+
+  /* Borders */
+  --color-border: #e2e8f0;
+  --color-ring:   #2563eb;
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08);
+
+  /* Consultant palette (inchangée) */
+  --color-consultant-1-bg:   #dbeafe;
+  --color-consultant-1-text: #1e40af;
+  --color-consultant-2-bg:   #d1fae5;
+  --color-consultant-2-text: #065f46;
+  --color-consultant-3-bg:   #fed7aa;
+  --color-consultant-3-text: #9a3412;
+  --color-consultant-4-bg:   #e9d5ff;
+  --color-consultant-4-text: #6b21a8;
+  --color-consultant-5-bg:   #fecdd3;
+  --color-consultant-5-text: #9f1239;
+  --color-consultant-6-bg:   #fef3c7;
+  --color-consultant-6-text: #92400e;
+
+  /* Projet palette (inchangée) */
+  --color-projet-1: #bfdbfe;
+  --color-projet-2: #bbf7d0;
+  --color-projet-3: #fecaca;
+  --color-projet-4: #fde68a;
+  --color-projet-5: #ddd6fe;
+}
+
+/* ── Dark mode overrides ──────────────────────────────────────── */
+.dark {
+  --color-background:     #09090b;
+  --color-surface:        #18181b;
+  --color-surface-raised: #27272a;
+  --color-card:           #18181b;
+  --color-muted:          #27272a;
+  --color-secondary:      #27272a;
+
+  --color-foreground:           #fafafa;
+  --color-card-foreground:      #fafafa;
+  --color-muted-foreground:     #a1a1aa;
+  --color-secondary-foreground: #fafafa;
+
+  --color-border: #27272a;
+  --color-ring:   #3b82f6;
+}
+
+/* ── Glassmorphism utility ────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.dark .glass {
+  background: rgba(24, 24, 27, 0.7);
+  border-color: rgba(63, 63, 70, 0.8);
+}
+
+/* ── Base ─────────────────────────────────────────────────────── */
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ── Animations ───────────────────────────────────────────────── */
+@keyframes animate-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-in {
+  animation: animate-in 0.15s ease-out;
+}
+
+/* ── Animations Sprint 8 ────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-4px); }
+}
+
+.animate-fade-in         { animation: fade-in 200ms ease-out both; }
+.animate-slide-in-right  { animation: slide-in-right 200ms ease-out both; }
+.animate-scale-in        { animation: scale-in 150ms ease-out both; }
+.animate-fade-out        { animation: fade-out 150ms ease-out both; }
+.transition-base         { transition: all 150ms ease; }
+
+/* ── Respect prefers-reduced-motion ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
