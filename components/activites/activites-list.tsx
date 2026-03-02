@@ -119,14 +119,14 @@ export function ActivitesList({
                       >
                         <button
                           onClick={() => onApplyFilter(f)}
-                          className="text-sm font-medium text-left flex-1 truncate cursor-pointer"
+                          className="text-sm font-medium text-left flex-1 truncate cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                           data-testid={`apply-filter-${f.id}`}
                         >
                           {f.nom}
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onDeleteFilter(f.id); }}
-                          className="shrink-0 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                          className="shrink-0 text-muted-foreground hover:text-destructive transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                           aria-label="Supprimer le filtre"
                           data-testid={`delete-filter-${f.id}`}
                         >

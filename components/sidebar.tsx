@@ -90,6 +90,7 @@ function SidebarVertical({
               title={collapsed ? label : undefined}
               className={cn(
                 "flex items-center rounded-lg text-sm font-medium transition-all group relative",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5",
                 active
                   ? collapsed
@@ -138,7 +139,7 @@ function SidebarVertical({
         <div className={cn("flex gap-1", collapsed ? "flex-col items-center" : "items-center")}>
           <button
             onClick={onToggle}
-            className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             title={collapsed ? "Déplier la sidebar" : "Replier la sidebar"}
             aria-label={collapsed ? "Déplier la sidebar" : "Replier la sidebar"}
           >
@@ -150,7 +151,7 @@ function SidebarVertical({
           </button>
           <button
             onClick={onSwitchHorizontal}
-            className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             title="Passer en barre horizontale"
             aria-label="Passer en barre horizontale"
           >
@@ -158,7 +159,7 @@ function SidebarVertical({
           </button>
           <button
             onClick={toggle}
-            className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             title={theme === "dark" ? "Mode clair" : "Mode sombre"}
             aria-label={theme === "dark" ? "Mode clair" : "Mode sombre"}
           >
@@ -210,6 +211,7 @@ function NavbarHorizontal({
               href={href}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-all shrink-0",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 active
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -233,7 +235,7 @@ function NavbarHorizontal({
       <div className="flex items-center gap-2 shrink-0 ml-2">
         <button
           onClick={onSwitchVertical}
-          className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           title="Passer en sidebar verticale"
           aria-label="Passer en sidebar verticale"
         >
@@ -241,7 +243,7 @@ function NavbarHorizontal({
         </button>
         <button
           onClick={toggle}
-          className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           title={theme === "dark" ? "Mode clair" : "Mode sombre"}
           aria-label={theme === "dark" ? "Mode clair" : "Mode sombre"}
         >
@@ -318,7 +320,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span key={i} className="flex items-center gap-1.5">
                   {i > 0 && <span className="text-border">/</span>}
                   {crumb.href ? (
-                    <Link href={crumb.href} className="hover:text-foreground transition-colors">
+                    <Link href={crumb.href} className="hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm">
                       {crumb.label}
                     </Link>
                   ) : (
@@ -378,7 +380,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 md:px-6 sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <button
-              className="md:hidden p-2 rounded-md hover:bg-muted transition-colors cursor-pointer"
+              className="md:hidden p-2 rounded-md hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               onClick={() => setMobileOpen(true)}
               aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
             >
@@ -389,7 +391,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span key={i} className="flex items-center gap-1.5">
                   {i > 0 && <span className="text-border">/</span>}
                   {crumb.href ? (
-                    <Link href={crumb.href} className="hover:text-foreground transition-colors">
+                    <Link href={crumb.href} className="hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm">
                       {crumb.label}
                     </Link>
                   ) : (
