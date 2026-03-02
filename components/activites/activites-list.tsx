@@ -52,7 +52,8 @@ export function ActivitesList({
     <Card data-testid="activites-list">
       <CardContent className="pt-6">
         {/* Filtres */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        {/* Ligne 1 : 3 selects côte à côte */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
           <Select value={filtreConsultant} onChange={(e) => onFiltreConsultant(e.target.value)} aria-label="Filtrer par consultant">
             <option value="">Tous les consultants</option>
             {consultants.map((c) => (
@@ -65,24 +66,25 @@ export function ActivitesList({
               <option key={p.id} value={p.id}>{p.nom}</option>
             ))}
           </Select>
-          <div className="flex gap-1">
-            {PERIODES.map((p) => (
-              <Button
-                key={p.value}
-                variant={filtrePeriode === p.value ? "default" : "outline"}
-                size="sm"
-                className="flex-1 text-xs"
-                onClick={() => onFiltrePeriode(p.value)}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
-          <Select value={filtreFacturable} onChange={(e) => onFiltreFacturable(e.target.value)} aria-label="Filtrer par facturable">
+          <Select value={filtreFacturable} onChange={(e) => onFiltreFacturable(e.target.value)} aria-label="Filtrer par facturation">
             <option value="">Toutes</option>
             <option value="true">Facturables</option>
             <option value="false">Non facturables</option>
           </Select>
+        </div>
+        {/* Ligne 2 : boutons période */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {PERIODES.map((p) => (
+            <Button
+              key={p.value}
+              variant={filtrePeriode === p.value ? "default" : "outline"}
+              size="sm"
+              className="flex-none text-xs"
+              onClick={() => onFiltrePeriode(p.value)}
+            >
+              {p.label}
+            </Button>
+          ))}
         </div>
 
         {/* Saved filters bar */}
