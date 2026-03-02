@@ -184,6 +184,7 @@ function KanbanCard({
             onClick={() => onMoveEtape(e, "backward")}
             title="Reculer l'étape"
             aria-label="Reculer l'étape"
+            data-testid={`btn-backward-${e.id}`}
           >
             <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
@@ -196,6 +197,7 @@ function KanbanCard({
             onClick={() => onMoveEtape(e, "forward")}
             title="Avancer l'étape"
             aria-label="Avancer l'étape"
+            data-testid={`btn-forward-${e.id}`}
           >
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
