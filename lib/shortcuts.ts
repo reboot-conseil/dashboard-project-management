@@ -3,11 +3,6 @@ export interface Shortcut {
   action: string;
 }
 
-export interface PageShortcuts {
-  page: string;
-  shortcuts: Shortcut[];
-}
-
 export const SHORTCUTS_BY_PAGE: Record<string, Shortcut[]> = {
   "/": [
     { keys: "Ctrl+1", action: "Vue Opérationnelle" },
