@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum StatutProjet {
+  PLANIFIE
+  EN_COURS
+  EN_PAUSE
+  TERMINE
+}
+
+enum StatutEtape {
+  A_FAIRE
+  EN_COURS
+  VALIDEE
+}
+
+model Consultant {
+  id                     Int        @id @default(autoincrement())
+  nom                    String
+  email                  String     @unique
+  tjm                    Decimal?
+  coutJournalierEmployeur Float?
+  competences            String?
+  couleur                String     @default("#8B5CF6")
+  actif                  Boolean    @default(true)
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+  activites              Activite[]
+}
+
+model Projet {
+  id                  Int                @id @default(autoincrement())
+  nom                 String
+  client              String
+  budget              Decimal?
+  chargeEstimeeTotale Float?
+  dateDebut           DateTime?
+  dateFin             DateTime?
+  statut              StatutProjet       @default(PLANIFIE)
+  couleur             String             @default("#3b82f6")
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  activites           Activite[]
+  etapes              Etape[]
+  teamsConfig         ProjetTeamsConfig?
+  documentsSource     DocumentIngestion[]
+}
+
+model Activite {
+  id           Int        @id @default(autoincrement())
+  consultantId Int
+  projetId     Int
+  etapeId      Int?
+  date         DateTime
+  heures       Decimal
+  description  String?
+  facturable   Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  consultant   Consultant @relation(fields: [consultantId], references: [id])
+  projet       Projet     @relation(fields: [projetId], references: [id])
+  etape        Etape?     @relation(fields: [etapeId], references: [id])
+
+  @@index([consultantId])
+  @@index([projetId])
+  @@index([etapeId])
+}
+
+model Etape {
+  id                  Int         @id @default(autoincrement())
+  projetId            Int
+  nom                 String
+  description         String?
+  statut              StatutEtape @default(A_FAIRE)
+  dateDebut           DateTime?
+  deadline            DateTime?
+  chargeEstimeeJours  Float?
+  ordre               Int
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  projet              Projet      @relation(fields: [projetId], references: [id])
+  activites           Activite[]
+
+  @@index([projetId])
+}
+
+model ProjetTeamsConfig {
+  id          Int      @id @default(autoincrement())
+  projetId    Int      @unique
+  projet      Projet   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  // Canal Teams
+  canalNom    String?  // Ex: "refonte-site-web" ou "#refonte-site-web"
+  canalId     String?  // ID Teams du canal (optionnel)
+  webhookUrl  String?  // URL webhook sortant Teams pour ce canal
+
+  // Configuration
+  logAutoActif Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DocumentIngestion {
+  id             Int       @id @default(autoincrement())
+  filename       String
+  filepath       String
+  filesize       Int?
+  mimetype       String?
+  type           String?   // devis, presentation, transcript, compte_rendu, email, autre
+  status         String    @default("UPLOADING")
+  // Statuts : UPLOADING, EXTRACTING, ANALYZING, PENDING_REVIEW, PROCESSED, REJECTED, ERROR
+
+  projetId       Int?
+  projet         Projet?   @relation(fields: [projetId], references: [id])
+
+  extractedText  String?
+  analysis       Json?
+  confidence     Int?
+  validatedData  Json?
+
+  errorMessage   String?
+
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model IntegrationConfig {
+  id            Int       @id @default(autoincrement())
+
+  // Configuration globale
+  n8nUrl        String    @default("https://n8n.spoton-ai.fr")
+  webhookSecret String
+  emailDomain   String    @default("@reboot-conseil.com")
+
+  // Statut
+  actif         Boolean   @default(true)
+  derniereSync  DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}

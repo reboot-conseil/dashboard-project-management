@@ -1,0 +1,363 @@
+"use client";
+
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { format, startOfWeek, addDays } from "date-fns";
+import { fr } from "date-fns/locale";
+import { AlertDialog } from "@/components/ui/alert-dialog";
+import type { Consultant, Projet, Etape, Activite, Totaux, SavedFilter, EditForm } from "@/components/activites/types";
+import { getPeriodeDates } from "@/components/activites/types";
+import { SaisieRapide } from "@/components/activites/saisie-rapide";
+import type { SaisieRapideFormState } from "@/components/activites/saisie-rapide";
+import { SemaineView } from "@/components/activites/semaine-view";
+import { ActivitesList } from "@/components/activites/activites-list";
+import { EditDialog } from "@/components/activites/edit-dialog";
+import { SaveFilterDialog } from "@/components/activites/save-filter-dialog";
+
+export default function ActivitesPage() {
+  const router = useRouter();
+  const heuresRef = useRef<HTMLInputElement>(null);
+
+  const [consultants, setConsultants] = useState<Consultant[]>([]);
+  const [projets, setProjets] = useState<Projet[]>([]);
+  const [etapes, setEtapes] = useState<Etape[]>([]);
+  const [etapesLoading, setEtapesLoading] = useState(false);
+
+  const [form, setForm] = useState<SaisieRapideFormState>({
+    consultantId: "",
+    projetId: "",
+    etapeId: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    heures: "",
+    description: "",
+    facturable: true,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const [activites, setActivites] = useState<Activite[]>([]);
+  const [totaux, setTotaux] = useState<Totaux>({ total: 0, facturable: 0, nonFacturable: 0 });
+  const [loading, setLoading] = useState(true);
+  const [filtreConsultant, setFiltreConsultant] = useState("");
+  const [filtreProjet, setFiltreProjet] = useState("");
+  const [filtrePeriode, setFiltrePeriode] = useState("month");
+  const [filtreFacturable, setFiltreFacturable] = useState("");
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingActivite, setEditingActivite] = useState<Activite | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({ consultantId: "", projetId: "", etapeId: "", date: "", heures: "", description: "", facturable: true });
+  const [editEtapes, setEditEtapes] = useState<Etape[]>([]);
+  const [editEtapesLoading, setEditEtapesLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingActivite, setDeletingActivite] = useState<Activite | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
+  const [saveFilterName, setSaveFilterName] = useState("");
+  const [savedFiltersOpen, setSavedFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("activites-filtres-sauvegardes");
+      if (saved) setSavedFilters(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  function persistSavedFilters(filters: SavedFilter[]) {
+    setSavedFilters(filters);
+    localStorage.setItem("activites-filtres-sauvegardes", JSON.stringify(filters));
+  }
+
+  function handleSaveFilter() {
+    if (!saveFilterName.trim()) { toast.error("Donnez un nom au filtre"); return; }
+    const newFilter: SavedFilter = {
+      id: Date.now().toString(),
+      nom: saveFilterName.trim(),
+      consultantId: filtreConsultant,
+      projetId: filtreProjet,
+      periode: filtrePeriode,
+      facturable: filtreFacturable,
+    };
+    persistSavedFilters([...savedFilters, newFilter]);
+    setSaveFilterName("");
+    setSaveFilterDialogOpen(false);
+    toast.success(`Filtre "${newFilter.nom}" sauvegardé !`);
+  }
+
+  function applyFilter(f: SavedFilter) {
+    setFiltreConsultant(f.consultantId);
+    setFiltreProjet(f.projetId);
+    setFiltrePeriode(f.periode);
+    setFiltreFacturable(f.facturable);
+    setSavedFiltersOpen(false);
+    toast.success(`Filtre "${f.nom}" appliqué`);
+  }
+
+  function deleteFilter(id: string) {
+    persistSavedFilters(savedFilters.filter((f) => f.id !== id));
+    toast.success("Filtre supprimé");
+  }
+
+  useEffect(() => {
+    async function loadRef() {
+      const [cRes, pRes] = await Promise.all([fetch("/api/consultants"), fetch("/api/projets?statut=EN_COURS")]);
+      const cData = await cRes.json();
+      const pData = await pRes.json();
+      const activeConsultants = cData.filter((c: { actif: boolean }) => c.actif);
+      setConsultants(activeConsultants);
+      setProjets(pData);
+      const lastC = localStorage.getItem("lastConsultantId");
+      const lastP = localStorage.getItem("lastProjetId");
+      if (lastC && activeConsultants.find((c: Consultant) => c.id === parseInt(lastC)))
+        setForm((f) => ({ ...f, consultantId: lastC }));
+      if (lastP && pData.find((p: Projet) => p.id === parseInt(lastP)))
+        setForm((f) => ({ ...f, projetId: lastP }));
+    }
+    loadRef();
+  }, []);
+
+  const fetchEtapes = useCallback(async (projetId: string) => {
+    if (!projetId) { setEtapes([]); setEtapesLoading(false); return; }
+    setEtapesLoading(true);
+    try {
+      const res = await fetch(`/api/etapes?projetId=${projetId}`);
+      const json = await res.json();
+      setEtapes(Array.isArray(json) ? json : (json.etapes ?? []));
+    } catch { setEtapes([]); }
+    finally { setEtapesLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    fetchEtapes(form.projetId);
+    setForm((f) => ({ ...f, etapeId: "" }));
+  }, [form.projetId, fetchEtapes]);
+
+  const fetchActivites = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filtreConsultant) params.set("consultantId", filtreConsultant);
+      if (filtreProjet) params.set("projetId", filtreProjet);
+      if (filtreFacturable === "true") params.set("facturable", "true");
+      if (filtreFacturable === "false") params.set("facturable", "false");
+      const dates = getPeriodeDates(filtrePeriode);
+      if (dates.dateDebut) params.set("dateDebut", dates.dateDebut);
+      if (dates.dateFin) params.set("dateFin", dates.dateFin);
+      const res = await fetch(`/api/activites?${params}`);
+      const data = await res.json();
+      setActivites(data.activites);
+      setTotaux(data.totaux);
+    } catch { toast.error("Erreur de chargement"); }
+    finally { setLoading(false); }
+  }, [filtreConsultant, filtreProjet, filtrePeriode, filtreFacturable]);
+
+  useEffect(() => { fetchActivites(); }, [fetchActivites]);
+
+  async function handleQuickSave() {
+    if (!form.consultantId || !form.projetId || !form.heures) {
+      toast.error("Remplissez consultant, projet et heures");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/activites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consultantId: parseInt(form.consultantId),
+          projetId: parseInt(form.projetId),
+          etapeId: form.etapeId ? parseInt(form.etapeId) : null,
+          date: form.date,
+          heures: parseFloat(form.heures),
+          description: form.description || null,
+          facturable: form.facturable,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); toast.error(d.error || "Erreur"); return; }
+      toast.success("Activité enregistrée !");
+      localStorage.setItem("lastConsultantId", form.consultantId);
+      localStorage.setItem("lastProjetId", form.projetId);
+      setForm((f) => ({ ...f, heures: "", description: "", etapeId: "" }));
+      fetchActivites();
+      router.refresh();
+      setTimeout(() => heuresRef.current?.focus(), 100);
+    } catch { toast.error("Erreur de connexion"); }
+    finally { setSaving(false); }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); handleQuickSave(); }
+  }
+
+  async function openEdit(a: Activite) {
+    setEditingActivite(a);
+    setEditForm({
+      consultantId: String(a.consultant.id),
+      projetId: String(a.projet.id),
+      etapeId: a.etape ? String(a.etape.id) : "",
+      date: format(new Date(a.date), "yyyy-MM-dd"),
+      heures: String(Number(a.heures)),
+      description: a.description ?? "",
+      facturable: a.facturable,
+    });
+    setEditDialogOpen(true);
+    setEditEtapesLoading(true);
+    try {
+      const res = await fetch(`/api/etapes?projetId=${a.projet.id}`);
+      const json = await res.json();
+      setEditEtapes(Array.isArray(json) ? json : (json.etapes ?? []));
+    } catch { setEditEtapes([]); }
+    finally { setEditEtapesLoading(false); }
+  }
+
+  async function handleEditSave() {
+    if (!editingActivite) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/activites/${editingActivite.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consultantId: parseInt(editForm.consultantId),
+          projetId: parseInt(editForm.projetId),
+          etapeId: editForm.etapeId ? parseInt(editForm.etapeId) : null,
+          date: editForm.date,
+          heures: parseFloat(editForm.heures),
+          description: editForm.description || null,
+          facturable: editForm.facturable,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); toast.error(d.error || "Erreur"); return; }
+      toast.success("Activité modifiée !");
+      setEditDialogOpen(false);
+      fetchActivites();
+    } catch { toast.error("Erreur de connexion"); }
+    finally { setEditSaving(false); }
+  }
+
+  function handleEditProjetChange(projetId: string) {
+    setEditForm((f) => ({ ...f, projetId, etapeId: "" }));
+    setEditEtapesLoading(true);
+    fetch(`/api/etapes?projetId=${projetId}`)
+      .then((r) => r.json())
+      .then((json) => setEditEtapes(Array.isArray(json) ? json : (json.etapes ?? [])))
+      .catch(() => setEditEtapes([]))
+      .finally(() => setEditEtapesLoading(false));
+  }
+
+  function openDelete(a: Activite) { setDeletingActivite(a); setDeleteDialogOpen(true); }
+
+  async function handleDelete() {
+    if (!deletingActivite) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/activites/${deletingActivite.id}`, { method: "DELETE" });
+      if (!res.ok) { toast.error("Erreur lors de la suppression"); return; }
+      toast.success("Activité supprimée");
+      setDeleteDialogOpen(false);
+      fetchActivites();
+      router.refresh();
+    } catch { toast.error("Erreur de connexion"); }
+    finally { setDeleting(false); }
+  }
+
+  const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+
+  return (
+    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6" onKeyDown={handleKeyDown}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Suivi des Activités</h1>
+          <p className="text-muted-foreground capitalize mt-1">
+            {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
+          </p>
+        </div>
+      </div>
+
+      <SaisieRapide
+        consultants={consultants}
+        projets={projets}
+        etapes={etapes}
+        etapesLoading={etapesLoading}
+        activites={activites}
+        form={form}
+        saving={saving}
+        heuresRef={heuresRef}
+        onFormChange={(field, value) => setForm((f) => ({ ...f, [field]: value }))}
+        onSave={handleQuickSave}
+      />
+
+      <SemaineView activites={activites} weekDays={weekDays} />
+
+      <ActivitesList
+        activites={activites}
+        totaux={totaux}
+        loading={loading}
+        consultants={consultants}
+        projets={projets}
+        filtreConsultant={filtreConsultant}
+        filtreProjet={filtreProjet}
+        filtrePeriode={filtrePeriode}
+        filtreFacturable={filtreFacturable}
+        savedFilters={savedFilters}
+        savedFiltersOpen={savedFiltersOpen}
+        onFiltreConsultant={setFiltreConsultant}
+        onFiltreProjet={setFiltreProjet}
+        onFiltrePeriode={setFiltrePeriode}
+        onFiltreFacturable={setFiltreFacturable}
+        onToggleSavedFilters={() => setSavedFiltersOpen((v) => !v)}
+        onOpenSaveFilterDialog={() => setSaveFilterDialogOpen(true)}
+        onApplyFilter={applyFilter}
+        onDeleteFilter={deleteFilter}
+        onEdit={openEdit}
+        onDelete={openDelete}
+      />
+
+      <EditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        consultants={consultants}
+        projets={projets}
+        editEtapes={editEtapes}
+        editEtapesLoading={editEtapesLoading}
+        editForm={editForm}
+        editSaving={editSaving}
+        onFormChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
+        onProjetChange={handleEditProjetChange}
+        onSave={handleEditSave}
+      />
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Supprimer cette activité ?"
+        description={
+          deletingActivite
+            ? `Êtes-vous sûr de vouloir supprimer l'activité de ${deletingActivite.consultant.nom} (${Number(deletingActivite.heures)}h le ${format(new Date(deletingActivite.date), "dd/MM/yyyy")}) ?`
+            : ""
+        }
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+        loading={deleting}
+      />
+
+      <SaveFilterDialog
+        open={saveFilterDialogOpen}
+        onOpenChange={setSaveFilterDialogOpen}
+        saveFilterName={saveFilterName}
+        onNameChange={setSaveFilterName}
+        onSave={handleSaveFilter}
+        consultants={consultants}
+        projets={projets}
+        filtreConsultant={filtreConsultant}
+        filtreProjet={filtreProjet}
+        filtrePeriode={filtrePeriode}
+        filtreFacturable={filtreFacturable}
+      />
+    </div>
+  );
+}
