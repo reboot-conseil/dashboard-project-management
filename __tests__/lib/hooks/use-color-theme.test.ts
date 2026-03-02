@@ -1,21 +1,24 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-
-// Mock localStorage
-const store: Record<string, string> = {};
-vi.stubGlobal("localStorage", {
-  getItem: (k: string) => store[k] ?? null,
-  setItem: (k: string, v: string) => { store[k] = v; },
-  removeItem: (k: string) => { delete store[k]; },
-});
-
-// Spy on document.documentElement.setAttribute without replacing the whole document
-vi.spyOn(document.documentElement, "setAttribute").mockImplementation(() => {});
-
 import { useColorTheme } from "@/lib/hooks/use-color-theme";
 
+const store: Record<string, string> = {};
+
+beforeAll(() => {
+  vi.stubGlobal("localStorage", {
+    getItem: (k: string) => store[k] ?? null,
+    setItem: (k: string, v: string) => { store[k] = v; },
+    removeItem: (k: string) => { delete store[k]; },
+  });
+});
+
 describe("useColorTheme", () => {
-  beforeEach(() => { Object.keys(store).forEach((k) => delete store[k]); });
+  beforeEach(() => {
+    Object.keys(store).forEach((k) => delete store[k]);
+    vi.spyOn(document.documentElement, "setAttribute").mockImplementation(() => {});
+  });
+
+  afterEach(() => { vi.restoreAllMocks(); });
 
   it("defaults to classique", () => {
     const { result } = renderHook(() => useColorTheme());
