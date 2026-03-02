@@ -94,7 +94,7 @@ export function ActivitesList({
             className="gap-1.5 text-xs"
             data-testid="btn-save-filter"
           >
-            <Bookmark className="h-3.5 w-3.5" />
+            <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />
             Sauvegarder filtre
           </Button>
           {savedFilters.length > 0 && (
@@ -106,7 +106,7 @@ export function ActivitesList({
                 className="gap-1.5 text-xs"
                 data-testid="btn-saved-filters"
               >
-                <BookmarkCheck className="h-3.5 w-3.5" />
+                <BookmarkCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 Filtres sauvegardés ({savedFilters.length})
               </Button>
               {savedFiltersOpen && (
@@ -127,9 +127,10 @@ export function ActivitesList({
                         <button
                           onClick={(e) => { e.stopPropagation(); onDeleteFilter(f.id); }}
                           className="shrink-0 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                          aria-label="Supprimer le filtre"
                           data-testid={`delete-filter-${f.id}`}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     ))}
@@ -200,9 +201,10 @@ export function ActivitesList({
                             size="icon"
                             onClick={() => onEdit(a)}
                             title="Modifier"
+                            aria-label="Modifier"
                             data-testid={`btn-edit-${a.id}`}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -210,9 +212,10 @@ export function ActivitesList({
                             className="text-destructive hover:text-destructive"
                             onClick={() => onDelete(a)}
                             title="Supprimer"
+                            aria-label="Supprimer l'activité"
                             data-testid={`btn-delete-${a.id}`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           </Button>
                         </div>
                       </TableCell>

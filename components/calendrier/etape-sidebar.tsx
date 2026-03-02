@@ -46,8 +46,8 @@ export function EtapeSidebar({ etape, onClose, onChangerStatut, onReporterDeadli
               <Badge variant={statutBadgeVariant(etape.statut)} className="text-xs">
                 {STATUT_LABELS[etape.statut]}
               </Badge>
-              <button onClick={onClose} className="p-1 rounded hover:bg-muted transition-colors" data-testid="sidebar-close">
-                <X className="h-4 w-4" />
+              <button onClick={onClose} className="p-1 rounded hover:bg-muted transition-colors" aria-label="Fermer" data-testid="sidebar-close">
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -123,21 +123,21 @@ export function EtapeSidebar({ etape, onClose, onChangerStatut, onReporterDeadli
             <div className="grid grid-cols-2 gap-2">
               {etape.statut === "A_FAIRE" && (
                 <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => onChangerStatut("EN_COURS")}>
-                  <Play className="h-3 w-3" />Démarrer
+                  <Play className="h-3 w-3" aria-hidden="true" />Démarrer
                 </Button>
               )}
               {etape.statut === "EN_COURS" && (
                 <Button size="sm" className="gap-1 text-xs" onClick={() => onChangerStatut("VALIDEE")}>
-                  <Check className="h-3 w-3" />Valider
+                  <Check className="h-3 w-3" aria-hidden="true" />Valider
                 </Button>
               )}
               {etape.statut === "VALIDEE" && (
                 <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => onChangerStatut("EN_COURS")}>
-                  <RotateCcw className="h-3 w-3" />Réouvrir
+                  <RotateCcw className="h-3 w-3" aria-hidden="true" />Réouvrir
                 </Button>
               )}
               <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => onNavigate(etape.projet.id)}>
-                <ExternalLink className="h-3 w-3" />Voir projet
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />Voir projet
               </Button>
             </div>
 
@@ -147,18 +147,18 @@ export function EtapeSidebar({ etape, onClose, onChangerStatut, onReporterDeadli
               <Button size="sm" variant="outline" className="gap-1 text-xs shrink-0"
                 onClick={() => newDeadline && onReporterDeadline(newDeadline)}
                 disabled={!newDeadline || newDeadline === etape.deadline}>
-                <Timer className="h-3 w-3" />Reporter
+                <Timer className="h-3 w-3" aria-hidden="true" />Reporter
               </Button>
             </div>
 
             <Link href={`/activites?etapeId=${etape.id}`}>
               <Button size="sm" variant="outline" className="w-full gap-1 text-xs">
-                <Clock className="h-3 w-3" />Logger des heures
+                <Clock className="h-3 w-3" aria-hidden="true" />Logger des heures
               </Button>
             </Link>
 
             <Button size="sm" variant="outline" className="w-full gap-1 text-xs text-destructive hover:bg-destructive/10" onClick={onSupprimer}>
-              <Trash2 className="h-3 w-3" />Supprimer l&apos;étape
+              <Trash2 className="h-3 w-3" aria-hidden="true" />Supprimer l&apos;étape
             </Button>
           </div>
 

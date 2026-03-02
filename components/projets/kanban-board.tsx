@@ -65,8 +65,9 @@ export function KanbanBoard({
                   className="h-7 w-7"
                   onClick={() => onAddEtape(col.statut)}
                   title="Ajouter une étape"
+                  aria-label="Ajouter une étape"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
               <div className="space-y-2">
@@ -143,7 +144,7 @@ function KanbanCard({
           </p>
           {(heures > 0 || e.chargeEstimeeJours) && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              <Clock className="inline h-3 w-3 mr-0.5 -mt-0.5" />
+              <Clock className="inline h-3 w-3 mr-0.5 -mt-0.5" aria-hidden="true" />
               {heures > 0 ? `${heures}h` : "0h"}
               {e.chargeEstimeeJours && (
                 <span className="ml-1">
@@ -181,9 +182,10 @@ function KanbanCard({
             size="icon"
             className="h-6 w-6"
             onClick={() => onMoveEtape(e, "backward")}
-            title="Reculer"
+            title="Reculer l'étape"
+            aria-label="Reculer l'étape"
           >
-            <ChevronLeft className="h-3.5 w-3.5" />
+            <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         )}
         {e.statut !== "VALIDEE" && (
@@ -192,9 +194,10 @@ function KanbanCard({
             size="icon"
             className="h-6 w-6"
             onClick={() => onMoveEtape(e, "forward")}
-            title="Avancer"
+            title="Avancer l'étape"
+            aria-label="Avancer l'étape"
           >
-            <ChevronRight className="h-3.5 w-3.5" />
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         )}
         <div className="flex-1" />
@@ -204,9 +207,10 @@ function KanbanCard({
           className="h-6 w-6"
           onClick={() => onFiltreEtapeId(filtreEtapeId === e.id ? null : e.id)}
           title="Voir activités"
+          aria-label="Voir activités"
           data-testid={`btn-filtre-${e.id}`}
         >
-          <Eye className={`h-3 w-3 ${filtreEtapeId === e.id ? "text-primary" : ""}`} />
+          <Eye className={`h-3 w-3 ${filtreEtapeId === e.id ? "text-primary" : ""}`} aria-hidden="true" />
         </Button>
         <Button
           variant="ghost"
@@ -214,19 +218,21 @@ function KanbanCard({
           className="h-6 w-6"
           onClick={() => onEditEtape(e)}
           title="Modifier"
+          aria-label="Modifier"
           data-testid={`btn-edit-${e.id}`}
         >
-          <Pencil className="h-3 w-3" />
+          <Pencil className="h-3 w-3" aria-hidden="true" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
           className="h-6 w-6 text-destructive hover:text-destructive"
           onClick={() => onDeleteEtape(e)}
-          title="Supprimer"
+          title="Supprimer l'étape"
+          aria-label="Supprimer l'étape"
           data-testid={`btn-delete-${e.id}`}
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash2 className="h-3 w-3" aria-hidden="true" />
         </Button>
       </div>
     </div>

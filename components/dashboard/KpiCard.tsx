@@ -46,7 +46,7 @@ export function KpiCard({ title, value, icon, subtitle, trend, variant = "defaul
     <Card className={cn("animate-fade-in transition-shadow hover:shadow-md", config.card, className)}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardDescription className="text-sm font-medium">{title}</CardDescription>
-        <span className={cn("h-5 w-5 shrink-0", config.icon)}>{icon}</span>
+        <span className={cn("h-5 w-5 shrink-0", config.icon)} aria-hidden="true">{icon}</span>
       </CardHeader>
       <CardContent>
         <div className={cn("text-3xl font-bold", config.value)}>{value}</div>
@@ -54,11 +54,11 @@ export function KpiCard({ title, value, icon, subtitle, trend, variant = "defaul
         {trend && (
           <div className="flex items-center gap-1 mt-2">
             {trend.value > 0 ? (
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
             ) : trend.value < 0 ? (
-              <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+              <TrendingDown className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
             ) : (
-              <Minus className="h-3.5 w-3.5 text-muted-foreground" />
+              <Minus className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
             )}
             <span
               className={cn(
