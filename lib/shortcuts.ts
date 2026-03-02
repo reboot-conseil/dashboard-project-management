@@ -23,6 +23,7 @@ export const SHORTCUTS_BY_PAGE: Record<string, Shortcut[]> = {
 };
 
 export const GLOBAL_SHORTCUTS: Shortcut[] = [
+  { keys: "Ctrl+1/2/3", action: "Changer de vue Dashboard" },
   { keys: "?", action: "Afficher les raccourcis" },
   { keys: "Échap", action: "Fermer les modales" },
 ];

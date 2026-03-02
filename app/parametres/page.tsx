@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useColorTheme, type ColorTheme } from "@/lib/hooks/use-color-theme";
 import { useTheme } from "@/lib/hooks/use-theme";
 import { cn } from "@/lib/utils";
+import { GLOBAL_SHORTCUTS } from "@/lib/shortcuts";
 
 const COLOR_THEMES: { value: ColorTheme; label: string; description: string; preview: string[] }[] = [
   {
@@ -24,7 +25,7 @@ const COLOR_THEMES: { value: ColorTheme; label: string; description: string; pre
 ];
 
 export default function ParametresPage() {
-  const { colorTheme, setColorTheme } = useColorTheme();
+  const { colorTheme, setColorTheme, hydrated: colorHydrated } = useColorTheme();
   const { theme, toggle } = useTheme();
 
   return (
@@ -44,8 +45,8 @@ export default function ParametresPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Mode clair / sombre */}
-            <div>
-              <p className="text-sm font-medium mb-3">Mode</p>
+            <div role="group" aria-labelledby="mode-label">
+              <p id="mode-label" className="text-sm font-medium mb-3">Mode</p>
               <div className="flex gap-3">
                 <Button
                   variant={theme === "light" ? "default" : "outline"}
@@ -72,6 +73,8 @@ export default function ParametresPage() {
                   <button
                     key={t.value}
                     onClick={() => setColorTheme(t.value)}
+                    aria-pressed={colorHydrated ? colorTheme === t.value : undefined}
+                    disabled={!colorHydrated}
                     className={cn(
                       "flex flex-col gap-2 p-4 rounded-lg border text-left transition-all",
                       colorTheme === t.value
@@ -108,11 +111,7 @@ export default function ParametresPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-              {[
-                { keys: "Ctrl+1/2/3", action: "Changer de vue Dashboard" },
-                { keys: "?", action: "Afficher les raccourcis de la page" },
-                { keys: "Échap", action: "Fermer les modales / panels" },
-              ].map(({ keys, action }) => (
+              {GLOBAL_SHORTCUTS.map(({ keys, action }) => (
                 <div key={keys} className="flex justify-between items-center py-1.5 border-b border-border last:border-0">
                   <span className="text-sm text-muted-foreground">{action}</span>
                   <kbd className="px-2 py-0.5 rounded border bg-muted text-xs font-mono">{keys}</kbd>
