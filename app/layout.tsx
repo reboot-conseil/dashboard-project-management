@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { AppShell } from "@/components/sidebar";
 import { PageTransition } from "@/components/layout/page-transition";
+import { ShortcutsModal } from "@/components/ui/shortcuts-modal";
 import "./globals.css";
 
 const inter = Inter({
@@ -38,6 +39,7 @@ export default function RootLayout({
           <PageTransition>{children}</PageTransition>
         </AppShell>
         <Toaster richColors position="top-right" />
+        <ShortcutsModal />
       </body>
     </html>
   );
