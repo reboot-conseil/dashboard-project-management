@@ -142,18 +142,24 @@ export function SaisieRapide({
               onChange={(e) => onFormChange("description", e.target.value)}
             />
           </div>
-          <div className="flex items-end gap-3">
-            <div className="flex items-center gap-2 pb-2">
+          {/* Dernière ligne : facturable + enregistrer — col-span-full pour éviter le débordement */}
+          <div className="col-span-full flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
               <Checkbox
                 id="saisie-facturable"
                 checked={form.facturable}
                 onCheckedChange={(v) => onFormChange("facturable", v as boolean)}
               />
-              <Label htmlFor="saisie-facturable" className="text-xs cursor-pointer">Fact.</Label>
+              <Label htmlFor="saisie-facturable" className="text-xs cursor-pointer">Facturable</Label>
             </div>
-            <Button onClick={onSave} disabled={saving} className="flex-1" data-testid="btn-enregistrer">
+            <Button
+              onClick={onSave}
+              disabled={saving}
+              className="min-w-[140px]"
+              data-testid="btn-enregistrer"
+            >
               <Save className="h-4 w-4" />
-              {saving ? "..." : "Enregistrer"}
+              {saving ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </div>
         </div>
