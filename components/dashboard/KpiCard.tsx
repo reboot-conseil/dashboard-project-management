@@ -29,7 +29,7 @@ const variantConfig = {
   },
   warning: {
     card: "border-amber-200/60",
-    value: "text-amber-600",
+    value: "text-amber-700",
     icon: "text-amber-500",
   },
   danger: {

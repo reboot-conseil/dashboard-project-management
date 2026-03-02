@@ -53,13 +53,13 @@ export function ActivitesList({
       <CardContent className="pt-6">
         {/* Filtres */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <Select value={filtreConsultant} onChange={(e) => onFiltreConsultant(e.target.value)}>
+          <Select value={filtreConsultant} onChange={(e) => onFiltreConsultant(e.target.value)} aria-label="Filtrer par consultant">
             <option value="">Tous les consultants</option>
             {consultants.map((c) => (
               <option key={c.id} value={c.id}>{c.nom}</option>
             ))}
           </Select>
-          <Select value={filtreProjet} onChange={(e) => onFiltreProjet(e.target.value)}>
+          <Select value={filtreProjet} onChange={(e) => onFiltreProjet(e.target.value)} aria-label="Filtrer par projet">
             <option value="">Tous les projets</option>
             {projets.map((p) => (
               <option key={p.id} value={p.id}>{p.nom}</option>
@@ -78,7 +78,7 @@ export function ActivitesList({
               </Button>
             ))}
           </div>
-          <Select value={filtreFacturable} onChange={(e) => onFiltreFacturable(e.target.value)}>
+          <Select value={filtreFacturable} onChange={(e) => onFiltreFacturable(e.target.value)} aria-label="Filtrer par facturable">
             <option value="">Toutes</option>
             <option value="true">Facturables</option>
             <option value="false">Non facturables</option>
@@ -233,7 +233,7 @@ export function ActivitesList({
               </div>
               <div className="text-sm">
                 <span className="text-muted-foreground">Facturables : </span>
-                <span className="font-bold text-emerald-600" data-testid="total-facturable">{totaux.facturable}h</span>
+                <span className="font-bold text-emerald-700" data-testid="total-facturable">{totaux.facturable}h</span>
               </div>
               <div className="text-sm">
                 <span className="text-muted-foreground">Non facturables : </span>
