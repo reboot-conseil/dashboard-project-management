@@ -1,24 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { RotateCw, FileText, Sheet, Mail, ChevronDown } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 export interface DashboardHeaderProps {
   viewName: string;
   icon: React.ReactNode;
   onRefresh?: () => void;
-  onExport?: (type: "pdf" | "excel" | "email") => void;
   isRefreshing?: boolean;
-  children?: React.ReactNode; // Pour filtres custom
+  children?: React.ReactNode;
   className?: string;
 }
 
@@ -26,7 +18,6 @@ export function DashboardHeader({
   viewName,
   icon,
   onRefresh,
-  onExport,
   isRefreshing = false,
   children,
   className,
@@ -41,34 +32,6 @@ export function DashboardHeader({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Bouton Exporter */}
-          {onExport && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <FileText className="h-4 w-4" />
-                  Exporter
-                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onExport("pdf")}>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  Exporter PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExport("excel")}>
-                  <Sheet className="h-4 w-4 text-muted-foreground" />
-                  Exporter Excel
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onExport("email")}>
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  Envoyer par email
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
           {/* Bouton Rafraîchir */}
           {onRefresh && (
             <Button

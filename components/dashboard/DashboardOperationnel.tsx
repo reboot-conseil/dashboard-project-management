@@ -194,31 +194,6 @@ export function DashboardOperationnel() {
     saveFilters(STORAGE_KEY, newFilters);
   }
 
-  // Export handler
-  function handleExport(type: "pdf" | "excel" | "email") {
-    fetch("/api/dashboard/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: type === "email" ? "pdf" : type,
-        view: "operationnel",
-        filters: {
-          dateDebut: filters.dateDebut,
-          dateFin: filters.dateFin,
-          projetId: filters.projetId,
-        },
-      }),
-    })
-      .then(() => {
-        toast.info(
-          type === "email"
-            ? "Export email disponible dans une prochaine version"
-            : `Export ${type.toUpperCase()} en cours de préparation`
-        );
-      })
-      .catch(() => toast.error("Erreur lors de l'export"));
-  }
-
   if (!hydrated) return null;
 
   // ── KPIs dérivés ───────────────────────────────────────────────────
@@ -255,7 +230,6 @@ export function DashboardOperationnel() {
       <DashboardHeader
         viewName="Vue Opérationnelle"
         icon={<BarChart3 className="h-5 w-5" />}
-        onExport={handleExport}
         onRefresh={() => fetchData(true)}
         isRefreshing={refreshing}
       >
