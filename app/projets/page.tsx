@@ -120,6 +120,27 @@ interface SavedFilters {
   showAdvanced: boolean;
 }
 
+function exportCsvProjets(projets: ProjetListItem[]) {
+  const rows = [
+    ["Nom", "Client", "Statut", "Budget (EUR)", "Progression (%)"],
+    ...projets.map((p) => [
+      p.nom ?? "",
+      p.client ?? "",
+      p.statut ?? "",
+      String(Number(p.budget ?? 0)),
+      String(p.pctBudget ?? 0),
+    ]),
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `projets-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ProjetsPage() {
   const router = useRouter();
   const [projets, setProjets] = useState<ProjetListItem[]>([]);

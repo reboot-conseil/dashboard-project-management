@@ -20,6 +20,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import {
   Card,
   CardHeader,
@@ -117,6 +118,26 @@ function formatK(montant: number) {
 const STORAGE_KEY = "executive-objectifs";
 
 const PIE_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"];
+
+function exportCsvFacturation(data: ExecutiveData) {
+  const rows = [
+    ["Mois", "CA (EUR)", "Marge (EUR)", "Couts (EUR)"],
+    ...data.tendance12Mois.map((t) => [
+      t.mois ?? "",
+      String(Math.round(t.ca ?? 0)),
+      String(Math.round(t.marge ?? 0)),
+      String(Math.round(t.couts ?? 0)),
+    ]),
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `facturation-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 // ── Page ──────────────────────────────────────────────────────────
 export default function ExecutivePage() {

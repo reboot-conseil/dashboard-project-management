@@ -37,6 +37,26 @@ interface ConsultantKpi {
   caMoisPrecedent: number;
 }
 
+function exportCsvConsultants(consultants: Consultant[]) {
+  const rows = [
+    ["Nom", "Email", "TJM (EUR)", "Actif"],
+    ...consultants.map((c) => [
+      c.nom ?? "",
+      c.email ?? "",
+      String(Number(c.tjm ?? 0)),
+      c.actif ? "Oui" : "Non",
+    ]),
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `consultants-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ConsultantsPage() {
   const router = useRouter();
   const [consultants, setConsultants] = useState<Consultant[]>([]);

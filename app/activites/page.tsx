@@ -15,6 +15,29 @@ import { ActivitesList } from "@/components/activites/activites-list";
 import { EditDialog } from "@/components/activites/edit-dialog";
 import { SaveFilterDialog } from "@/components/activites/save-filter-dialog";
 
+function exportCsvActivites(activites: Activite[]) {
+  const rows = [
+    ["Date", "Consultant", "Projet", "Etape", "Heures", "Facturable", "Description"],
+    ...activites.map((a) => [
+      a.date ?? "",
+      a.consultant?.nom ?? "",
+      a.projet?.nom ?? "",
+      a.etape?.nom ?? "",
+      String(Number(a.heures ?? 0)),
+      a.facturable ? "Oui" : "Non",
+      a.description ?? "",
+    ]),
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `activites-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ActivitesPage() {
   const router = useRouter();
   const heuresRef = useRef<HTMLInputElement>(null);
