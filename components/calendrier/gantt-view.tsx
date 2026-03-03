@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   format,
   startOfMonth,
@@ -9,6 +10,8 @@ import {
   isToday,
   isWeekend,
   parseISO,
+  addDays,
+  format as dateFnsFormat,
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -21,19 +24,47 @@ interface GanttViewProps {
   data: CalData | null;
   onSelectEtape: (e: EtapeInfo) => void;
   onContextMenu: (ev: React.MouseEvent, e: EtapeInfo) => void;
+  onEtapeDatesChange?: (etapeId: number, dateDebut: string | null, deadline: string | null) => void;
 }
+
+function pxToJours(px: number): number {
+  return Math.round(px / COL_WIDTH);
+}
+
+function shiftDate(dateStr: string | null, delta: number): string | null {
+  if (!dateStr) return null;
+  return dateFnsFormat(addDays(parseISO(dateStr), delta), "yyyy-MM-dd");
+}
+
+const COL_WIDTH = 44;
 
 export function GanttView({
   currentDate,
   data,
   onSelectEtape,
   onContextMenu,
+  onEtapeDatesChange,
 }: GanttViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const [drag, setDrag] = useState<{
+    etapeId: number;
+    type: "move" | "resize";
+    startX: number;
+    origDateDebut: string | null;
+    origDeadline: string | null;
+    deltaJours: number;
+  } | null>(null);
+
+  const [dragPreview, setDragPreview] = useState<{
+    etapeId: number;
+    dateDebut: string | null;
+    deadline: string | null;
+  } | null>(null);
 
   const projetMap = new Map<number, { projet: ProjetInfo; etapes: EtapeInfo[] }>();
   for (const etape of data?.etapes ?? []) {
@@ -44,7 +75,6 @@ export function GanttView({
   }
 
   const totalDays = days.length;
-  const COL_WIDTH = 44;
 
   function dayPercent(dateStr: string | null): number {
     if (!dateStr) return 0;
@@ -133,97 +163,156 @@ export function GanttView({
                 </div>
 
                 {/* Lignes étapes */}
-                {etapes.map((etape) => (
-                  <div
-                    key={etape.id}
-                    className="flex items-center border-b border-border/50"
-                    style={{ minHeight: "40px" }}
-                  >
+                {etapes.map((etape) => {
+                  const barStart = dayPercent(etape.dateDebut ?? etape.deadline);
+                  const bw = barWidth(etape.dateDebut, etape.deadline);
+                  const barWidthPx = Math.max(bw, 1) * COL_WIDTH - 2;
+
+                  return (
                     <div
-                      className="shrink-0 px-3 py-1 text-xs text-muted-foreground pl-8 flex items-center gap-1"
-                      style={{ width: "200px" }}
+                      key={etape.id}
+                      className="flex items-center border-b border-border/50"
+                      style={{ minHeight: "40px" }}
                     >
-                      <span>{healthIcon(etape.health)}</span>
-                      <span className="truncate">{etape.nom}</span>
-                    </div>
+                      <div
+                        className="shrink-0 px-3 py-1 text-xs text-muted-foreground pl-8 flex items-center gap-1"
+                        style={{ width: "200px" }}
+                      >
+                        <span>{healthIcon(etape.health)}</span>
+                        <span className="truncate">{etape.nom}</span>
+                      </div>
 
-                    <div className="relative flex-1" style={{ height: "40px" }}>
-                      {days.map((day, i) =>
-                        isWeekend(day) ? (
-                          <div
-                            key={i}
-                            className="absolute top-0 bottom-0 bg-muted/30"
-                            style={{ left: `${i * COL_WIDTH}px`, width: `${COL_WIDTH}px` }}
-                          />
-                        ) : null
-                      )}
-                      {today >= monthStart && today <= monthEnd && (
-                        <div
-                          className="absolute top-0 bottom-0 w-0.5 bg-red-500/50 z-10"
-                          style={{
-                            left: `${differenceInDays(today, monthStart) * COL_WIDTH + COL_WIDTH / 2}px`,
-                          }}
-                        />
-                      )}
-
-                      {etape.deadline && (
-                        <button
-                          onContextMenu={(ev) => onContextMenu(ev, etape)}
-                          onClick={() => onSelectEtape(etape)}
-                          className={cn(
-                            "absolute top-3 h-5 rounded cursor-pointer transition-opacity hover:opacity-90 flex items-center px-1 text-[10px] font-medium text-white overflow-hidden",
-                            etape.statut === "VALIDEE" && "opacity-50",
-                            etape.urgence === "retard" && "ring-1 ring-red-500"
-                          )}
-                          style={{
-                            left: `${dayPercent(etape.dateDebut ?? etape.deadline) * COL_WIDTH}px`,
-                            width: `${barWidth(etape.dateDebut, etape.deadline) * COL_WIDTH - 2}px`,
-                            backgroundColor: etape.projet.couleur ?? "#3b82f6",
-                          }}
-                        >
-                          <span className="text-[10px] font-medium text-white truncate leading-none">
-                            {etape.nom}
-                          </span>
-                        </button>
-                      )}
-
-                      {etape.deadline && (
-                        <div
-                          className={cn(
-                            "absolute top-2 h-3 w-3 rounded-full border-2 border-white z-20",
-                            etape.urgence === "retard"
-                              ? "bg-red-600"
-                              : etape.urgence === "critique"
-                                ? "bg-orange-500"
-                                : "bg-red-400"
-                          )}
-                          style={{
-                            left: `${dayPercent(etape.deadline) * COL_WIDTH + COL_WIDTH / 2 - 6}px`,
-                          }}
-                          title={`Deadline: ${etape.deadline}`}
-                        />
-                      )}
-
-                      {etape.consultants.length > 0 && etape.deadline && (
-                        <div
-                          className="absolute bottom-1 flex gap-0.5 z-20"
-                          style={{
-                            left: `${dayPercent(etape.dateDebut ?? etape.deadline) * COL_WIDTH}px`,
-                          }}
-                        >
-                          {etape.consultants.slice(0, 3).map((c) => (
-                            <span
-                              key={c.id}
-                              className="h-2 w-2 rounded-full border border-white"
-                              style={{ backgroundColor: c.couleur }}
-                              title={c.nom}
+                      <div className="relative flex-1" style={{ height: "40px" }}>
+                        {days.map((day, i) =>
+                          isWeekend(day) ? (
+                            <div
+                              key={i}
+                              className="absolute top-0 bottom-0 bg-muted/30"
+                              style={{ left: `${i * COL_WIDTH}px`, width: `${COL_WIDTH}px` }}
                             />
-                          ))}
-                        </div>
-                      )}
+                          ) : null
+                        )}
+                        {today >= monthStart && today <= monthEnd && (
+                          <div
+                            className="absolute top-0 bottom-0 w-0.5 bg-red-500/50 z-10"
+                            style={{
+                              left: `${differenceInDays(today, monthStart) * COL_WIDTH + COL_WIDTH / 2}px`,
+                            }}
+                          />
+                        )}
+
+                        {etape.deadline && (
+                          <button
+                            onContextMenu={(ev) => onContextMenu(ev, etape)}
+                            onClick={() => {
+                              if (!drag || drag.deltaJours === 0) onSelectEtape(etape);
+                            }}
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.setPointerCapture(e.pointerId);
+                              const isResize = e.nativeEvent.offsetX > (barWidthPx - 12);
+                              setDrag({
+                                etapeId: etape.id,
+                                type: isResize ? "resize" : "move",
+                                startX: e.clientX,
+                                origDateDebut: etape.dateDebut ?? null,
+                                origDeadline: etape.deadline ?? null,
+                                deltaJours: 0,
+                              });
+                            }}
+                            onPointerMove={(e) => {
+                              if (!drag || drag.etapeId !== etape.id) return;
+                              const delta = pxToJours(e.clientX - drag.startX);
+                              if (delta === drag.deltaJours) return;
+                              setDrag((d) => d ? { ...d, deltaJours: delta } : null);
+
+                              if (drag.type === "move") {
+                                setDragPreview({
+                                  etapeId: etape.id,
+                                  dateDebut: shiftDate(drag.origDateDebut, delta),
+                                  deadline: shiftDate(drag.origDeadline, delta),
+                                });
+                              } else {
+                                setDragPreview({
+                                  etapeId: etape.id,
+                                  dateDebut: drag.origDateDebut,
+                                  deadline: shiftDate(drag.origDeadline, delta),
+                                });
+                              }
+                            }}
+                            onPointerUp={() => {
+                              if (!drag || !dragPreview || drag.deltaJours === 0) {
+                                setDrag(null);
+                                setDragPreview(null);
+                                return;
+                              }
+                              onEtapeDatesChange?.(
+                                drag.etapeId,
+                                dragPreview.dateDebut,
+                                dragPreview.deadline,
+                              );
+                              setDrag(null);
+                              setDragPreview(null);
+                            }}
+                            className={cn(
+                              "absolute top-3 h-5 rounded transition-opacity hover:opacity-90 flex items-center px-1 text-[10px] font-medium text-white overflow-hidden",
+                              etape.statut === "VALIDEE" && "opacity-50",
+                              etape.urgence === "retard" && "ring-1 ring-red-500"
+                            )}
+                            style={{
+                              left: drag?.etapeId === etape.id && drag?.type === "move"
+                                ? `${(barStart + drag.deltaJours) * COL_WIDTH}px`
+                                : `${barStart * COL_WIDTH}px`,
+                              width: `${barWidthPx}px`,
+                              backgroundColor: etape.projet.couleur ?? "#3b82f6",
+                              opacity: drag?.etapeId === etape.id ? 0.7 : 1,
+                              cursor: drag?.etapeId === etape.id && drag?.type === "resize" ? "ew-resize" : "grab",
+                            }}
+                          >
+                            <span className="text-[10px] font-medium text-white truncate leading-none">
+                              {etape.nom}
+                            </span>
+                          </button>
+                        )}
+
+                        {etape.deadline && (
+                          <div
+                            className={cn(
+                              "absolute top-2 h-3 w-3 rounded-full border-2 border-white z-20",
+                              etape.urgence === "retard"
+                                ? "bg-red-600"
+                                : etape.urgence === "critique"
+                                  ? "bg-orange-500"
+                                  : "bg-red-400"
+                            )}
+                            style={{
+                              left: `${dayPercent(etape.deadline) * COL_WIDTH + COL_WIDTH / 2 - 6}px`,
+                            }}
+                            title={`Deadline: ${etape.deadline}`}
+                          />
+                        )}
+
+                        {etape.consultants.length > 0 && etape.deadline && (
+                          <div
+                            className="absolute bottom-1 flex gap-0.5 z-20"
+                            style={{
+                              left: `${dayPercent(etape.dateDebut ?? etape.deadline) * COL_WIDTH}px`,
+                            }}
+                          >
+                            {etape.consultants.slice(0, 3).map((c) => (
+                              <span
+                                key={c.id}
+                                className="h-2 w-2 rounded-full border border-white"
+                                style={{ backgroundColor: c.couleur }}
+                                title={c.nom}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ))}
 

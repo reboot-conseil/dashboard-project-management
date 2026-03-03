@@ -26,6 +26,7 @@ import {
   GanttChart,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -196,6 +197,24 @@ export default function CalendrierPage() {
     setContextMenu(null);
   }
 
+  async function handleEtapeDatesChange(
+    etapeId: number,
+    dateDebut: string | null,
+    deadline: string | null
+  ) {
+    try {
+      await fetch(`/api/etapes/${etapeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateDebut, deadline }),
+      });
+      toast.success("Étape mise à jour");
+      await refresh();
+    } catch {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  }
+
   function handleContextMenu(e: React.MouseEvent, etape: EtapeInfo) {
     e.preventDefault();
     e.stopPropagation();
@@ -336,6 +355,7 @@ export default function CalendrierPage() {
               data={data}
               onSelectEtape={setSelectedEtape}
               onContextMenu={handleContextMenu}
+              onEtapeDatesChange={handleEtapeDatesChange}
             />
           ) : (
             <ChargeEquipeView
