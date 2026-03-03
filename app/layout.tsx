@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { AppShell } from "@/components/sidebar";
 import { PageTransition } from "@/components/layout/page-transition";
 import { ShortcutsModal } from "@/components/ui/shortcuts-modal";
+import { SessionProvider } from "@/components/session-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,11 +36,13 @@ export default function RootLayout({
         ` }} />
       </head>
       <body className="min-h-screen antialiased">
-        <AppShell>
-          <PageTransition>{children}</PageTransition>
-        </AppShell>
-        <Toaster richColors position="top-right" />
-        <ShortcutsModal />
+        <SessionProvider>
+          <AppShell>
+            <PageTransition>{children}</PageTransition>
+          </AppShell>
+          <Toaster richColors position="top-right" />
+          <ShortcutsModal />
+        </SessionProvider>
       </body>
     </html>
   );

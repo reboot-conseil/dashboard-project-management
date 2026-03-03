@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 function calculateScore(
   projet: { nom: string; client: string; statut: string },
@@ -25,6 +26,8 @@ function calculateScore(
 }
 
 export async function GET(req: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const query = req.nextUrl.searchParams.get("q");
 

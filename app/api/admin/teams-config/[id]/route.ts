@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/lib/auth-guard";
 
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireRole(["ADMIN"]);
+  if (authError) return authError;
   try {
     const { id } = await params;
     const numId = parseInt(id);

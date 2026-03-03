@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { startOfWeek, startOfMonth } from 'date-fns'
+import { requireAuth } from '@/lib/auth-guard'
 
 export async function GET(req: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const { searchParams } = new URL(req.url)
     const projetIdParam = searchParams.get('projetId')

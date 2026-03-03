@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { calculerProgression } from "@/lib/projet-metrics";
+import { requireAuth } from "@/lib/auth-guard";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const { id } = await params;
   const projetId = parseInt(id);
 

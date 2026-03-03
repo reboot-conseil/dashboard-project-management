@@ -3,8 +3,11 @@ import { NextResponse } from "next/server";
 import { differenceInDays, subDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const { searchParams } = new URL(request.url);
   const dateDebut = searchParams.get("dateDebut");
   const dateFin = searchParams.get("dateFin");

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireRole } from "@/lib/auth-guard";
 
 function escapeCsv(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return "";
@@ -19,6 +20,8 @@ function buildCsv(headers: string[], rows: (string | number | null)[][]): string
 }
 
 export async function GET(request: Request) {
+  const authError = await requireRole(["ADMIN", "PM"]);
+  if (authError) return authError;
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "activites";
   const dateDebut = searchParams.get("dateDebut");

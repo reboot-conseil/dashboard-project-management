@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { differenceInDays } from "date-fns";
+import { requireAuth } from "@/lib/auth-guard";
 
 export type AlerteSeverite = "critique" | "attention" | "info";
 export type AlerteType = "budget_depasse" | "budget_eleve" | "deadline_depassee" | "deadline_proche" | "marge_negative";
@@ -17,6 +18,8 @@ export interface Alerte {
 }
 
 export async function GET() {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const now = new Date();
 
   const projets = await prisma.projet.findMany({

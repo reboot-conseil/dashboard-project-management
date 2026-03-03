@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
+import { requireRole } from '@/lib/auth-guard'
 
 const execAsync = promisify(exec)
 
@@ -21,6 +22,8 @@ const VALID_MODES = ['dry-run', 'execute'] as const
 type CleanupMode = typeof VALID_MODES[number]
 
 export async function POST(request: Request) {
+  const authError = await requireRole(["ADMIN"]);
+  if (authError) return authError;
   try {
     if (!checkAdminSecret(request)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
@@ -82,6 +85,8 @@ export async function POST(request: Request) {
 
 // ── GET : statut du script (existe ? exécutable ?) ────────────────────────────
 export async function GET() {
+  const authError = await requireRole(["ADMIN"]);
+  if (authError) return authError;
   const { promises: fs } = await import('fs')
   const scriptPath = path.join(process.cwd(), 'scripts', 'cleanup.sh')
   try {

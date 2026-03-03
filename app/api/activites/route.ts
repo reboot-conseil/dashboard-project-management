@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { requireAuth, getSession } from "@/lib/auth-guard";
+import { getConsultantFilter } from "@/lib/consultant-filter";
 
 const activiteSchema = z.object({
   consultantId: z.number().int(),
@@ -14,6 +16,10 @@ const activiteSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+  const session = await getSession();
+  const forcedConsultantId = getConsultantFilter(session);
   const { searchParams } = new URL(request.url);
   const consultantId = searchParams.get("consultantId");
   const projetId = searchParams.get("projetId");
@@ -23,7 +29,12 @@ export async function GET(request: Request) {
 
   const where: Prisma.ActiviteWhereInput = {};
 
-  if (consultantId) where.consultantId = parseInt(consultantId);
+  // CONSULTANT role: always restrict to own data, ignoring query param
+  if (forcedConsultantId !== undefined) {
+    where.consultantId = forcedConsultantId;
+  } else if (consultantId) {
+    where.consultantId = parseInt(consultantId);
+  }
   if (projetId) where.projetId = parseInt(projetId);
   if (facturable === "true") where.facturable = true;
   if (facturable === "false") where.facturable = false;
@@ -76,6 +87,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const body = await request.json();
     const data = activiteSchema.parse(body);

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAuth } from "@/lib/auth-guard";
 
 const patchDatesSchema = z.object({
   dateDebut: z.string().nullable().optional(),
@@ -21,6 +22,8 @@ const updateSchema = z.object({
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -50,6 +53,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -93,6 +98,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const { id } = await params;
     await prisma.etape.delete({ where: { id: parseInt(id) } });

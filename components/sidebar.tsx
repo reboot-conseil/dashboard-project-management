@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  Users2,
   FolderOpen,
   Clock,
   CalendarDays,
@@ -20,7 +21,9 @@ import {
   Settings,
   Sun,
   Moon,
+  LogOut,
 } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/hooks/use-theme";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
@@ -28,8 +31,9 @@ import { useAlertCount } from "@/lib/hooks/use-alert-count";
 
 // ── Types ────────────────────────────────────────────────────────
 type SidebarMode = "full" | "collapsed" | "horizontal";
+type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly?: boolean };
 
-const NAV_ITEMS = [
+const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/consultants", label: "Consultants", icon: Users },
   { href: "/projets", label: "Projets", icon: FolderOpen },
@@ -37,6 +41,7 @@ const NAV_ITEMS = [
   { href: "/calendrier", label: "Calendrier", icon: CalendarDays },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/parametres", label: "Paramètres", icon: Settings },
+  { href: "/admin/users", label: "Utilisateurs", icon: Users2, adminOnly: true },
 ];
 
 // ── Sidebar Vertical (full & collapsed) ──────────────────────────
@@ -57,6 +62,7 @@ function SidebarVertical({
 }) {
   const collapsed = mode === "collapsed";
   const { theme, toggle } = useTheme();
+  const { data: session } = useSession();
 
   return (
     <div className="flex flex-col h-full">
@@ -75,7 +81,7 @@ function SidebarVertical({
 
       {/* Navigation */}
       <nav className={cn("flex-1 py-4 space-y-1 overflow-y-auto", collapsed ? "px-1.5" : "px-3")}>
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.filter((item) => !item.adminOnly || session?.user?.role === "ADMIN").map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           const showAlertBadge = href === "/" && alertCount > 0;
           return (
@@ -129,6 +135,18 @@ function SidebarVertical({
           );
         })}
       </nav>
+
+      {/* Logout */}
+      <div className={cn("border-t border-border shrink-0", collapsed ? "px-1.5 py-2" : "px-3 py-2")}>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+          aria-label="Se déconnecter"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          <span className={collapsed ? "sr-only" : ""}>Déconnexion</span>
+        </button>
+      </div>
 
       {/* Controls */}
       <div className={cn("border-t border-border shrink-0", collapsed ? "px-1.5 py-2" : "px-3 py-2")}>
@@ -198,7 +216,7 @@ function NavbarHorizontal({
 
       {/* Navigation (scrollable) */}
       <nav className="flex items-center gap-1 overflow-x-auto flex-1 min-w-0 scrollbar-none">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.filter((item) => !item.adminOnly).map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           const showAlertBadge = href === "/" && alertCount > 0;
           return (

@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { differenceInDays, subMonths, startOfMonth, endOfMonth, format } from "date-fns";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const { searchParams } = new URL(request.url);
   const dateDebut = searchParams.get("dateDebut");
   const dateFin = searchParams.get("dateFin");
