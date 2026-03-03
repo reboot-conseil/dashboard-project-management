@@ -44,7 +44,7 @@ export function GanttView({
   }
 
   const totalDays = days.length;
-  const COL_WIDTH = 36;
+  const COL_WIDTH = 44;
 
   function dayPercent(dateStr: string | null): number {
     if (!dateStr) return 0;
@@ -64,6 +64,16 @@ export function GanttView({
     <Card data-testid="gantt-view">
       <CardContent className="p-0 overflow-x-auto">
         <div style={{ minWidth: `${200 + totalDays * COL_WIDTH}px` }}>
+          {/* En-tête mois */}
+          <div className="flex border-b border-border" style={{ paddingLeft: "200px" }}>
+            <div
+              className="flex-shrink-0 px-2 py-1 text-xs font-semibold text-muted-foreground capitalize bg-muted/50"
+              style={{ width: `${totalDays * COL_WIDTH}px` }}
+            >
+              {format(monthStart, "MMMM yyyy", { locale: fr })}
+            </div>
+          </div>
+
           {/* Header jours */}
           <div className="flex border-b border-border" style={{ paddingLeft: "200px" }}>
             {days.map((day, i) => (
@@ -168,10 +178,12 @@ export function GanttView({
                           style={{
                             left: `${dayPercent(etape.dateDebut ?? etape.deadline) * COL_WIDTH}px`,
                             width: `${barWidth(etape.dateDebut, etape.deadline) * COL_WIDTH - 2}px`,
-                            backgroundColor: etape.projet.couleur,
+                            backgroundColor: etape.projet.couleur ?? "#3b82f6",
                           }}
                         >
-                          <span className="truncate">{etape.nom}</span>
+                          <span className="text-[10px] font-medium text-white truncate leading-none">
+                            {etape.nom}
+                          </span>
                         </button>
                       )}
 
