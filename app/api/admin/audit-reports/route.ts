@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import fs from 'fs/promises'
 import path from 'path'
+import { requireRole } from '@/lib/auth-guard'
 
 // ── Sécurité minimale ─────────────────────────────────────────────────────────
 function checkAdminSecret(request: Request): boolean {
@@ -52,6 +53,8 @@ function computeCleanlinessScore(state: {
 
 // ── Route GET ─────────────────────────────────────────────────────────────────
 export async function GET(request: Request) {
+  const authError = await requireRole(["ADMIN"]);
+  if (authError) return authError;
   try {
     if (!checkAdminSecret(request)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })

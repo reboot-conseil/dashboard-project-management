@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { calculerProgression } from "@/lib/projet-metrics";
+import { requireRole } from "@/lib/auth-guard";
 
 export async function GET(request: Request) {
+  const authError = await requireRole(["ADMIN", "PM"]);
+  if (authError) return authError;
   const { searchParams } = new URL(request.url);
   const dateDebut = searchParams.get("dateDebut");
   const dateFin = searchParams.get("dateFin");

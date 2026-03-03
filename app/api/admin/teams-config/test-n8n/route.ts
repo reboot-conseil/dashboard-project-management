@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireRole } from "@/lib/auth-guard";
 
 export async function POST() {
+  const authError = await requireRole(["ADMIN"]);
+  if (authError) return authError;
   try {
     const config = await prisma.integrationConfig.findFirst();
 

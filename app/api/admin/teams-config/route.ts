@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/lib/auth-guard";
 
 // GET - Récupérer config globale + toutes les configs projet
 export async function GET() {
+  const authError = await requireRole(["ADMIN"]);
+  if (authError) return authError;
   try {
     let globalConfig = await prisma.integrationConfig.findFirst();
 
@@ -43,6 +46,8 @@ export async function GET() {
 
 // POST - Créer ou mettre à jour config d'un projet (upsert)
 export async function POST(req: NextRequest) {
+  const authError = await requireRole(["ADMIN"]);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { projetId, canalNom, canalId, webhookUrl, logAutoActif } = body;
@@ -85,6 +90,8 @@ export async function POST(req: NextRequest) {
 
 // PUT - Modifier config globale
 export async function PUT(req: NextRequest) {
+  const authError = await requireRole(["ADMIN"]);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { n8nUrl, webhookSecret, emailDomain, actif } = body;

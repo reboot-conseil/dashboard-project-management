@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAuth } from "@/lib/auth-guard";
 
 const updateSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
@@ -15,6 +16,8 @@ const updateSchema = z.object({
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const { id } = await params;
   const projet = await prisma.projet.findUnique({
     where: { id: parseInt(id) },
@@ -52,6 +55,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -82,6 +87,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const { id } = await params;
     const pid = parseInt(id);

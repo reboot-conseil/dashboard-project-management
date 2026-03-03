@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAuth } from "@/lib/auth-guard";
 
 const etapeSchema = z.object({
   projetId: z.number(),
@@ -13,6 +14,8 @@ const etapeSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const { searchParams } = new URL(request.url);
     const projetIdParam = searchParams.get("projetId");
@@ -72,6 +75,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const body = await request.json();
     const data = etapeSchema.parse(body);

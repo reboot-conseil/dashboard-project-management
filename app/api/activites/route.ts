@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { requireAuth } from "@/lib/auth-guard";
 
 const activiteSchema = z.object({
   consultantId: z.number().int(),
@@ -14,6 +15,8 @@ const activiteSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const { searchParams } = new URL(request.url);
   const consultantId = searchParams.get("consultantId");
   const projetId = searchParams.get("projetId");
@@ -76,6 +79,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const body = await request.json();
     const data = activiteSchema.parse(body);

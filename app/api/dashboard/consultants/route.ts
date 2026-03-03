@@ -13,9 +13,12 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
+import { requireAuth } from "@/lib/auth-guard";
 
 // GET /api/dashboard/consultants?consultantId=X&periode=mois|trimestre|annee
 export async function GET(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const { searchParams } = new URL(request.url);
   const consultantIdParam = searchParams.get("consultantId");
   const periode = searchParams.get("periode") ?? "mois";

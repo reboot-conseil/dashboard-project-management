@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { differenceInDays } from "date-fns";
 import { calculerProgression } from "@/lib/projet-metrics";
+import { requireAuth } from "@/lib/auth-guard";
 
 const projetSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
@@ -15,6 +16,8 @@ const projetSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const { searchParams } = new URL(request.url);
     const statut = searchParams.get("statut");
@@ -155,6 +158,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const body = await request.json();
     const data = projetSchema.parse(body);
