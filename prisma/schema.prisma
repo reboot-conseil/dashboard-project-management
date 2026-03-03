@@ -20,6 +20,12 @@ enum StatutEtape {
   VALIDEE
 }
 
+enum Role {
+  ADMIN
+  PM
+  CONSULTANT
+}
+
 model Consultant {
   id                     Int        @id @default(autoincrement())
   nom                    String
@@ -29,6 +35,8 @@ model Consultant {
   competences            String?
   couleur                String     @default("#8B5CF6")
   actif                  Boolean    @default(true)
+  password               String?
+  role                   Role       @default(CONSULTANT)
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt
   activites              Activite[]
