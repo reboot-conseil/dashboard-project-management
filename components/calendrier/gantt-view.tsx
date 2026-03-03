@@ -27,6 +27,8 @@ interface GanttViewProps {
   onEtapeDatesChange?: (etapeId: number, dateDebut: string | null, deadline: string | null) => void;
 }
 
+const COL_WIDTH = 44;
+
 function pxToJours(px: number): number {
   return Math.round(px / COL_WIDTH);
 }
@@ -35,8 +37,6 @@ function shiftDate(dateStr: string | null, delta: number): string | null {
   if (!dateStr) return null;
   return dateFnsFormat(addDays(parseISO(dateStr), delta), "yyyy-MM-dd");
 }
-
-const COL_WIDTH = 44;
 
 export function GanttView({
   currentDate,
@@ -254,9 +254,12 @@ export function GanttView({
                               setDrag(null);
                               setDragPreview(null);
                             }}
+                            onPointerCancel={() => {
+                              setDrag(null);
+                              setDragPreview(null);
+                            }}
                             className={cn(
                               "absolute top-3 h-5 rounded transition-opacity hover:opacity-90 flex items-center px-1 text-[10px] font-medium text-white overflow-hidden",
-                              etape.statut === "VALIDEE" && "opacity-50",
                               etape.urgence === "retard" && "ring-1 ring-red-500"
                             )}
                             style={{
@@ -265,7 +268,7 @@ export function GanttView({
                                 : `${barStart * COL_WIDTH}px`,
                               width: `${barWidthPx}px`,
                               backgroundColor: etape.projet.couleur ?? "#3b82f6",
-                              opacity: drag?.etapeId === etape.id ? 0.7 : 1,
+                              opacity: drag?.etapeId === etape.id ? 0.7 : etape.statut === "VALIDEE" ? 0.5 : 1,
                               cursor: drag?.etapeId === etape.id && drag?.type === "resize" ? "ew-resize" : "grab",
                             }}
                           >
