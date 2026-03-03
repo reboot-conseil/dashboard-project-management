@@ -15,7 +15,9 @@ export default auth((req) => {
     const url = req.nextUrl.clone()
     url.pathname = redirectTo
     if (redirectTo === "/login" && pathname !== "/login") {
-      url.searchParams.set("callbackUrl", pathname)
+      // Sanitise: only allow relative paths (starts with / but not //)
+      const safeCallback = pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : "/"
+      url.searchParams.set("callbackUrl", safeCallback)
     }
     return NextResponse.redirect(url)
   }

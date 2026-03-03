@@ -1,3 +1,12 @@
+/**
+ * Helpers d'authentification pour les routes API.
+ *
+ * Usage :
+ * - Utiliser `requireAuth()` pour les routes accessibles à tous les utilisateurs connectés.
+ * - Utiliser `requireRole(["ADMIN"])` pour les routes avec restriction de rôle.
+ *   requireRole() inclut déjà la vérification d'authentification — ne pas combiner les deux.
+ * - `getSession()` retourne la session courante pour filtrer les données.
+ */
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { Role } from "@prisma/client"
