@@ -20,7 +20,9 @@ import {
   Settings,
   Sun,
   Moon,
+  LogOut,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/hooks/use-theme";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
@@ -129,6 +131,18 @@ function SidebarVertical({
           );
         })}
       </nav>
+
+      {/* Logout */}
+      <div className={cn("border-t border-border shrink-0", collapsed ? "px-1.5 py-2" : "px-3 py-2")}>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+          aria-label="Se déconnecter"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          <span className={collapsed ? "sr-only" : ""}>Déconnexion</span>
+        </button>
+      </div>
 
       {/* Controls */}
       <div className={cn("border-t border-border shrink-0", collapsed ? "px-1.5 py-2" : "px-3 py-2")}>
