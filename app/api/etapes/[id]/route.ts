@@ -69,6 +69,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       updateData.nom = data.nom;
     }
 
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "Aucun champ à mettre à jour" }, { status: 400 });
+    }
+
     const etape = await prisma.etape.update({
       where: { id: parseInt(id) },
       data: updateData,
