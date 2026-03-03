@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import LoginPage from '@/app/login/page'
+import LoginPage from '@/app/(auth)/login/page'
 
 vi.mock('next-auth/react', () => ({
   signIn: vi.fn(),
@@ -32,6 +32,7 @@ describe('LoginPage', () => {
     expect(signIn).toHaveBeenCalledWith('credentials', expect.objectContaining({
       email: 'admin@company.com',
       password: 'password123',
+      redirect: false,
     }))
   })
 })
