@@ -2,6 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+const patchDatesSchema = z.object({
+  dateDebut: z.string().nullable().optional(),
+  deadline: z.string().nullable().optional(),
+  statut: z.enum(["A_FAIRE", "EN_COURS", "VALIDEE"]).optional(),
+  nom: z.string().min(1).optional(),
+});
+
 const updateSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
   description: z.string().nullable().optional(),
@@ -46,12 +53,21 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
+    const data = patchDatesSchema.parse(body);
 
-    const updateData: Record<string, unknown> = {};
-    if (body.statut !== undefined) updateData.statut = body.statut;
-    if (body.deadline !== undefined) updateData.deadline = body.deadline ? new Date(body.deadline) : null;
-    if (body.dateDebut !== undefined) updateData.dateDebut = body.dateDebut ? new Date(body.dateDebut) : null;
-    if (body.nom !== undefined) updateData.nom = body.nom;
+    const updateData: { dateDebut?: Date | null; deadline?: Date | null; statut?: "A_FAIRE" | "EN_COURS" | "VALIDEE"; nom?: string } = {};
+    if ("dateDebut" in data) {
+      updateData.dateDebut = data.dateDebut ? new Date(data.dateDebut) : null;
+    }
+    if ("deadline" in data) {
+      updateData.deadline = data.deadline ? new Date(data.deadline) : null;
+    }
+    if ("statut" in data && data.statut !== undefined) {
+      updateData.statut = data.statut;
+    }
+    if ("nom" in data && data.nom !== undefined) {
+      updateData.nom = data.nom;
+    }
 
     const etape = await prisma.etape.update({
       where: { id: parseInt(id) },
@@ -64,7 +80,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       },
     });
     return NextResponse.json(etape);
-  } catch {
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    }
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
