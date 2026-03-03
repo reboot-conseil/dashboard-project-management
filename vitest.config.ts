@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/__tests__/**/*.test.{ts,tsx}', '**/*.test.{ts,tsx}'],
-    exclude: ['node_modules', '.next', 'prisma'],
+    exclude: ['node_modules', '.next', 'prisma', '.worktrees'],
   },
   resolve: {
     alias: {
