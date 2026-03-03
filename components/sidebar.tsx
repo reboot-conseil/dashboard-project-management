@@ -8,7 +8,6 @@ import {
   Users,
   FolderOpen,
   Clock,
-  BarChart3,
   CalendarDays,
   Menu,
   X,
@@ -17,9 +16,8 @@ import {
   PanelLeftOpen,
   ArrowRightLeft,
   Bell,
-  Settings2,
   FileText,
-  ShieldCheck,
+  Settings,
   Sun,
   Moon,
 } from "lucide-react";
@@ -37,10 +35,8 @@ const NAV_ITEMS = [
   { href: "/projets", label: "Projets", icon: FolderOpen },
   { href: "/activites", label: "Activités", icon: Clock },
   { href: "/calendrier", label: "Calendrier", icon: CalendarDays },
-  { href: "/rapports", label: "Rapports", icon: BarChart3 },
   { href: "/documents", label: "Documents", icon: FileText },
-  { href: "/admin/teams-config", label: "Teams Config", icon: Settings2 },
-  { href: "/admin/audit", label: "Audit", icon: ShieldCheck },
+  { href: "/parametres", label: "Paramètres", icon: Settings },
 ];
 
 // ── Sidebar Vertical (full & collapsed) ──────────────────────────

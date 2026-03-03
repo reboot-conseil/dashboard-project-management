@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   TrendingUp,
   TrendingDown,
@@ -18,8 +19,10 @@ import {
   ArrowDownRight,
   ShieldAlert,
   Briefcase,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import {
   Card,
   CardHeader,
@@ -118,6 +121,26 @@ const STORAGE_KEY = "executive-objectifs";
 
 const PIE_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"];
 
+function exportCsvFacturation(data: ExecutiveData) {
+  const rows = [
+    ["Mois", "CA (EUR)", "Marge (EUR)", "Couts (EUR)"],
+    ...data.tendance12Mois.map((t) => [
+      t.mois ?? "",
+      String(Math.round(t.ca ?? 0)),
+      String(Math.round(t.marge ?? 0)),
+      String(Math.round(t.couts ?? 0)),
+    ]),
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `facturation-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── Page ──────────────────────────────────────────────────────────
 export default function ExecutivePage() {
   const [data, setData] = useState<ExecutiveData | null>(null);
@@ -196,18 +219,23 @@ export default function ExecutivePage() {
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vue Dirigeant</h1>
-          <p className="text-muted-foreground">Vision globale et pilotage stratégique</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openDialog} className="gap-1.5">
-            <Settings className="h-3.5 w-3.5" />
-            Configurer
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Vue Dirigeant"
+        subtitle="Performance annuelle et indicateurs stratégiques"
+        icon={<TrendingUp className="h-5 w-5" />}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => { if (data) exportCsvFacturation(data); }} disabled={!data} className="gap-1.5">
+              <Download className="h-4 w-4 mr-1.5" />
+              Export facturation
+            </Button>
+            <Button variant="outline" size="sm" onClick={openDialog} className="gap-1.5">
+              <Settings className="h-4 w-4 mr-1.5" />
+              Configurer
+            </Button>
+          </div>
+        }
+      />
 
       {/* ── 1. Performance Globale ─────────────────────────────── */}
       <Card>

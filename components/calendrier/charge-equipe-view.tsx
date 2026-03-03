@@ -13,6 +13,12 @@ interface ChargeEquipeViewProps {
   onContextMenu: (ev: React.MouseEvent, e: EtapeInfo) => void;
 }
 
+function chargeColor(pct: number): string {
+  if (pct >= 100) return "bg-destructive";
+  if (pct >= 80) return "bg-warning";
+  return "bg-success";
+}
+
 export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMenu }: ChargeEquipeViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 5 }, (_, i) => addDays(weekStart, i));
@@ -111,6 +117,14 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
                             : dispo ? <span className="text-[10px] font-medium text-emerald-600">🟢 {heures}h</span>
                             : <span className="text-[10px] font-medium">{heures}h</span>}
                         </div>
+                        {!libre && (
+                          <div className="h-1 w-full rounded-full bg-muted mb-1 overflow-hidden">
+                            <div
+                              className={cn("h-full rounded-full", chargeColor(Math.round((heures / 8) * 100)))}
+                              style={{ width: `${Math.min(100, Math.round((heures / 8) * 100))}%` }}
+                            />
+                          </div>
+                        )}
                         <div className="space-y-0.5">
                           {etapesJour.slice(0, 2).map((e) => (
                             <button key={e.id} onContextMenu={(ev) => onContextMenu(ev, e)} onClick={() => onSelectEtape(e)}

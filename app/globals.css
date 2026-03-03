@@ -176,3 +176,49 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Thème "Sobre & Classe" ──────────────────────────────────── */
+[data-color-theme="sobre"] {
+  --color-background:     #fafaf9;
+  --color-surface:        #ffffff;
+  --color-surface-raised: #f5f5f4;
+
+  --color-primary:        #475569;
+  --color-primary-hover:  #334155;
+  --color-accent:         #92400e;
+
+  --color-success:        #166534;
+  --color-warning:        #92400e;
+
+  --color-foreground:     #1c1917;
+  --color-muted-foreground: #6b7280;
+  --color-border:         #e7e5e4;
+  --color-ring:           #475569;
+
+  /* Consultants palette — tons sourds */
+  --color-consultant-1: #6d5ea8;
+  --color-consultant-2: #b06070;
+  --color-consultant-3: #8a6b30;
+  --color-consultant-4: #3d7a5c;
+  --color-consultant-5: #3b7088;
+  --color-consultant-6: #8a5530;
+
+  /* Projets palette — teintes neutres */
+  --color-projet-1: #475569;
+  --color-projet-2: #4b5563;
+  --color-projet-3: #374151;
+  --color-projet-4: #52525b;
+  --color-projet-5: #3f6212;
+  --color-projet-6: #7c2d12;
+}
+
+[data-color-theme="sobre"].dark {
+  --color-background:     #1c1917;
+  --color-surface:        #292524;
+  --color-surface-raised: #1c1917;
+  --color-primary:        #94a3b8;
+  --color-primary-hover:  #cbd5e1;
+  --color-foreground:     #f5f5f4;
+  --color-muted-foreground: #a8a29e;
+  --color-border:         #3d3836;
+}

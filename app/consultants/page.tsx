@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Pencil, ToggleLeft, ToggleRight, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { UserPlus, Users, Pencil, ToggleLeft, ToggleRight, ArrowUpRight, ArrowDownRight, Download } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,26 @@ interface ConsultantKpi {
   tauxOccupation: number;
   caMois: number;
   caMoisPrecedent: number;
+}
+
+function exportCsvConsultants(consultants: Consultant[]) {
+  const rows = [
+    ["Nom", "Email", "TJM (EUR)", "Actif"],
+    ...consultants.map((c) => [
+      c.nom ?? "",
+      c.email ?? "",
+      String(Number(c.tjm ?? 0)),
+      c.actif ? "Oui" : "Non",
+    ]),
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `consultants-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function ConsultantsPage() {
@@ -159,16 +180,23 @@ export default function ConsultantsPage() {
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Gestion des Consultants
-        </h1>
-        <Button onClick={handleAdd}>
-          <UserPlus className="h-4 w-4" />
-          Ajouter un consultant
-        </Button>
-      </div>
+      <PageHeader
+        title="Consultants"
+        subtitle={`${consultants.length} consultant${consultants.length > 1 ? "s" : ""}`}
+        icon={<Users className="h-5 w-5" />}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportCsvConsultants(consultants)}>
+              <Download className="h-4 w-4 mr-1.5" />
+              Exporter CSV
+            </Button>
+            <Button size="sm" onClick={handleAdd}>
+              <UserPlus className="h-4 w-4 mr-1.5" />
+              Nouveau consultant
+            </Button>
+          </div>
+        }
+      />
 
       {/* Table */}
       <div className="rounded-lg border border-border bg-card">

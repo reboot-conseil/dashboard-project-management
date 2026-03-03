@@ -15,7 +15,7 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
-  Calendar,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
@@ -26,6 +26,8 @@ import {
   GanttChart,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -195,6 +197,24 @@ export default function CalendrierPage() {
     setContextMenu(null);
   }
 
+  async function handleEtapeDatesChange(
+    etapeId: number,
+    dateDebut: string | null,
+    deadline: string | null
+  ) {
+    try {
+      await fetch(`/api/etapes/${etapeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateDebut, deadline }),
+      });
+      toast.success("Étape mise à jour");
+      await refresh();
+    } catch {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  }
+
   function handleContextMenu(e: React.MouseEvent, etape: EtapeInfo) {
     e.preventDefault();
     e.stopPropagation();
@@ -213,14 +233,13 @@ export default function CalendrierPage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
+      <PageHeader
+        title="Calendrier"
+        subtitle="Planification des étapes et charge équipe"
+        icon={<CalendarDays className="h-5 w-5" />}
+      />
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold">Calendrier</h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+        <div className="flex flex-wrap items-center gap-2">
             {/* Sélecteur de vue */}
             <div className="flex rounded-lg border border-border overflow-hidden">
               {(["mois", "gantt", "charge"] as VueType[]).map((v) => (
@@ -270,7 +289,6 @@ export default function CalendrierPage() {
                 <Users className="h-3 w-3" />Staffing hebdo
               </Button>
             </div>
-          </div>
         </div>
 
         <FiltresBar
@@ -337,6 +355,7 @@ export default function CalendrierPage() {
               data={data}
               onSelectEtape={setSelectedEtape}
               onContextMenu={handleContextMenu}
+              onEtapeDatesChange={handleEtapeDatesChange}
             />
           ) : (
             <ChargeEquipeView

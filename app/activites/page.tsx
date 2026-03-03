@@ -14,6 +14,32 @@ import { SemaineView } from "@/components/activites/semaine-view";
 import { ActivitesList } from "@/components/activites/activites-list";
 import { EditDialog } from "@/components/activites/edit-dialog";
 import { SaveFilterDialog } from "@/components/activites/save-filter-dialog";
+import { PageHeader } from "@/components/layout/page-header";
+import { Clock, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+function exportCsvActivites(activites: Activite[]) {
+  const rows = [
+    ["Date", "Consultant", "Projet", "Etape", "Heures", "Facturable", "Description"],
+    ...activites.map((a) => [
+      a.date ?? "",
+      a.consultant?.nom ?? "",
+      a.projet?.nom ?? "",
+      a.etape?.nom ?? "",
+      String(Number(a.heures ?? 0)),
+      a.facturable ? "Oui" : "Non",
+      a.description ?? "",
+    ]),
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `activites-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function ActivitesPage() {
   const router = useRouter();
@@ -269,14 +295,17 @@ export default function ActivitesPage() {
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6" onKeyDown={handleKeyDown}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Suivi des Activités</h1>
-          <p className="text-muted-foreground capitalize mt-1">
-            {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Activités"
+        subtitle={`${activites.length} activité${activites.length > 1 ? "s" : ""} sur la période`}
+        icon={<Clock className="h-5 w-5" />}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => exportCsvActivites(activites)}>
+            <Download className="h-4 w-4 mr-1.5" />
+            Exporter CSV
+          </Button>
+        }
+      />
 
       <SaisieRapide
         consultants={consultants}
