@@ -16,7 +16,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "db:seed-admin": "npx tsx prisma/seed-admin.ts"
+    "db:seed-admin": "npx tsx prisma/seed-admin.ts",
+    "db:migrate-data": "npx tsx prisma/migrate-data.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
