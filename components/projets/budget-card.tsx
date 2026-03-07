@@ -93,12 +93,6 @@ export function BudgetCard({ budgetNum, budgetConsomme, coutReel, marge }: Budge
           </div>
         </div>
 
-        {/* Barre de progression */}
-        <div className="space-y-1">
-          <Progress value={pctBudget} indicatorClassName={budgetColor(pctBudget)} />
-          <p className="text-xs text-muted-foreground text-right">{pctBudget}% consommé</p>
-        </div>
-
         {/* Alerte dépassement */}
         {budgetConsomme > budgetNum && (
           <div

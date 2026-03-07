@@ -2,21 +2,22 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { format, startOfWeek, addDays } from "date-fns";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import type { Consultant, Projet, Etape, Activite, Totaux, SavedFilter, EditForm } from "@/components/activites/types";
 import { getPeriodeDates } from "@/components/activites/types";
 import { SaisieRapide } from "@/components/activites/saisie-rapide";
 import type { SaisieRapideFormState } from "@/components/activites/saisie-rapide";
-import { SemaineView } from "@/components/activites/semaine-view";
 import { ActivitesList } from "@/components/activites/activites-list";
+import { ActivitesFeed } from "@/components/activites/activites-feed";
 import { EditDialog } from "@/components/activites/edit-dialog";
 import { SaveFilterDialog } from "@/components/activites/save-filter-dialog";
-import { PageHeader } from "@/components/layout/page-header";
-import { Clock, Download } from "lucide-react";
+import { Clock, Download, List, LayoutList, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function exportCsvActivites(activites: Activite[]) {
   const rows = [
@@ -43,7 +44,10 @@ function exportCsvActivites(activites: Activite[]) {
 
 export default function ActivitesPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const heuresRef = useRef<HTMLInputElement>(null);
+  const [viewMode, setViewMode] = useState<"table" | "feed">("table");
+  const [saisieOpen, setSaisieOpen] = useState(false);
 
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [projets, setProjets] = useState<Projet[]>([]);
@@ -67,7 +71,7 @@ export default function ActivitesPage() {
   const [filtreConsultant, setFiltreConsultant] = useState("");
   const [filtreProjet, setFiltreProjet] = useState("");
   const [filtrePeriode, setFiltrePeriode] = useState("month");
-  const [filtreFacturable, setFiltreFacturable] = useState("");
+  const [filtreFacturable] = useState("");
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingActivite, setEditingActivite] = useState<Activite | null>(null);
@@ -117,7 +121,6 @@ export default function ActivitesPage() {
     setFiltreConsultant(f.consultantId);
     setFiltreProjet(f.projetId);
     setFiltrePeriode(f.periode);
-    setFiltreFacturable(f.facturable);
     setSavedFiltersOpen(false);
     toast.success(`Filtre "${f.nom}" appliqué`);
   }
@@ -144,6 +147,19 @@ export default function ActivitesPage() {
     }
     loadRef();
   }, []);
+
+  // Pré-sélection consultant selon session (CONSULTANT role: forcé, autres: seulement si pas de préférence)
+  useEffect(() => {
+    if (!session?.user?.id || consultants.length === 0) return;
+    const sessionId = session.user.id;
+    const isConsultantRole = (session.user as { role?: string }).role === "CONSULTANT";
+    const match = consultants.find((c) => String(c.id) === sessionId);
+    if (!match) return;
+    setForm((f) => {
+      if (isConsultantRole || !f.consultantId) return { ...f, consultantId: sessionId };
+      return f;
+    });
+  }, [session, consultants]);
 
   const fetchEtapes = useCallback(async (projetId: string) => {
     if (!projetId) { setEtapes([]); setEtapesLoading(false); return; }
@@ -290,38 +306,69 @@ export default function ActivitesPage() {
     finally { setDeleting(false); }
   }
 
-  const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
-
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6" onKeyDown={handleKeyDown}>
-      <PageHeader
-        title="Activités"
-        subtitle={`${activites.length} activité${activites.length > 1 ? "s" : ""} sur la période`}
-        icon={<Clock className="h-5 w-5" />}
-        actions={
+    <div className="p-6 space-y-6" onKeyDown={handleKeyDown}>
+
+      {/* ── Page title ──────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <h1 className="text-lg font-semibold">Activités</h1>
+          <span className="text-sm text-muted-foreground">
+            {activites.length} activité{activites.length > 1 ? "s" : ""}
+            {totaux && Number(totaux.total) > 0 && ` · ${totaux.total}h`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Toggle Table / Feed */}
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => setViewMode("table")}
+              className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors${viewMode === "table" ? " bg-primary text-primary-foreground" : " bg-card text-muted-foreground hover:bg-muted"}`}
+            >
+              <List className="h-3.5 w-3.5" />Table
+            </button>
+            <button
+              onClick={() => setViewMode("feed")}
+              className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors${viewMode === "feed" ? " bg-primary text-primary-foreground" : " bg-card text-muted-foreground hover:bg-muted"}`}
+            >
+              <LayoutList className="h-3.5 w-3.5" />Feed
+            </button>
+          </div>
           <Button variant="outline" size="sm" onClick={() => exportCsvActivites(activites)}>
-            <Download className="h-4 w-4 mr-1.5" />
-            Exporter CSV
+            <Download className="h-4 w-4 mr-1.5" />Exporter
           </Button>
-        }
-      />
+          <Button size="sm" onClick={() => setSaisieOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />Saisir une activité
+          </Button>
+        </div>
+      </div>
 
-      <SaisieRapide
-        consultants={consultants}
-        projets={projets}
-        etapes={etapes}
-        etapesLoading={etapesLoading}
-        activites={activites}
-        form={form}
-        saving={saving}
-        heuresRef={heuresRef}
-        onFormChange={(field, value) => setForm((f) => ({ ...f, [field]: value }))}
-        onSave={handleQuickSave}
-      />
+      {/* Dialog Saisie Rapide */}
+      <Dialog open={saisieOpen} onOpenChange={setSaisieOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Saisir une activité</DialogTitle>
+          </DialogHeader>
+          <SaisieRapide
+            consultants={consultants}
+            projets={projets}
+            etapes={etapes}
+            etapesLoading={etapesLoading}
+            activites={activites}
+            form={form}
+            saving={saving}
+            heuresRef={heuresRef}
+            isConsultantRole={(session?.user as { role?: string })?.role === "CONSULTANT"}
+            onFormChange={(field, value) => setForm((f) => ({ ...f, [field]: value }))}
+            onSave={async () => { await handleQuickSave(); setSaisieOpen(false); }}
+          />
+        </DialogContent>
+      </Dialog>
 
-      <SemaineView activites={activites} weekDays={weekDays} />
-
+      {viewMode === "feed" ? (
+        <ActivitesFeed activites={activites} onEdit={openEdit} onDelete={openDelete} />
+      ) : (
       <ActivitesList
         activites={activites}
         totaux={totaux}
@@ -337,7 +384,7 @@ export default function ActivitesPage() {
         onFiltreConsultant={setFiltreConsultant}
         onFiltreProjet={setFiltreProjet}
         onFiltrePeriode={setFiltrePeriode}
-        onFiltreFacturable={setFiltreFacturable}
+        onFiltreFacturable={() => {}}
         onToggleSavedFilters={() => setSavedFiltersOpen((v) => !v)}
         onOpenSaveFilterDialog={() => setSaveFilterDialogOpen(true)}
         onApplyFilter={applyFilter}
@@ -345,6 +392,7 @@ export default function ActivitesPage() {
         onEdit={openEdit}
         onDelete={openDelete}
       />
+      )}
 
       <EditDialog
         open={editDialogOpen}

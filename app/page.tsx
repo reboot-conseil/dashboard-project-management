@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { BarChart3, Users, TrendingUp, LayoutDashboard } from "lucide-react";
+import { BarChart3, Users, TrendingUp } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DashboardConsultants } from "@/components/dashboard/DashboardConsultants";
 import { DashboardOperationnel } from "@/components/dashboard/DashboardOperationnel";
 import { DashboardStrategique } from "@/components/dashboard/DashboardStrategique";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
-import { PageHeader } from "@/components/layout/page-header";
+import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────
 type VueDashboard = "operationnel" | "consultants" | "strategique";
@@ -18,7 +18,6 @@ const VALID_VUES: readonly VueDashboard[] = ["operationnel", "consultants", "str
 export default function DashboardPage() {
   const [storedVue, setVue] = useLocalStorage<string>("dashboard-active-view", "operationnel");
 
-  // Validate stored value — fallback to "operationnel" if corrupted
   const vue: VueDashboard = VALID_VUES.includes(storedVue as VueDashboard)
     ? (storedVue as VueDashboard)
     : "operationnel";
@@ -38,40 +37,42 @@ export default function DashboardPage() {
   }, [setVue]);
 
   return (
-    <div className="min-h-screen p-6 md:p-10 max-w-7xl mx-auto">
-      <PageHeader
-        title="Dashboard"
-        subtitle="Vue d'ensemble de vos projets et consultants"
-        icon={<LayoutDashboard className="h-5 w-5" />}
-      />
-      <Tabs value={vue} onValueChange={setVue}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="operationnel" title="Vue Opérationnelle (Ctrl+1)">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Opérationnel
+    <Tabs value={vue} onValueChange={setVue}>
+      <div className="p-7 md:px-9 md:pt-7">
+
+        {/* ── Onglets vue en underline ────────────────────────── */}
+        <TabsList className="bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 w-full justify-start gap-0 mb-0">
+          <TabsTrigger
+            value="operationnel"
+            title="Vue Opérationnelle (Ctrl+1)"
+            className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2 text-[13px] font-medium bg-transparent text-[var(--color-muted-foreground)] data-[state=active]:border-[var(--color-primary)] data-[state=active]:text-[var(--color-primary)] data-[state=active]:font-semibold data-[state=active]:bg-transparent gap-1.5"
+          >
+            <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />Opérationnel
           </TabsTrigger>
-          <TabsTrigger value="consultants" title="Vue Consultants (Ctrl+2)">
-            <Users className="h-4 w-4 mr-2" />
-            Consultants
+          <TabsTrigger
+            value="consultants"
+            title="Vue Consultants (Ctrl+2)"
+            className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2 text-[13px] font-medium bg-transparent text-[var(--color-muted-foreground)] data-[state=active]:border-[var(--color-primary)] data-[state=active]:text-[var(--color-primary)] data-[state=active]:font-semibold data-[state=active]:bg-transparent gap-1.5"
+          >
+            <Users className="h-3.5 w-3.5" aria-hidden="true" />Consultants
           </TabsTrigger>
-          <TabsTrigger value="strategique" title="Vue Stratégique (Ctrl+3)">
-            <TrendingUp className="h-4 w-4 mr-2" />
-            Stratégique
+          <TabsTrigger
+            value="strategique"
+            title="Vue Stratégique (Ctrl+3)"
+            className="rounded-none border-b-2 border-transparent -mb-px px-4 py-2 text-[13px] font-medium bg-transparent text-[var(--color-muted-foreground)] data-[state=active]:border-[var(--color-primary)] data-[state=active]:text-[var(--color-primary)] data-[state=active]:font-semibold data-[state=active]:bg-transparent gap-1.5"
+          >
+            <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />Stratégique
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="operationnel">
-          <DashboardOperationnel />
-        </TabsContent>
+      </div>
 
-        <TabsContent value="consultants">
-          <DashboardConsultants />
-        </TabsContent>
-
-        <TabsContent value="strategique">
-          <DashboardStrategique />
-        </TabsContent>
-      </Tabs>
-    </div>
+      {/* ── Content ──────────────────────────────────────────── */}
+      <div className="px-7 md:px-9 pb-9 pt-6">
+        <TabsContent value="operationnel" className="mt-0"><DashboardOperationnel /></TabsContent>
+        <TabsContent value="consultants"  className="mt-0"><DashboardConsultants /></TabsContent>
+        <TabsContent value="strategique"  className="mt-0"><DashboardStrategique /></TabsContent>
+      </div>
+    </Tabs>
   );
 }

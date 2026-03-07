@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Users, Pencil, ToggleLeft, ToggleRight, ArrowUpRight, ArrowDownRight, Download } from "lucide-react";
-import { PageHeader } from "@/components/layout/page-header";
+import { UserPlus, Users, Pencil, ArrowUpRight, ArrowDownRight, Download } from "lucide-react";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -195,23 +194,20 @@ export default function ConsultantsPage() {
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
-      <PageHeader
-        title="Consultants"
-        subtitle={`${consultants.length} consultant${consultants.length > 1 ? "s" : ""}`}
-        icon={<Users className="h-5 w-5" />}
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => exportCsvConsultants(consultants)}>
-              <Download className="h-4 w-4 mr-1.5" />
-              Exporter CSV
-            </Button>
-            <Button size="sm" onClick={handleAdd}>
-              <UserPlus className="h-4 w-4 mr-1.5" />
-              Nouveau consultant
-            </Button>
-          </div>
-        }
-      />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <h1 className="text-lg font-semibold">{consultants.length} consultant{consultants.length > 1 ? "s" : ""}</h1>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportCsvConsultants(consultants)}>
+            <Download className="h-4 w-4 mr-1.5" />Exporter CSV
+          </Button>
+          <Button size="sm" onClick={handleAdd}>
+            <UserPlus className="h-4 w-4 mr-1.5" />Nouveau consultant
+          </Button>
+        </div>
+      </div>
 
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
@@ -222,10 +218,9 @@ export default function ConsultantsPage() {
               <TableHead>Email</TableHead>
               <TableHead>TJM</TableHead>
               <TableHead>Coût Employeur</TableHead>
-              <TableHead>Compétences</TableHead>
               <TableHead className="text-right">Occupation</TableHead>
               <TableHead className="text-right">CA ce mois</TableHead>
-              <TableHead className="text-center">Tendance</TableHead>
+              <TableHead>Tendance</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -270,23 +265,6 @@ export default function ConsultantsPage() {
                       ? `${c.coutJournalierEmployeur.toLocaleString("fr-FR")} €`
                       : "—"}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {c.competences
-                        ?.split(",")
-                        .map((comp) => comp.trim())
-                        .filter(Boolean)
-                        .map((comp) => (
-                          <Badge
-                            key={comp}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {comp}
-                          </Badge>
-                        ))}
-                    </div>
-                  </TableCell>
                   <TableCell className="text-right">
                     {kpi ? (
                       <Badge
@@ -330,34 +308,26 @@ export default function ConsultantsPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={c.actif ? "success" : "secondary"}>
-                      {c.actif ? "Actif" : "Inactif"}
-                    </Badge>
+                    <button
+                      onClick={() => handleToggle(c)}
+                      disabled={togglingId === c.id}
+                      title={c.actif ? "Cliquer pour désactiver" : "Cliquer pour activer"}
+                      className="cursor-pointer disabled:opacity-50"
+                    >
+                      <Badge variant={c.actif ? "success" : "secondary"}>
+                        {c.actif ? "Actif" : "Inactif"}
+                      </Badge>
+                    </button>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(c)}
-                        title="Modifier"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleToggle(c)}
-                        disabled={togglingId === c.id}
-                        title={c.actif ? "Désactiver" : "Activer"}
-                      >
-                        {c.actif ? (
-                          <ToggleRight className="h-4 w-4 text-emerald-600" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(c)}
+                      title="Modifier"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
                 );

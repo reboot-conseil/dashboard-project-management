@@ -8,11 +8,7 @@ import {
   Eye,
   Pencil,
   Calendar,
-  AlertTriangle,
-  Timer,
-  DollarSign,
   Search,
-  ArrowUpDown,
   ArrowUp,
   ArrowDown,
   SlidersHorizontal,
@@ -20,7 +16,6 @@ import {
   Download,
   Plus,
 } from "lucide-react";
-import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -60,22 +55,6 @@ interface ProjetListItem {
   progressionDateFinEstimee?: string | null;
 }
 
-function alertBadgeInfo(type: string) {
-  switch (type) {
-    case "budget_depasse":
-      return { label: "Budget dépassé", icon: DollarSign, color: "text-destructive bg-destructive/10" };
-    case "budget_eleve":
-      return { label: "Budget >80%", icon: DollarSign, color: "text-amber-700 bg-amber-500/10" };
-    case "marge_negative":
-      return { label: "Marge négative", icon: AlertTriangle, color: "text-destructive bg-destructive/10" };
-    case "deadline_depassee":
-      return { label: "Deadline dépassée", icon: Timer, color: "text-destructive bg-destructive/10" };
-    case "deadline_proche":
-      return { label: "Deadline proche", icon: Timer, color: "text-amber-700 bg-amber-500/10" };
-    default:
-      return null;
-  }
-}
 
 const STATUTS = [
   { value: "TOUS", label: "Tous" },
@@ -389,23 +368,20 @@ export default function ProjetsPage() {
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
-      <PageHeader
-        title="Projets"
-        subtitle={`${projets.length} projet${projets.length > 1 ? "s" : ""}`}
-        icon={<FolderOpen className="h-5 w-5" />}
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => exportCsvProjets(projets)}>
-              <Download className="h-4 w-4 mr-1.5" />
-              Exporter
-            </Button>
-            <Button size="sm" onClick={handleAdd}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Nouveau projet
-            </Button>
-          </div>
-        }
-      />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <FolderOpen className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <h1 className="text-lg font-semibold">{projets.length} projet{projets.length > 1 ? "s" : ""}</h1>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportCsvProjets(projets)}>
+            <Download className="h-4 w-4 mr-1.5" />Exporter
+          </Button>
+          <Button size="sm" onClick={handleAdd}>
+            <Plus className="h-4 w-4 mr-1.5" />Nouveau projet
+          </Button>
+        </div>
+      </div>
 
       {/* Filtres statut */}
       <div className="flex flex-wrap gap-2">
@@ -697,54 +673,6 @@ export default function ProjetsPage() {
                         </div>
                         <span className="text-muted-foreground w-8 text-right">{p.progressionRealisationPct ?? 0}%</span>
                       </div>
-                    </div>
-                  )}
-
-                  {/* KPI Badges */}
-                  {kpi && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {/* ROI */}
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
-                        kpi.roi > 50 ? "text-emerald-700 bg-emerald-500/10" : kpi.roi > 20 ? "text-amber-700 bg-amber-500/10" : "text-destructive bg-destructive/10"
-                      }`}>
-                        ROI {kpi.roi}%
-                      </span>
-                      {/* Burn Rate */}
-                      {kpi.burnRate > 0 && (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
-                          kpi.burnRate > 1.2 ? "text-destructive bg-destructive/10" : kpi.burnRate > 1 ? "text-amber-700 bg-amber-500/10" : "text-emerald-700 bg-emerald-500/10"
-                        }`}>
-                          Burn {kpi.burnRate}x
-                        </span>
-                      )}
-                      {/* Vélocité */}
-                      {kpi.velocite > 0 && (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
-                          kpi.velocite >= 1 ? "text-emerald-700 bg-emerald-500/10" : kpi.velocite >= 0.7 ? "text-amber-700 bg-amber-500/10" : "text-destructive bg-destructive/10"
-                        }`}>
-                          {kpi.velocite >= 1 ? "\u26A1" : "\uD83D\uDC0C"} {kpi.velocite}x
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Alertes */}
-                  {p.alertes && p.alertes.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {[...new Set(p.alertes)].map((alertType, index) => {
-                        const info = alertBadgeInfo(alertType);
-                        if (!info) return null;
-                        const Icon = info.icon;
-                        return (
-                          <span
-                            key={`${p.id}-${alertType}-${index}`}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${info.color}`}
-                          >
-                            <Icon className="h-3 w-3" />
-                            {info.label}
-                          </span>
-                        );
-                      })}
                     </div>
                   )}
 

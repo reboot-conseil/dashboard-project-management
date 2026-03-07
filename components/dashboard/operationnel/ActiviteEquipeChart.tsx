@@ -2,13 +2,12 @@
 
 import * as React from "react";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
@@ -29,43 +28,34 @@ interface ActiviteEquipeChartProps {
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload || payload.length === 0) return null;
 
-  const total = payload.reduce((s: number, p: any) => s + (Number(p.value) || 0), 0);
+  const entries = payload.filter((p: any) => (Number(p.value) || 0) > 0);
 
   return (
-    <div className="rounded-lg border border-border bg-card shadow-lg p-3 text-sm min-w-[180px]">
+    <div className="rounded-lg border border-border bg-card shadow-lg p-3 text-sm min-w-[160px]">
       <p className="font-semibold text-foreground mb-2">{label}</p>
-      {payload.map((entry: any) => (
-        entry.value > 0 && (
-          <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
-            <div className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-sm shrink-0"
-                style={{ backgroundColor: entry.fill }}
-              />
-              <span className="text-muted-foreground">{entry.name}</span>
-            </div>
-            <span className="font-medium tabular-nums">{entry.value}h</span>
+      {entries.map((entry: any) => (
+        <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2 w-2 rounded-full shrink-0"
+              style={{ backgroundColor: entry.stroke }}
+            />
+            <span className="text-muted-foreground text-xs">{entry.name}</span>
           </div>
-        )
+          <span className="font-medium tabular-nums text-xs">{entry.value}h</span>
+        </div>
       ))}
-      <div className="border-t border-border mt-2 pt-2 flex justify-between">
-        <span className="text-muted-foreground font-medium">Total</span>
-        <span className="font-bold tabular-nums">{Math.round(total * 10) / 10}h</span>
-      </div>
     </div>
   );
 }
 
-// ── Custom Legend ──────────────────────────────────────────────────────
+// ── Légende compacte ───────────────────────────────────────────────────
 function CustomLegend({ consultants }: { consultants: ConsultantChart[] }) {
   return (
     <div className="flex flex-wrap gap-3 justify-center mt-2">
       {consultants.map((c) => (
         <div key={c.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span
-            className="inline-block h-3 w-3 rounded-sm shrink-0"
-            style={{ backgroundColor: c.couleur }}
-          />
+          <span className="inline-block h-2 w-4 rounded-sm shrink-0" style={{ backgroundColor: c.couleur }} />
           {c.nom}
         </div>
       ))}
@@ -85,8 +75,16 @@ export function ActiviteEquipeChart({ data, consultants }: ActiviteEquipeChartPr
 
   return (
     <div className="space-y-2">
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+      <ResponsiveContainer width="100%" height={240}>
+        <AreaChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+          <defs>
+            {consultants.map((c) => (
+              <linearGradient key={c.id} id={`grad-${c.id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={c.couleur} stopOpacity={0.18} />
+                <stop offset="95%" stopColor={c.couleur} stopOpacity={0} />
+              </linearGradient>
+            ))}
+          </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
           <XAxis
             dataKey="jour"
@@ -99,28 +97,29 @@ export function ActiviteEquipeChart({ data, consultants }: ActiviteEquipeChartPr
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => `${v}h`}
-            width={36}
+            width={32}
           />
-          {/* Ligne 8h = journée standard */}
           <ReferenceLine
             y={8}
             stroke="var(--color-muted-foreground)"
             strokeDasharray="4 4"
-            strokeOpacity={0.4}
+            strokeOpacity={0.35}
             label={{ value: "8h", position: "insideTopRight", fontSize: 10, fill: "var(--color-muted-foreground)" }}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-muted)", opacity: 0.4 }} />
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--color-border)" }} />
           {consultants.map((c) => (
-            <Bar
+            <Area
               key={c.id}
               dataKey={c.nom}
-              stackId="equipe"
-              fill={c.couleur}
               name={c.nom}
-              radius={consultants[consultants.length - 1].id === c.id ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+              stroke={c.couleur}
+              strokeWidth={2}
+              fill={`url(#grad-${c.id})`}
+              dot={false}
+              activeDot={{ r: 4, fill: c.couleur, strokeWidth: 0 }}
             />
           ))}
-        </BarChart>
+        </AreaChart>
       </ResponsiveContainer>
       <CustomLegend consultants={consultants} />
     </div>
