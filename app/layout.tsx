@@ -5,6 +5,7 @@ import { AppShell } from "@/components/sidebar";
 import { PageTransition } from "@/components/layout/page-transition";
 import { ShortcutsModal } from "@/components/ui/shortcuts-modal";
 import { SessionProvider } from "@/components/session-provider";
+import { SplashScreen } from "@/components/splash-screen";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,19 +25,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={inter.variable}>
+    <html lang="fr" className={inter.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('theme');
+            var cl = document.documentElement.classList;
             if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-              document.documentElement.classList.add('dark');
+              cl.add('dark');
+            } else if (t === 'cerise') {
+              cl.add('theme-cerise');
+            } else if (t === 'reboot') {
+              cl.add('theme-reboot');
             }
           } catch(e) {}
         ` }} />
       </head>
       <body className="min-h-screen antialiased">
         <SessionProvider>
+          <SplashScreen />
           <AppShell>
             <PageTransition>{children}</PageTransition>
           </AppShell>
