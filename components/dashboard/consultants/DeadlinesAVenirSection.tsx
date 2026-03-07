@@ -2,7 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CheckCircle, ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowRight, AlertCircle, Clock, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -24,18 +24,21 @@ interface DeadlinesAVenirSectionProps {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
-function urgenceConfig(jours: number): {
+interface UrgenceConfig {
   label: string;
   badgeClass: string;
-  icon: string;
-} {
+  Icon: React.ElementType;
+  level: "critique" | "urgent" | "normal";
+}
+
+function urgenceConfig(jours: number): UrgenceConfig {
   if (jours < 0)
-    return { label: "En retard", badgeClass: "bg-destructive/10 text-destructive border-destructive/30", icon: "🔴" };
+    return { label: "En retard", badgeClass: "bg-destructive/10 text-destructive border-destructive/30", Icon: AlertCircle, level: "critique" };
   if (jours < 3)
-    return { label: "URGENT", badgeClass: "bg-destructive/10 text-destructive border-destructive/30", icon: "🔴" };
+    return { label: "Urgent", badgeClass: "bg-destructive/10 text-destructive border-destructive/30", Icon: AlertCircle, level: "urgent" };
   if (jours < 7)
-    return { label: "Proche", badgeClass: "bg-amber-100 text-amber-800 border-amber-200", icon: "⚠️" };
-  return { label: "À venir", badgeClass: "bg-blue-100 text-blue-800 border-blue-200", icon: "📅" };
+    return { label: "Proche", badgeClass: "bg-amber-100 text-amber-800 border-amber-200", Icon: Clock, level: "normal" };
+  return { label: "À venir", badgeClass: "bg-blue-50 text-blue-700 border-blue-200", Icon: Calendar, level: "normal" };
 }
 
 // ── Component ──────────────────────────────────────────────────────────
@@ -71,11 +74,12 @@ export function DeadlinesAVenirSection({ deadlines }: DeadlinesAVenirSectionProp
                 <span className="text-sm font-medium truncate">{d.etapeNom}</span>
                 <span
                   className={cn(
-                    "text-[10px] font-semibold px-1.5 py-0.5 rounded border",
+                    "inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border",
                     urgence.badgeClass
                   )}
                 >
-                  {urgence.icon} {urgence.label}
+                  <urgence.Icon className="h-3 w-3" aria-hidden="true" />
+                  {urgence.label}
                 </span>
               </div>
 

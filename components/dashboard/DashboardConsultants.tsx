@@ -326,7 +326,19 @@ export function DashboardConsultants() {
       ) : (
         <>
           {/* Section 1 : 4 KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-4">
+            <KpiCard
+              title="CA généré"
+              value={formatEuros(kpis.caGenere)}
+              icon={<DollarSign className="h-4 w-4" />}
+              trend={{
+                value: kpis.variationCA,
+                label: `${kpis.variationCA > 0 ? "+" : ""}${kpis.variationCA}% vs mois préc.`,
+              }}
+              isHero
+              subtitle={`TJM : ${formatEuros(data.consultant.tjm)}/j`}
+              style={{ animationDelay: "0ms" }}
+            />
             <KpiCard
               title="Heures ce mois"
               value={`${kpis.heuresTotal}h`}
@@ -336,17 +348,7 @@ export function DashboardConsultants() {
                 label: `${kpis.variationHeures > 0 ? "+" : ""}${kpis.variationHeures}h vs mois préc.`,
               }}
               subtitle={`${kpis.heuresBill}h facturables`}
-            />
-            <KpiCard
-              title="CA généré"
-              value={formatEuros(kpis.caGenere)}
-              icon={<DollarSign className="h-4 w-4" />}
-              trend={{
-                value: kpis.variationCA,
-                label: `${kpis.variationCA > 0 ? "+" : ""}${kpis.variationCA}% vs mois préc.`,
-              }}
-              variant={kpis.variationCA >= 0 ? "success" : "danger"}
-              subtitle={`TJM : ${formatEuros(data.consultant.tjm)}/j`}
+              style={{ animationDelay: "50ms" }}
             />
             <KpiCard
               title="Taux occupation"
@@ -354,6 +356,7 @@ export function DashboardConsultants() {
               icon={<Activity className="h-4 w-4" />}
               variant={tauxVariant(kpis.tauxOccupation)}
               subtitle={tauxLabel(kpis.tauxOccupation)}
+              style={{ animationDelay: "100ms" }}
             />
             <KpiCard
               title="Projets actifs"
@@ -370,6 +373,7 @@ export function DashboardConsultants() {
                       : "")
                   : "Aucun projet"
               }
+              style={{ animationDelay: "150ms" }}
             />
           </div>
 

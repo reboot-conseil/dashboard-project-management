@@ -209,16 +209,34 @@ export function TendancesPrevisionsChart({
         </ComposedChart>
       </ResponsiveContainer>
 
-      {/* Résumé prévisions */}
-      <div className="flex flex-wrap items-center gap-4 text-sm px-1">
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-6 rounded" style={{ background: "#2563eb", opacity: 0.5, borderTop: "2px dashed #2563eb" }} />
-          <span className="text-muted-foreground">Projection 3 mois :</span>
-          <span className="font-semibold">{formatEuros(projectionQ2)}</span>
+      {/* Légende réel vs prévision + stats */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xs px-1 pt-1 border-t border-border">
+        {/* Légende visuelle */}
+        <div className="flex items-center gap-4 text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <svg width="24" height="10" aria-hidden="true">
+              <line x1="0" y1="5" x2="24" y2="5" stroke="#2563eb" strokeWidth="2.5" />
+            </svg>
+            <span>Données réelles</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <svg width="24" height="10" aria-hidden="true">
+              <line x1="0" y1="5" x2="24" y2="5" stroke="#2563eb" strokeWidth="2" strokeDasharray="5 4" opacity="0.8" />
+            </svg>
+            <span>Prévisions</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">Moy. CA 3 mois :</span>
-          <span className="font-semibold">{formatEuros(moyenneCA3Mois)}/mois</span>
+
+        {/* Stats */}
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-muted-foreground">Projection 3 mois</p>
+            <p className="font-semibold text-foreground text-sm">{formatEuros(projectionQ2)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-muted-foreground">Moy. CA / mois</p>
+            <p className="font-semibold text-foreground text-sm">{formatEuros(moyenneCA3Mois)}</p>
+          </div>
         </div>
       </div>
     </div>

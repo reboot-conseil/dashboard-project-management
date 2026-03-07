@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -64,13 +65,24 @@ export function PlanningSemaineSection({ jours }: PlanningSemaineSectionProps) {
                       ? "text-muted-foreground"
                       : "text-foreground/60"
                   )}>
-                    {isSurcharge
-                      ? `⚠️ ${jour.totalHeures}h`
-                      : isVide
-                      ? "Libre"
-                      : isDisponible
-                      ? `🟢 ${8 - jour.totalHeures}h dispo`
-                      : `${jour.totalHeures}h`}
+                    {isSurcharge ? (
+                      <span className="flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                        {jour.totalHeures}h
+                      </span>
+                    ) : isVide ? (
+                      "Libre"
+                    ) : isDisponible ? (
+                      <span className="flex items-center gap-1">
+                        <span
+                          className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"
+                          aria-hidden="true"
+                        />
+                        {8 - jour.totalHeures}h dispo
+                      </span>
+                    ) : (
+                      `${jour.totalHeures}h`
+                    )}
                   </p>
                 )}
               </div>

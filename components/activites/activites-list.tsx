@@ -89,6 +89,18 @@ export function ActivitesList({
 
         {/* Saved filters bar */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
+          {/* Effacer tout si filtres actifs */}
+          {(filtreConsultant || filtreProjet || filtreFacturable || filtrePeriode !== "month") && (
+            <button
+              onClick={() => { onFiltreConsultant(""); onFiltreProjet(""); onFiltreFacturable(""); onFiltrePeriode("month"); }}
+              className="flex items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
+            >
+              <Trash2 className="h-3 w-3" />Effacer filtres
+              <span className="ml-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
+                {[filtreConsultant, filtreProjet, filtreFacturable, filtrePeriode !== "month" ? "1" : ""].filter(Boolean).length}
+              </span>
+            </button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -152,6 +164,7 @@ export function ActivitesList({
           </p>
         ) : (
           <>
+            <div className="overflow-x-auto">
             <Table data-testid="activites-table">
               <TableHeader>
                 <TableRow>
@@ -226,6 +239,7 @@ export function ActivitesList({
                 </AnimatePresence>
               </TableBody>
             </Table>
+            </div>
 
             {/* Totaux */}
             <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border" data-testid="totaux">

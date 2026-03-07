@@ -26,7 +26,6 @@ import { PrioritesSection } from "@/components/dashboard/operationnel/PrioritesS
 import { ProjetsASurveillerList } from "@/components/dashboard/operationnel/ProjetsASurveillerList";
 import { ActiviteEquipeChart } from "@/components/dashboard/operationnel/ActiviteEquipeChart";
 import { TendancesChart } from "@/components/dashboard/operationnel/TendancesChart";
-import { MesTachesSection } from "@/components/dashboard/operationnel/MesTachesSection";
 import { toast } from "sonner";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -259,13 +258,14 @@ export function DashboardOperationnel() {
           </SectionCard>
 
           {/* ── Section 2 : KPIs ──────────────────────────────────── */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* KPI 1 : Heures / Occupation */}
+          <section className="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-4">
+            {/* KPI 1 : Heures / Occupation — hero card */}
             <KpiCard
               title="Heures Équipe"
               value={`${kpis?.totalHeures ?? 0}h`}
               icon={<Target className="h-4 w-4" />}
               subtitle={`${kpis?.tauxOccupation ?? 0}% taux d'occupation`}
+              isHero
               variant={
                 (kpis?.tauxOccupation ?? 0) >= 80
                   ? "success"
@@ -273,6 +273,7 @@ export function DashboardOperationnel() {
                   ? "default"
                   : "warning"
               }
+              style={{ animationDelay: "0ms" }}
             />
 
             {/* KPI 2 : Décalage Planning */}
@@ -292,6 +293,7 @@ export function DashboardOperationnel() {
                   : "Aucun retard détecté"
               }
               variant={planningVariant}
+              style={{ animationDelay: "50ms" }}
             />
 
             {/* KPI 3 : Budget Alert */}
@@ -314,6 +316,7 @@ export function DashboardOperationnel() {
                   : "Tous les budgets sont OK"
               }
               variant={budgetVariant}
+              style={{ animationDelay: "100ms" }}
             />
 
             {/* KPI 4 : Marge Globale */}
@@ -323,11 +326,12 @@ export function DashboardOperationnel() {
               icon={<TrendingUp className="h-4 w-4" />}
               subtitle={formatEuros(kpis?.margeBrute ?? 0)}
               variant={margeVariant}
+              style={{ animationDelay: "150ms" }}
             />
           </section>
 
-          {/* ── Section 3 : Projets + Tâches ─────────────────────── */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* ── Section 3 : Projets à Surveiller ─────────────────── */}
+          <section className="grid grid-cols-1 gap-6">
             <SectionCard
               title="Projets à Surveiller"
               icon={<AlertCircle className="h-4 w-4" />}
@@ -340,13 +344,6 @@ export function DashboardOperationnel() {
               }
             >
               <ProjetsASurveillerList projets={data.projetsASurveiller} />
-            </SectionCard>
-
-            <SectionCard
-              title="Mes Tâches"
-              icon={<Target className="h-4 w-4" />}
-            >
-              <MesTachesSection />
             </SectionCard>
           </section>
 

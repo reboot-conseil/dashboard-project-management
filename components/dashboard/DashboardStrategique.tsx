@@ -242,14 +242,15 @@ export function DashboardStrategique() {
       </DashboardHeader>
 
       {/* 4 KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-4">
         <KpiCard
           title="CA (période)"
           value={formatEuros(kpis.caTotal)}
           icon={<TrendingUp className="h-4 w-4" />}
           trend={variationLabel(kpis.variationCA)}
-          variant={kpis.variationCA >= 0 ? "success" : "danger"}
+          isHero
           subtitle={`${stats.nbProjetsEnCours} projets en cours`}
+          style={{ animationDelay: "0ms" }}
         />
         <KpiCard
           title="Marge globale"
@@ -260,6 +261,7 @@ export function DashboardStrategique() {
             kpis.tauxMarge >= 40 ? "success" : kpis.tauxMarge >= 30 ? "warning" : "danger"
           }
           subtitle={formatEuros(kpis.margeBrute)}
+          style={{ animationDelay: "50ms" }}
         />
         <KpiCard
           title="Coûts totaux"
@@ -268,6 +270,7 @@ export function DashboardStrategique() {
           trend={variationLabel(kpis.variationCout)}
           variant={kpis.variationCout <= 0 ? "success" : "warning"}
           subtitle="Charges employeur"
+          style={{ animationDelay: "100ms" }}
         />
         <KpiCard
           title="ROI moyen"
@@ -275,6 +278,7 @@ export function DashboardStrategique() {
           icon={<Target className="h-4 w-4" />}
           variant={kpis.roiMoyen >= 50 ? "success" : kpis.roiMoyen >= 20 ? "warning" : "danger"}
           subtitle={`${stats.nbConsultants} consultant${stats.nbConsultants > 1 ? "s" : ""}`}
+          style={{ animationDelay: "150ms" }}
         />
       </div>
 

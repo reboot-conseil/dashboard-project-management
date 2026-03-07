@@ -122,6 +122,7 @@ export function GanttView({
                 <div className="text-[9px] text-muted-foreground/60 capitalize">
                   {format(day, "EEE", { locale: fr })}
                 </div>
+                {isToday(day) && <div className="h-1 w-1 rounded-full bg-primary mx-auto mt-0.5" />}
               </div>
             ))}
           </div>
@@ -259,7 +260,7 @@ export function GanttView({
                               setDragPreview(null);
                             }}
                             className={cn(
-                              "absolute top-3 h-5 rounded transition-opacity hover:opacity-90 flex items-center px-1 text-[10px] font-medium text-white overflow-hidden",
+                              "absolute top-2 h-7 rounded transition-opacity hover:opacity-90 flex items-center px-1.5 text-[10px] font-medium text-white overflow-hidden",
                               etape.urgence === "retard" && "ring-1 ring-red-500"
                             )}
                             style={{
@@ -272,9 +273,14 @@ export function GanttView({
                               cursor: drag?.etapeId === etape.id && drag?.type === "resize" ? "ew-resize" : "grab",
                             }}
                           >
-                            <span className="text-[10px] font-medium text-white truncate leading-none">
+                            <span className="text-[10px] font-medium text-white truncate leading-none flex-1">
                               {etape.nom}
                             </span>
+                            {etape.dateDebut && etape.deadline && barWidthPx > 48 && (
+                              <span className="text-[9px] text-white/70 shrink-0 ml-1">
+                                J+{differenceInDays(parseISO(etape.deadline), parseISO(etape.dateDebut))}
+                              </span>
+                            )}
                           </button>
                         )}
 
@@ -297,19 +303,27 @@ export function GanttView({
 
                         {etape.consultants.length > 0 && etape.deadline && (
                           <div
-                            className="absolute bottom-1 flex gap-0.5 z-20"
+                            className="absolute bottom-0.5 flex z-20"
                             style={{
-                              left: `${dayPercent(etape.dateDebut ?? etape.deadline) * COL_WIDTH}px`,
+                              left: `${dayPercent(etape.dateDebut ?? etape.deadline) * COL_WIDTH + 2}px`,
                             }}
                           >
-                            {etape.consultants.slice(0, 3).map((c) => (
+                            {etape.consultants.slice(0, 3).map((c, ci) => (
                               <span
                                 key={c.id}
-                                className="h-2 w-2 rounded-full border border-white"
-                                style={{ backgroundColor: c.couleur }}
+                                className="h-3.5 w-3.5 rounded-full border-2 border-background block shrink-0"
+                                style={{ backgroundColor: c.couleur, marginLeft: ci > 0 ? "-4px" : undefined }}
                                 title={c.nom}
                               />
                             ))}
+                            {etape.consultants.length > 3 && (
+                              <span
+                                className="h-3.5 w-3.5 rounded-full border-2 border-background bg-muted text-[7px] font-bold flex items-center justify-center shrink-0"
+                                style={{ marginLeft: "-4px" }}
+                              >
+                                +{etape.consultants.length - 3}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>

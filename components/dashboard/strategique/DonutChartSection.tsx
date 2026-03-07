@@ -7,6 +7,7 @@ import {
   Cell,
   Tooltip,
   ResponsiveContainer,
+  Label,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -124,6 +125,34 @@ export function DonutChartSection({ data }: DonutChartSectionProps) {
               {chartData.map((entry) => (
                 <Cell key={entry.id} fill={entry.couleur} stroke="transparent" />
               ))}
+              <Label
+                content={({ viewBox }) => {
+                  const { cx, cy } = viewBox as { cx: number; cy: number };
+                  return (
+                    <g>
+                      <text
+                        x={cx}
+                        y={cy - 6}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="fill-foreground"
+                        style={{ fontSize: 14, fontWeight: 700 }}
+                      >
+                        {formatEuros(total)}
+                      </text>
+                      <text
+                        x={cx}
+                        y={cy + 12}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        style={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
+                      >
+                        {mode === "ca" ? "CA total" : mode === "cout" ? "Coûts" : "Marge"}
+                      </text>
+                    </g>
+                  );
+                }}
+              />
             </Pie>
             <Tooltip
               content={<CustomTooltip total={total} />}
@@ -131,11 +160,6 @@ export function DonutChartSection({ data }: DonutChartSectionProps) {
             />
           </PieChart>
         </ResponsiveContainer>
-
-        {/* Total au centre (simulé sous le graphique) */}
-        <p className="text-xs text-muted-foreground -mt-2">
-          Total : <span className="font-semibold text-foreground">{formatEurosFull(total)}</span>
-        </p>
       </div>
 
       {/* Légende top 5 */}

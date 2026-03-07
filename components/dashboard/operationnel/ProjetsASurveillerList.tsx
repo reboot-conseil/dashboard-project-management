@@ -13,6 +13,7 @@ export interface ProjetASurveiller {
   nom: string;
   client: string;
   statut: string;
+  couleur?: string;
   budget: number;
   pctBudget: number;
   budgetConsommePct: number;
@@ -62,7 +63,7 @@ function ProjetCard({ projet }: { projet: ProjetASurveiller }) {
   const isDeadlineCritique = joursD !== null && joursD !== undefined && joursD < 3;
 
   const borderClass = cn(
-    "rounded-lg border p-3 transition-colors hover:bg-muted/30",
+    "rounded-lg border transition-colors hover:bg-muted/30",
     projet.health === "critique" || isDeadlineCritique
       ? "border-destructive/30 bg-destructive/[0.02]"
       : isBudgetCritique
@@ -71,7 +72,18 @@ function ProjetCard({ projet }: { projet: ProjetASurveiller }) {
   );
 
   return (
-    <div className={borderClass}>
+    <div className={cn(borderClass, "flex overflow-hidden")}>
+      {/* Left color bar */}
+      <div
+        className="w-1 shrink-0 self-stretch"
+        style={{
+          backgroundColor: projet.couleur ?? (
+            projet.health === "critique" ? "var(--color-destructive)" :
+            projet.health === "normal" ? "#f59e0b" : "#10b981"
+          ),
+        }}
+      />
+      <div className="flex-1 min-w-0 p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0 space-y-2">
           {/* Nom + client */}
@@ -160,6 +172,7 @@ function ProjetCard({ projet }: { projet: ProjetASurveiller }) {
             <ArrowRight className="h-3 w-3" />
           </button>
         </Link>
+      </div>
       </div>
     </div>
   );

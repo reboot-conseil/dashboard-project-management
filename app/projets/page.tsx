@@ -42,6 +42,7 @@ interface ProjetListItem {
   dateDebut: string | null;
   dateFin: string | null;
   statut: "PLANIFIE" | "EN_COURS" | "EN_PAUSE" | "TERMINE";
+  couleur?: string;
   etapesTotal: number;
   etapesValidees: number;
   budgetConsomme: number;
@@ -589,8 +590,19 @@ export default function ProjetsPage() {
             return (
               <Card
                 key={p.id}
-                className="transition-shadow hover:shadow-md flex flex-col"
+                className="transition-shadow hover:shadow-md flex flex-col overflow-hidden"
               >
+                {/* Color bar */}
+                <div
+                  className="h-1.5 w-full shrink-0"
+                  style={{
+                    backgroundColor: p.couleur ?? (
+                      p.statut === "EN_COURS" ? "#3b82f6" :
+                      p.statut === "PLANIFIE" ? "#6366f1" :
+                      p.statut === "EN_PAUSE" ? "#f59e0b" : "#94a3b8"
+                    ),
+                  }}
+                />
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -739,9 +751,9 @@ export default function ProjetsPage() {
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-1">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 text-muted-foreground"
                       onClick={() => handleEdit(p)}
                     >
                       <Pencil className="h-3.5 w-3.5" />

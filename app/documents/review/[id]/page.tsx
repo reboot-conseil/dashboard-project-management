@@ -734,7 +734,7 @@ function ReviewContent() {
                   key={idx}
                   className="border rounded-lg p-3 space-y-2 relative group"
                 >
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <Input
                       type="date"
                       value={act.date}

@@ -18,6 +18,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -25,11 +26,16 @@ import {
   LayoutGrid,
   GanttChart,
   Users,
+  PanelRight,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import type { CalData, EtapeInfo, Filtres, VueType } from "@/components/calendrier/types";
@@ -39,6 +45,7 @@ import { MonthView } from "@/components/calendrier/month-view";
 import { GanttView } from "@/components/calendrier/gantt-view";
 import { ChargeEquipeView } from "@/components/calendrier/charge-equipe-view";
 import { EtapeSidebar } from "@/components/calendrier/etape-sidebar";
+import { WeekSidePanel } from "@/components/calendrier/week-side-panel";
 import { ContextMenu } from "@/components/calendrier/context-menu";
 
 const WEEK_DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -68,6 +75,7 @@ export default function CalendrierPage() {
     masquerPassees: true,
   });
   const [selectedEtape, setSelectedEtape] = useState<EtapeInfo | null>(null);
+  const [showWeekPanel, setShowWeekPanel] = useState(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; etape: EtapeInfo } | null>(null);
   const [showConfirmReport, setShowConfirmReport] = useState<{ etape: EtapeInfo; newDeadline: string } | null>(null);
   const [filtresOpen, setFiltresOpen] = useState<Record<string, boolean>>({});
@@ -231,13 +239,7 @@ export default function CalendrierPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      {/* Header */}
-      <PageHeader
-        title="Calendrier"
-        subtitle="Planification des étapes et charge équipe"
-        icon={<CalendarDays className="h-5 w-5" />}
-      />
+    <div className="p-6 space-y-4">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
             {/* Sélecteur de vue */}
@@ -280,15 +282,33 @@ export default function CalendrierPage() {
               Aujourd&apos;hui
             </Button>
 
-            {/* Vues rapides */}
-            <div className="flex gap-1">
-              <Button variant="outline" size="sm" onClick={applyRetroplanning} className="text-xs gap-1">
-                <Flag className="h-3 w-3" />Rétroplanning
-              </Button>
-              <Button variant="outline" size="sm" onClick={applyActivitesConsultants} className="text-xs gap-1">
-                <Users className="h-3 w-3" />Staffing hebdo
-              </Button>
-            </div>
+            {/* Vues rapides — dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs gap-1">
+                  <ChevronDown className="h-3 w-3" />Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={applyRetroplanning} className="text-xs gap-2 cursor-pointer">
+                  <Flag className="h-3 w-3" />Rétroplanning
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={applyActivitesConsultants} className="text-xs gap-2 cursor-pointer">
+                  <Users className="h-3 w-3" />Staffing hebdo
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Toggle WeekSidePanel */}
+            <Button
+              variant={showWeekPanel ? "default" : "outline"}
+              size="icon"
+              className="h-8 w-8 ml-auto"
+              onClick={() => setShowWeekPanel((v) => !v)}
+              title={showWeekPanel ? "Masquer le panneau semaine" : "Afficher le panneau semaine"}
+            >
+              <PanelRight className="h-4 w-4" aria-hidden="true" />
+            </Button>
         </div>
 
         <FiltresBar
@@ -335,12 +355,10 @@ export default function CalendrierPage() {
       <div className="flex gap-4">
         <div className="flex-1 min-w-0">
           {loading ? (
-            <Card>
-              <CardContent className="py-20 text-center text-muted-foreground">
-                <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
-                Chargement...
-              </CardContent>
-            </Card>
+            <div className="card py-20 text-center text-[var(--color-muted-foreground)]">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
+              Chargement...
+            </div>
           ) : vue === "mois" ? (
             <MonthView
               currentDate={currentDate}
@@ -367,7 +385,7 @@ export default function CalendrierPage() {
           )}
         </div>
 
-        {selectedEtape && (
+        {selectedEtape ? (
           <EtapeSidebar
             etape={selectedEtape}
             onClose={() => setSelectedEtape(null)}
@@ -376,27 +394,38 @@ export default function CalendrierPage() {
             onSupprimer={() => supprimerEtape(selectedEtape)}
             onNavigate={(id) => router.push(`/projets/${id}`)}
           />
-        )}
+        ) : showWeekPanel ? (
+          <WeekSidePanel
+            data={data}
+            currentDate={currentDate}
+            onSelectEtape={setSelectedEtape}
+          />
+        ) : null}
       </div>
 
       {/* Légende */}
-      <Card>
-        <CardContent className="py-3 px-4">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground text-sm">Consultants :</span>
-            {(data?.consultants ?? []).map((c) => (
-              <span key={c.id} className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.couleur }} />
-                {c.nom}
-              </span>
-            ))}
-            <span className="text-border">|</span>
-            <span className="flex items-center gap-1">🟢 On track</span>
-            <span className="flex items-center gap-1">🟡 Attention</span>
-            <span className="flex items-center gap-1">🔴 Dérive</span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-[var(--color-muted-foreground)] px-1 py-2 border-t border-[var(--color-border-muted)]">
+        <span className="font-medium text-[var(--color-foreground)] text-[13px]">Consultants :</span>
+        {(data?.consultants ?? []).map((c) => (
+          <span key={c.id} className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: c.couleur }} />
+            {c.nom}
+          </span>
+        ))}
+        <span className="text-[var(--color-border)]" aria-hidden="true">|</span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-[var(--color-success)]" aria-hidden="true" />
+          On track
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-[var(--color-warning)]" aria-hidden="true" />
+          Attention
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-[var(--color-destructive)]" aria-hidden="true" />
+          Dérive
+        </span>
+      </div>
 
       {/* Context menu */}
       {contextMenu && (

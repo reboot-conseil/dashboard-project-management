@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { KpiSparkline } from "@/components/charts/kpi-sparkline";
 import {
   Table,
   TableHeader,
@@ -29,6 +30,7 @@ interface Consultant {
   coutJournalierEmployeur: number | null;
   competences: string | null;
   actif: boolean;
+  couleur?: string;
 }
 
 interface ConsultantKpi {
@@ -36,6 +38,7 @@ interface ConsultantKpi {
   tauxOccupation: number;
   caMois: number;
   caMoisPrecedent: number;
+  sparkline: number[]; // CA des 4 derniers mois (du plus ancien au plus récent)
 }
 
 function exportCsvConsultants(consultants: Consultant[]) {
@@ -68,32 +71,44 @@ export default function ConsultantsPage() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [kpis, setKpis] = useState<Map<number, ConsultantKpi>>(new Map());
 
-  // Fetch KPI data for consultants
+  // Fetch KPI data for consultants (4 derniers mois pour sparkline)
   const fetchKpis = useCallback(async () => {
     try {
       const now = new Date();
-      const moisDebut = format(startOfMonth(now), "yyyy-MM-dd");
-      const moisFin = format(endOfMonth(now), "yyyy-MM-dd");
-      const prevDebut = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
-      const prevFin = format(endOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
+      const months = [3, 2, 1, 0].map((i) => {
+        const d = subMonths(now, i);
+        return {
+          debut: format(startOfMonth(d), "yyyy-MM-dd"),
+          fin: format(endOfMonth(d), "yyyy-MM-dd"),
+        };
+      });
 
-      const [rapRes, prevRes] = await Promise.all([
-        fetch(`/api/rapports?dateDebut=${moisDebut}&dateFin=${moisFin}`),
-        fetch(`/api/rapports?dateDebut=${prevDebut}&dateFin=${prevFin}`),
-      ]);
-      const [rapData, prevData] = await Promise.all([rapRes.json(), prevRes.json()]);
+      const results = await Promise.all(
+        months.map((m) =>
+          fetch(`/api/rapports?dateDebut=${m.debut}&dateFin=${m.fin}`).then((r) => r.json())
+        )
+      );
 
       const joursOuvres = Math.round(30 * 5 / 7);
       const capacite = joursOuvres * 8;
 
+      // Dernier mois = index 3, avant-dernier = index 2
+      const rapData = results[3];
+      const prevData = results[2];
+
       const map = new Map<number, ConsultantKpi>();
       for (const c of (rapData.parConsultant ?? [])) {
         const prevC = (prevData.parConsultant ?? []).find((pc: { id: number }) => pc.id === c.id);
+        // Sparkline: CA des 4 mois (du plus ancien au plus récent)
+        const sparkline = results.map(
+          (r) => (r.parConsultant ?? []).find((pc: { id: number }) => pc.id === c.id)?.ca ?? 0
+        );
         map.set(c.id, {
           id: c.id,
           tauxOccupation: capacite > 0 ? Math.round((c.heuresTotal / capacite) * 100) : 0,
           caMois: c.ca ?? 0,
           caMoisPrecedent: prevC?.ca ?? 0,
+          sparkline,
         });
       }
       setKpis(map);
@@ -199,7 +214,7 @@ export default function ConsultantsPage() {
       />
 
       {/* Table */}
-      <div className="rounded-lg border border-border bg-card">
+      <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -234,7 +249,18 @@ export default function ConsultantsPage() {
                 const tendance = kpi ? kpi.caMois - kpi.caMoisPrecedent : 0;
                 return (
                 <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.nom}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {c.couleur && (
+                        <span
+                          className="inline-block w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: c.couleur }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      {c.nom}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {c.email}
                   </TableCell>
@@ -282,11 +308,23 @@ export default function ConsultantsPage() {
                       <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell>
                     {kpi ? (
-                      <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${tendance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
-                        {tendance >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                      </span>
+                      <div className="flex items-center gap-2 min-w-[80px]">
+                        <div className="w-16 shrink-0">
+                          <KpiSparkline
+                            data={kpi.sparkline}
+                            color={tendance >= 0 ? "var(--color-success)" : "var(--color-destructive)"}
+                            height={28}
+                          />
+                        </div>
+                        <span className={`inline-flex items-center gap-0.5 text-xs font-medium shrink-0 ${tendance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                          {tendance >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                          {kpi.caMoisPrecedent > 0
+                            ? `${Math.abs(Math.round((tendance / kpi.caMoisPrecedent) * 100))}%`
+                            : ""}
+                        </span>
+                      </div>
                     ) : (
                       <span className="text-muted-foreground text-xs">—</span>
                     )}
