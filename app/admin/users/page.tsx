@@ -13,7 +13,7 @@ export default async function AdminUsersPage() {
   })
   const users = consultants.map((c) => ({ ...c, hasAccount: !!c.password, password: undefined }))
   return (
-    <div className="space-y-6">
+    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
       <PageHeader title="Gestion des utilisateurs" subtitle="Activez et gérez les comptes d'accès de l'équipe" />
       <AdminUsersClient users={users} />
     </div>
