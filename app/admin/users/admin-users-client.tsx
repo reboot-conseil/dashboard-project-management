@@ -1,18 +1,25 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Role } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select } from "@/components/ui/select"
 import { UserPlus, RotateCcw, UserX, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 
+type Role = "ADMIN" | "PM" | "CONSULTANT"
+const Role = { ADMIN: "ADMIN" as Role, PM: "PM" as Role, CONSULTANT: "CONSULTANT" as Role }
+
 type UserEntry = { id: number; nom: string; email: string; role: Role; actif: boolean; hasAccount: boolean }
 const ROLE_LABELS: Record<Role, string> = { ADMIN: "Administrateur", PM: "Chef de projet", CONSULTANT: "Consultant" }
+
+function nameToColor(nom: string): string {
+  const hue = nom.split("").reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
+  return `hsl(${hue}, 60%, 52%)`;
+}
 
 export function AdminUsersClient({ users }: { users: UserEntry[] }) {
   const router = useRouter()
@@ -52,43 +59,73 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader><CardTitle>Equipe ({users.length})</CardTitle></CardHeader>
-        <CardContent>
-          <div className="divide-y">
-            {users.map((user) => (
-              <div key={user.id} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium text-sm">{user.nom}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">Équipe <span className="text-muted-foreground font-normal text-sm">({users.length})</span></h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {users.map((user) => {
+            const color = nameToColor(user.nom);
+            const color2 = nameToColor(user.nom + "x");
+            const initials = user.nom.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+            return (
+              <div key={user.id} className="flex flex-col items-center gap-3 p-5 rounded-xl border border-border bg-card hover:shadow-md transition-all text-center">
+                {/* Avatar large */}
+                <div
+                  className="h-16 w-16 rounded-full flex items-center justify-center text-white text-xl font-bold select-none"
+                  style={{ background: `linear-gradient(135deg, ${color}, ${color2})` }}
+                >
+                  {initials}
                 </div>
-                <div className="flex items-center gap-2">
-                  {user.hasAccount ? <Badge variant="default">{ROLE_LABELS[user.role]}</Badge> : <Badge variant="outline">Pas de compte</Badge>}
-                  {!user.actif && <Badge variant="destructive">Inactif</Badge>}
-                  <div className="flex gap-1">
-                    {!user.hasAccount && <Button size="sm" variant="outline" onClick={() => setSelected(user)}><UserPlus className="h-3.5 w-3.5" /></Button>}
-                    {user.hasAccount && <Button size="sm" variant="ghost" onClick={() => resetPassword(user)}><RotateCcw className="h-3.5 w-3.5" /></Button>}
-                    {user.hasAccount && <Button size="sm" variant="ghost" onClick={() => toggleActive(user)}>{user.actif ? <UserX className="h-3.5 w-3.5 text-destructive" /> : <UserCheck className="h-3.5 w-3.5 text-green-600" />}</Button>}
-                  </div>
+
+                {/* Info */}
+                <div className="w-full min-w-0">
+                  <p className="font-semibold text-sm truncate">{user.nom}</p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{user.email}</p>
+                </div>
+
+                {/* Badges */}
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                  {user.hasAccount
+                    ? <Badge variant="default" className="text-[10px]">{ROLE_LABELS[user.role]}</Badge>
+                    : <Badge variant="outline" className="text-[10px]">Pas de compte</Badge>}
+                  {!user.actif && <Badge variant="destructive" className="text-[10px]">Inactif</Badge>}
+                  {user.actif && user.hasAccount && <Badge variant="success" className="text-[10px]">Actif</Badge>}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-1">
+                  {!user.hasAccount && (
+                    <Button size="sm" variant="outline" onClick={() => setSelected(user)} className="text-xs gap-1">
+                      <UserPlus className="h-3 w-3" />Activer
+                    </Button>
+                  )}
+                  {user.hasAccount && (
+                    <Button size="sm" variant="ghost" onClick={() => resetPassword(user)} className="h-8 w-8 p-0" title="Réinitialiser le mot de passe">
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {user.hasAccount && (
+                    <Button size="sm" variant="ghost" onClick={() => toggleActive(user)} className="h-8 w-8 p-0" title={user.actif ? "Désactiver" : "Réactiver"}>
+                      {user.actif ? <UserX className="h-3.5 w-3.5 text-destructive" /> : <UserCheck className="h-3.5 w-3.5 text-green-600" />}
+                    </Button>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            );
+          })}
+        </div>
+      </div>
       {selected && (
         <Card>
           <CardHeader><CardTitle>Activer le compte — {selected.nom}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>Role</Label>
-              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as Role)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ADMIN">Administrateur</SelectItem>
-                  <SelectItem value="PM">Chef de projet</SelectItem>
-                  <SelectItem value="CONSULTANT">Consultant</SelectItem>
-                </SelectContent>
+              <Select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as Role)}>
+                <option value="ADMIN">Administrateur</option>
+                <option value="PM">Chef de projet</option>
+                <option value="CONSULTANT">Consultant</option>
               </Select>
             </div>
             <div className="space-y-1.5">

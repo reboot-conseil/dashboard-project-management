@@ -68,8 +68,9 @@ function formatSize(bytes: number) {
 export default function UploadPage() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [documentType, setDocumentType] = useState("auto");
-  const [projetId, setProjetId] = useState("new");
+  const [contexte, setContexte] = useState("");
+  const [projectMode, setProjectMode] = useState<"new" | "existing">("new");
+  const [projetId, setProjetId] = useState("");
   const [projets, setProjets] = useState<Projet[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -121,8 +122,9 @@ export default function UploadPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("documentType", documentType);
-      formData.append("projetId", projetId);
+      formData.append("documentType", "auto");
+      formData.append("contexte", contexte);
+      formData.append("projetId", projectMode === "existing" && projetId ? projetId : "new");
 
       const res = await fetch("/api/documents/upload", {
         method: "POST",
@@ -221,51 +223,66 @@ export default function UploadPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">2. Configuration</CardTitle>
+          <CardDescription>Donnez du contexte à l&apos;IA pour une meilleure analyse</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Type document */}
+        <CardContent className="space-y-5">
+          {/* Contexte libre */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-slate-600">
-              Type de document
-            </Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {DOC_TYPES.map((dt) => (
-                <button
-                  key={dt.value}
-                  type="button"
-                  onClick={() => setDocumentType(dt.value)}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors text-left ${
-                    documentType === dt.value
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
-                  }`}
-                >
-                  {dt.label}
-                </button>
-              ))}
-            </div>
+            <Label className="text-xs font-medium">Contexte (optionnel)</Label>
+            <textarea
+              value={contexte}
+              onChange={(e) => setContexte(e.target.value)}
+              placeholder="Décrivez le document : type de mission, client, ce que vous souhaitez extraire (rétroplanning, activités, budget…)"
+              rows={3}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
           </div>
 
-          {/* Projet associé */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-slate-600">
-              Projet associé
-            </Label>
-            <Select
-              value={projetId}
-              onChange={(e) => setProjetId(e.target.value)}
-            >
-              <option value="new">Nouveau projet (sera créé)</option>
-              {projets.map((p) => (
-                <option key={p.id} value={String(p.id)}>
-                  {p.nom} — {p.client}
-                </option>
-              ))}
-            </Select>
+          {/* Mode projet */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Associer à</Label>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="projectMode"
+                  value="new"
+                  checked={projectMode === "new"}
+                  onChange={() => setProjectMode("new")}
+                  className="accent-primary"
+                />
+                <span className="text-sm">Nouveau projet / Rétroplanning</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="projectMode"
+                  value="existing"
+                  checked={projectMode === "existing"}
+                  onChange={() => setProjectMode("existing")}
+                  className="accent-primary"
+                />
+                <span className="text-sm">Projet existant</span>
+              </label>
+            </div>
+
+            {projectMode === "existing" && (
+              <Select
+                value={projetId}
+                onChange={(e) => setProjetId(e.target.value)}
+              >
+                <option value="">— Sélectionner un projet —</option>
+                {projets.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.nom} — {p.client}
+                  </option>
+                ))}
+              </Select>
+            )}
             <p className="text-xs text-muted-foreground">
-              {projetId === "new"
+              {projectMode === "new"
                 ? "Un nouveau projet sera créé à partir des données extraites."
-                : "Les étapes extraites seront ajoutées à ce projet."}
+                : "Les étapes et activités extraites seront ajoutées au projet sélectionné."}
             </p>
           </div>
         </CardContent>
