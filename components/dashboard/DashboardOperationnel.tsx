@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { ActiviteEquipeChart } from "@/components/dashboard/operationnel/ActiviteEquipeChart";
 import { TendancesChart } from "@/components/dashboard/operationnel/TendancesChart";
+import { RepartitionHeuresChart } from "@/components/dashboard/operationnel/RepartitionHeuresChart";
 import {
   getDefaultFilters,
   loadFilters,
@@ -36,6 +37,15 @@ interface ProjetASurveiller {
   prochainDeadline: { nom: string; deadline: string | null; joursRestants: number | null } | null;
 }
 
+interface ProchainDeadline {
+  id: number; nom: string; deadline: string; joursRestants: number;
+  projetId: number; projetNom: string; projetCouleur: string;
+}
+
+interface RepartitionProjet {
+  nom: string; couleur: string; heures: number; nbConsultants: number;
+}
+
 interface OperationnelData {
   kpis: {
     caTotal: number; coutTotal: number; margeBrute: number; tauxMarge: number;
@@ -50,6 +60,9 @@ interface OperationnelData {
     staffing: { sousSollicites: { id: number; nom: string }[]; surSollicites: { id: number; nom: string }[] };
   };
   projetsASurveiller: ProjetASurveiller[];
+  projetsActifs: ProjetASurveiller[];
+  prochainesDeadlines: ProchainDeadline[];
+  repartitionHeuresParProjet: RepartitionProjet[];
   activiteEquipe: { data: Record<string, unknown>[]; consultants: { id: number; nom: string; couleur: string }[] };
   tendances6Mois: { mois: string; ca: number; marge: number; heures: number }[];
   consultants: { id: number; nom: string; couleur: string; heuresPeriode: number; tauxOccupation: number }[];
@@ -211,7 +224,7 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
             {/* Projets Gérés */}
             <KpiCard
               title="Projets gérés"
-              value={String(data.projetsASurveiller.length)}
+              value={String(data.projetsActifs.length)}
               icon={<FolderOpen className="h-4 w-4" />}
               subtitle={`projets actifs sur la période`}
               variant={nbAlertes > 0 ? "warning" : "success"}
@@ -222,7 +235,7 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
           {/* ── Two-column middle ── */}
           <section className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
 
-            {/* LEFT: Projets actifs */}
+            {/* LEFT: Projets actifs — TOUS les EN_COURS */}
             <Card>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -230,7 +243,7 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
                     <FolderOpen className="h-3.5 w-3.5" />
                     Projets actifs
                     <span className="text-[11px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                      {data.projetsASurveiller.length}
+                      {data.projetsActifs.length}
                     </span>
                   </div>
                   <Link href="/projets" className="text-[12px] text-primary font-medium hover:underline">
@@ -239,27 +252,45 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
                 </div>
 
                 <div className="space-y-3">
-                  {data.projetsASurveiller.length === 0 ? (
+                  {data.projetsActifs.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4 text-center">Aucun projet actif</p>
                   ) : (
-                    data.projetsASurveiller.map((proj, i) => {
+                    data.projetsActifs.map((proj, i) => {
                       const color = PROJET_COLORS[i % PROJET_COLORS.length];
-                      const ecart = proj.ecart;
-                      const margeBadgeVariant = ecart >= 20 ? "danger" : ecart >= 10 ? "warning" : "success";
-                      const margeBadgeClasses = {
-                        danger: "bg-destructive/10 text-destructive",
-                        warning: "bg-warning/10 text-warning",
-                        success: "bg-success/10 text-success",
-                      }[margeBadgeVariant];
-                      const budgetBarColor = proj.budgetConsommePct > 100 ? "#b91c1c" : proj.budgetConsommePct > 85 ? "#f97316" : "#2563EB";
-                      const joursLabel = proj.prochainDeadline?.joursRestants != null
-                        ? proj.prochainDeadline.joursRestants < 0
-                          ? `J${proj.prochainDeadline.joursRestants} retard`
-                          : `J+${proj.prochainDeadline.joursRestants}`
-                        : null;
-                      const joursColor = proj.prochainDeadline?.joursRestants != null
-                        ? proj.prochainDeadline.joursRestants < 0 ? "text-destructive" : proj.prochainDeadline.joursRestants <= 7 ? "text-destructive" : proj.prochainDeadline.joursRestants <= 14 ? "text-warning" : "text-muted-foreground"
-                        : "";
+                      // Badge marge : basé sur tauxMarge réel (100 - ecart donne une approximation)
+                      // ecart = pctBudget - realisationPct (positif = en retard)
+                      // On utilise realisationPct comme proxy de la marge
+                      const tauxMarge = proj.realisationPct; // valeur disponible
+                      const margeBadgeClasses =
+                        tauxMarge < 30
+                          ? "bg-destructive/10 text-destructive"
+                          : tauxMarge < 40
+                          ? "bg-warning/10 text-warning-foreground"
+                          : "bg-success/10 text-success";
+                      const margeLabel =
+                        tauxMarge < 30 ? "Faible" : tauxMarge < 40 ? "Moyen" : "Bon";
+                      const budgetBarColor =
+                        proj.budgetConsommePct > 100
+                          ? "#b91c1c"
+                          : proj.budgetConsommePct > 85
+                          ? "#f97316"
+                          : "#2563EB";
+                      const joursLabel =
+                        proj.prochainDeadline?.joursRestants != null
+                          ? proj.prochainDeadline.joursRestants < 0
+                            ? `J${proj.prochainDeadline.joursRestants} retard`
+                            : `J+${proj.prochainDeadline.joursRestants}`
+                          : null;
+                      const joursColor =
+                        proj.prochainDeadline?.joursRestants != null
+                          ? proj.prochainDeadline.joursRestants < 0
+                            ? "text-destructive"
+                            : proj.prochainDeadline.joursRestants <= 7
+                            ? "text-destructive"
+                            : proj.prochainDeadline.joursRestants <= 14
+                            ? "text-warning"
+                            : "text-muted-foreground"
+                          : "";
 
                       return (
                         <div key={proj.id} className="relative rounded-xl border border-border overflow-hidden hover:-translate-y-px hover:shadow-sm transition-all">
@@ -273,7 +304,7 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
                               </div>
                               <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
                                 <span className={cn("text-[11.5px] font-semibold px-2 py-0.5 rounded-md", margeBadgeClasses)}>
-                                  Marge {ecart > 0 ? `-${ecart.toFixed(1)}` : `+${Math.abs(ecart).toFixed(1)}`}%
+                                  {margeLabel}
                                 </span>
                                 <Link href={`/projets/${proj.id}`} className="text-muted-foreground hover:text-primary transition-colors">
                                   <ArrowUpRight className="h-4 w-4" />
@@ -320,17 +351,23 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
                     <CalendarDays className="h-3.5 w-3.5" />
                     Deadlines à venir
                     <span className="text-[11px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                      {data.priorites.deadlinesCritiques.length}
+                      {data.prochainesDeadlines.length}
                     </span>
                   </div>
-                  {data.priorites.deadlinesCritiques.length === 0 ? (
+                  {data.prochainesDeadlines.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-2 text-center">Aucune deadline imminente</p>
                   ) : (
                     <div className="grid grid-cols-2 gap-1.5">
-                      {data.priorites.deadlinesCritiques.slice(0, 6).map((dl) => {
-                        const dateColor = dl.joursRestants < 0 ? "text-destructive" : dl.joursRestants <= 7 ? "text-destructive" : dl.joursRestants <= 14 ? "text-warning" : "text-muted-foreground";
-                        const projIdx = data.projetsASurveiller.findIndex((p) => p.id === dl.projetId);
-                        const dotColor = PROJET_COLORS[projIdx >= 0 ? projIdx % PROJET_COLORS.length : 0];
+                      {data.prochainesDeadlines.slice(0, 6).map((dl) => {
+                        const dateColor =
+                          dl.joursRestants < 0
+                            ? "text-destructive"
+                            : dl.joursRestants <= 7
+                            ? "text-destructive"
+                            : dl.joursRestants <= 14
+                            ? "text-warning"
+                            : "text-muted-foreground";
+                        const dotColor = dl.projetCouleur || PROJET_COLORS[0];
                         return (
                           <div key={dl.id} className="bg-muted/50 rounded-lg px-2.5 py-2">
                             <div className="flex items-baseline justify-between gap-1">
@@ -422,6 +459,22 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
               />
             </CardContent>
           </Card>
+
+          {data.repartitionHeuresParProjet.length > 0 && (
+            <Card>
+              <CardContent className="p-5 pb-3">
+                <div className="flex items-center gap-2 mb-4 text-[12.5px] font-semibold text-muted-foreground">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  Répartition heures par projet —{" "}
+                  <span className="text-foreground">{periodeLabel}</span>
+                </div>
+                <RepartitionHeuresChart
+                  data={data.repartitionHeuresParProjet}
+                  periodeLabel={periodeLabel}
+                />
+              </CardContent>
+            </Card>
+          )}
         </>
       ) : (
         <ErrorState onRetry={() => fetchData()} />
@@ -444,6 +497,7 @@ function LoadingState() {
           <div className="h-28 rounded-xl bg-muted" />
         </div>
       </div>
+      <div className="h-56 rounded-xl bg-muted" />
       <div className="h-56 rounded-xl bg-muted" />
       <div className="h-56 rounded-xl bg-muted" />
     </div>
