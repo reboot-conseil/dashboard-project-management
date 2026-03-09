@@ -13,9 +13,6 @@ import {
 } from "lucide-react";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { KpiCard } from "@/components/dashboard/KpiCard";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { Select } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { ProjetsEnCoursSection } from "@/components/dashboard/consultants/ProjetsEnCoursSection";
 import { DeadlinesAVenirSection } from "@/components/dashboard/consultants/DeadlinesAVenirSection";
 import { PlanningSemaineSection } from "@/components/dashboard/consultants/PlanningSemaineSection";
@@ -153,11 +150,11 @@ function formatEuros(v: number) {
 }
 
 function tauxLabel(t: number): string {
-  if (t > 100) return "🔴 Surcharge";
-  if (t >= 95) return "🟡 Pleine charge";
-  if (t >= 80) return "🟢 Optimal";
-  if (t >= 70) return "🟢 Bon";
-  return "🟡 Sous-utilisé";
+  if (t > 100) return "Surcharge";
+  if (t >= 95) return "Pleine charge";
+  if (t >= 80) return "Optimal";
+  if (t >= 70) return "Bon rythme";
+  return "Sous-utilisé";
 }
 
 function tauxVariant(t: number): "success" | "warning" | "danger" | "default" {
@@ -245,83 +242,65 @@ export function DashboardConsultants({ periode: _periodeProp }: DashboardConsult
   const { kpis, historique } = data;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <DashboardHeader
-        viewName="Analyse par Consultant"
-        icon={<Users className="h-5 w-5" />}
-        isRefreshing={isRefreshing}
-        onRefresh={() => fetchData(consultantId, periode, true)}
-      >
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Navigation précédent/suivant */}
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 w-7 p-0"
-              disabled={selectedIdx <= 0}
-              onClick={() => setConsultantId(consultants[selectedIdx - 1].id)}
-              title="Consultant précédent (←)"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 w-7 p-0"
-              disabled={selectedIdx >= consultants.length - 1}
-              onClick={() => setConsultantId(consultants[selectedIdx + 1].id)}
-              title="Consultant suivant (→)"
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-
-          {/* Sélecteur consultant */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground whitespace-nowrap">
-              Consultant :
-            </label>
-            <div className="relative">
-              <Select
-                value={consultantId?.toString() ?? ""}
-                onChange={(e) => setConsultantId(parseInt(e.target.value))}
-                className="h-8 text-xs pl-6 pr-3 w-[180px]"
-              >
-                {consultants.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nom}
-                  </option>
-                ))}
-              </Select>
-              {/* Dot couleur consultant */}
-              {selectedConsultant && (
-                <span
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full pointer-events-none"
-                  style={{ backgroundColor: selectedConsultant.couleur }}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Sélecteur période */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground whitespace-nowrap">
-              Période :
-            </label>
-            <Select
-              value={periode}
-              onChange={(e) => setPeriode(e.target.value as Periode)}
-              className="h-8 text-xs w-[140px]"
-            >
-              <option value="mois">Ce mois</option>
-              <option value="trimestre">Ce trimestre</option>
-              <option value="annee">Cette année</option>
-            </Select>
-          </div>
+    <div className="space-y-5">
+      {/* ── Inline filter bar (no header) ── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Consultant selector */}
+        <div className="relative">
+          {selectedConsultant && (
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full pointer-events-none z-10"
+              style={{ backgroundColor: selectedConsultant.couleur }} />
+          )}
+          <select
+            value={consultantId?.toString() ?? ""}
+            onChange={(e) => setConsultantId(parseInt(e.target.value))}
+            className="appearance-none bg-background border border-border rounded-xl pl-7 pr-8 py-1.5 text-[12.5px] font-medium text-muted-foreground focus:outline-none focus:border-primary cursor-pointer"
+          >
+            {consultants.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+          </select>
+          <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
         </div>
-      </DashboardHeader>
+
+        {/* Prev/next nav */}
+        <div className="flex items-center gap-1">
+          <button
+            className="p-1.5 rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+            disabled={selectedIdx <= 0}
+            onClick={() => setConsultantId(consultants[selectedIdx - 1].id)}
+            title="Consultant précédent (←)"
+          ><ChevronLeft className="h-3.5 w-3.5" /></button>
+          <button
+            className="p-1.5 rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+            disabled={selectedIdx >= consultants.length - 1}
+            onClick={() => setConsultantId(consultants[selectedIdx + 1].id)}
+            title="Consultant suivant (→)"
+          ><ChevronRight className="h-3.5 w-3.5" /></button>
+        </div>
+
+        {/* Period selector */}
+        <div className="relative">
+          <select
+            value={periode}
+            onChange={(e) => setPeriode(e.target.value as Periode)}
+            className="appearance-none bg-background border border-border rounded-xl px-3 py-1.5 pr-8 text-[12.5px] font-medium text-muted-foreground focus:outline-none focus:border-primary cursor-pointer"
+          >
+            <option value="mois">Ce mois</option>
+            <option value="trimestre">Ce trimestre</option>
+            <option value="annee">Cette année</option>
+          </select>
+          <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
+        </div>
+
+        {/* Refresh */}
+        <button
+          onClick={() => fetchData(consultantId, periode, true)}
+          disabled={isRefreshing}
+          className="p-1.5 rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          title="Rafraîchir"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+        </button>
+      </div>
 
       {/* Pas de consultant = état vide */}
       {!data.consultant ? (

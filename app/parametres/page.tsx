@@ -4,29 +4,27 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Settings } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useColorTheme, type ColorTheme } from "@/lib/hooks/use-color-theme";
-import { useTheme } from "@/lib/hooks/use-theme";
+import { useTheme, type Theme } from "@/lib/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { GLOBAL_SHORTCUTS } from "@/lib/shortcuts";
 
-const COLOR_THEMES: { value: ColorTheme; label: string; description: string; preview: string[] }[] = [
+const UI_THEMES: { value: Theme; label: string; description: string; preview: string[] }[] = [
   {
-    value: "classique",
-    label: "Classique",
-    description: "Bleu vif, couleurs saturées — thème par défaut",
-    preview: ["#1d4ed8", "#3b82f6", "#8B5CF6", "#EC4899", "#10B981"],
+    value: "light",
+    label: "Clair",
+    description: "Interface lumineuse, fond blanc",
+    preview: ["#2563eb", "#f5f7fa", "#e4e8ef"],
   },
   {
-    value: "sobre",
-    label: "Sobre & Classe",
-    description: "Bleu ardoise, tons neutres et élégants",
-    preview: ["#475569", "#94a3b8", "#6d5ea8", "#3d7a5c", "#8a6b30"],
+    value: "dark",
+    label: "Sombre",
+    description: "Interface sombre, confort nocturne",
+    preview: ["#3b82f6", "#0c0e14", "#252a3a"],
   },
 ];
 
 export default function ParametresPage() {
-  const { colorTheme, setColorTheme, hydrated: colorHydrated } = useColorTheme();
-  const { theme, toggle } = useTheme();
+  const { theme, setTheme: setUiTheme, hydrated: themeHydrated } = useTheme();
 
   return (
     <div className="min-h-screen p-6 md:p-10 max-w-3xl mx-auto">
@@ -44,40 +42,19 @@ export default function ParametresPage() {
             <CardDescription>Choisissez votre thème visuel et mode d&apos;affichage</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Mode clair / sombre */}
+            {/* Thème UI */}
             <div role="group" aria-labelledby="mode-label">
-              <p id="mode-label" className="text-sm font-medium mb-3">Mode</p>
-              <div className="flex gap-3">
-                <Button
-                  variant={theme === "light" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => theme === "dark" && toggle()}
-                >
-                  Clair
-                </Button>
-                <Button
-                  variant={theme === "dark" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => theme === "light" && toggle()}
-                >
-                  Sombre
-                </Button>
-              </div>
-            </div>
-
-            {/* Palette de couleurs */}
-            <div>
-              <p className="text-sm font-medium mb-3">Palette de couleurs</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {COLOR_THEMES.map((t) => (
+              <p id="mode-label" className="text-sm font-medium mb-3">Thème</p>
+              <div className="grid grid-cols-2 gap-3">
+                {UI_THEMES.map((t) => (
                   <button
                     key={t.value}
-                    onClick={() => setColorTheme(t.value)}
-                    aria-pressed={colorHydrated ? colorTheme === t.value : undefined}
-                    disabled={!colorHydrated}
+                    onClick={() => setUiTheme(t.value)}
+                    aria-pressed={themeHydrated ? theme === t.value : undefined}
+                    disabled={!themeHydrated}
                     className={cn(
                       "flex flex-col gap-2 p-4 rounded-lg border text-left transition-all",
-                      colorTheme === t.value
+                      theme === t.value
                         ? "border-primary ring-2 ring-primary ring-offset-2 bg-primary/5"
                         : "border-border hover:border-primary/50"
                     )}
@@ -86,7 +63,7 @@ export default function ParametresPage() {
                       {t.preview.map((c) => (
                         <span
                           key={c}
-                          className="h-5 w-5 rounded-full"
+                          className="h-5 w-5 rounded-full border border-black/10"
                           style={{ backgroundColor: c }}
                           aria-hidden="true"
                         />
@@ -100,6 +77,7 @@ export default function ParametresPage() {
                 ))}
               </div>
             </div>
+
           </CardContent>
         </Card>
 
