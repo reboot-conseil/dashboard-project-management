@@ -15,20 +15,33 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CalData, EtapeInfo } from "./types";
-import { healthIcon } from "./types";
+
+const WEEK_DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 interface MonthViewProps {
   currentDate: Date;
   data: CalData | null;
-  weekDayLabels: string[];
+  weekDayLabels?: string[];
   onSelectEtape: (e: EtapeInfo) => void;
   onContextMenu: (ev: React.MouseEvent, e: EtapeInfo) => void;
+}
+
+// Returns bar continuation type for a workday cell
+function barType(etape: EtapeInfo, key: string): "standalone" | "right" | "left" | "both" {
+  const start = etape.dateDebut;
+  const end = etape.deadline;
+  if (!end) return "standalone";
+  const comesLeft = start !== null && start < key;
+  const goesRight = end > key;
+  if (comesLeft && goesRight) return "both";
+  if (comesLeft && !goesRight) return "left";
+  if (!comesLeft && goesRight) return "right";
+  return "standalone";
 }
 
 export function MonthView({
   currentDate,
   data,
-  weekDayLabels,
   onSelectEtape,
   onContextMenu,
 }: MonthViewProps) {
@@ -43,23 +56,6 @@ export function MonthView({
     d = addDays(d, 1);
   }
 
-  function getEtapesForDay(day: Date): EtapeInfo[] {
-    if (!data) return [];
-    const key = format(day, "yyyy-MM-dd");
-    return data.etapes.filter((e) => e.deadline === key);
-  }
-
-  function getActivitesForDay(day: Date) {
-    if (!data) return [];
-    const key = format(day, "yyyy-MM-dd");
-    return data.activites.filter((a) => a.date === key);
-  }
-
-  function getHoursForDay(day: Date): number {
-    if (!data) return 0;
-    return data.heuresParJour[format(day, "yyyy-MM-dd")] || 0;
-  }
-
   function getEtapesOverlapping(day: Date): EtapeInfo[] {
     if (!data) return [];
     const key = format(day, "yyyy-MM-dd");
@@ -71,11 +67,18 @@ export function MonthView({
     });
   }
 
+  function getActivitesForDay(day: Date) {
+    if (!data) return [];
+    const key = format(day, "yyyy-MM-dd");
+    return data.activites.filter((a) => a.date === key);
+  }
+
   return (
     <Card data-testid="month-view">
       <CardContent className="p-0">
+        {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-border">
-          {weekDayLabels.map((label, i) => (
+          {WEEK_DAY_LABELS.map((label, i) => (
             <div
               key={label}
               className={cn(
@@ -87,96 +90,108 @@ export function MonthView({
             </div>
           ))}
         </div>
+
+        {/* Calendar grid */}
         <div className="grid grid-cols-7">
           {days.map((day, i) => {
             const inMonth = isSameMonth(day, currentDate);
             const today = isToday(day);
             const weekend = isWeekend(day);
-            const hours = getHoursForDay(day);
-            const dayActivites = getActivitesForDay(day);
-            const overlapping = getEtapesOverlapping(day);
+            const key = format(day, "yyyy-MM-dd");
+            const overlapping = weekend ? [] : getEtapesOverlapping(day);
+            const dayActivites = weekend ? [] : getActivitesForDay(day);
 
             return (
               <div
                 key={i}
                 className={cn(
-                  "relative min-h-[100px] p-1.5 border-b border-r border-border",
-                  weekend && "bg-muted/20",
-                  !inMonth && "bg-muted/10",
+                  "relative min-h-[90px] p-1 border-b border-r border-border",
+                  !inMonth && "opacity-50",
                   today && "ring-2 ring-inset ring-primary"
                 )}
+                style={weekend ? { background: "var(--color-surface-raised, var(--muted))" } : undefined}
               >
-                <div className="flex items-start justify-between mb-1">
+                {/* Date number */}
+                <div className="flex items-center justify-between mb-1">
                   <span
                     className={cn(
-                      "text-sm font-medium",
-                      !inMonth && "text-muted-foreground",
+                      "text-xs font-medium leading-none",
+                      weekend && "text-muted-foreground",
                       today &&
-                        "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                        "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center"
                     )}
                   >
                     {format(day, "d")}
                   </span>
-                  {hours > 0 && (
-                    <span className="text-[10px] text-emerald-700 font-medium">
-                      🟢 {hours}h
+                  {/* Heures loguées */}
+                  {(data?.heuresParJour?.[key] ?? 0) > 0 && (
+                    <span className="text-[10px] text-emerald-600 font-medium">
+                      {data!.heuresParJour[key]}h
                     </span>
                   )}
                 </div>
 
-                <div className="space-y-0.5">
-                  {overlapping.slice(0, 3).map((etape) => {
-                    const isDeadlineDay = etape.deadline === format(day, "yyyy-MM-dd");
-                    const isFirst =
-                      etape.dateDebut === format(day, "yyyy-MM-dd") || !etape.dateDebut;
-                    return (
-                      <button
-                        key={etape.id}
-                        onContextMenu={(ev) => onContextMenu(ev, etape)}
-                        onClick={() => onSelectEtape(etape)}
-                        title={`${etape.nom} (${etape.projet.nom})`}
-                        tabIndex={!inMonth ? -1 : undefined}
-                        className={cn(
-                          "w-full text-left rounded px-1 py-0.5 text-[10px] leading-tight truncate transition-opacity cursor-pointer",
-                          etape.statut === "VALIDEE" && "opacity-50",
-                          etape.urgence === "retard" && "ring-1 ring-red-400"
-                        )}
-                        style={{
-                          backgroundColor: etape.projet.couleur + "25",
-                          borderLeft: `3px solid ${etape.projet.couleur}`,
-                        }}
-                      >
-                        {isFirst && (
-                          <span className="truncate">
-                            {healthIcon(etape.health)} {etape.nom}
-                          </span>
-                        )}
-                        {!isFirst && <span>&nbsp;</span>}
-                        {isDeadlineDay && (
-                          <span className="ml-1 text-red-500">📍</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                  {overlapping.length > 3 && (
-                    <div className="text-[10px] text-muted-foreground pl-1">
-                      +{overlapping.length - 3} autres
-                    </div>
-                  )}
-                </div>
+                {/* Etape bars (workdays only) */}
+                {!weekend && (
+                  <div className="space-y-0.5 overflow-hidden">
+                    {overlapping.slice(0, 3).map((etape) => {
+                      const type = barType(etape, key);
+                      const isDeadline = etape.deadline === key;
+                      return (
+                        <button
+                          key={etape.id}
+                          onContextMenu={(ev) => onContextMenu(ev, etape)}
+                          onClick={() => onSelectEtape(etape)}
+                          title={`${etape.nom} — ${etape.projet.nom}`}
+                          tabIndex={!inMonth ? -1 : undefined}
+                          className={cn(
+                            "w-full text-left px-1 py-0.5 text-[10px] leading-tight truncate transition-opacity cursor-pointer h-[18px]",
+                            etape.statut === "VALIDEE" && "opacity-50",
+                            type === "standalone" && "rounded",
+                            type === "right" && "rounded-l",
+                            type === "left" && "rounded-r",
+                            type === "both" && "rounded-none",
+                          )}
+                          style={{
+                            backgroundColor: etape.projet.couleur + "30",
+                            borderLeft: type === "right" || type === "standalone" ? `3px solid ${etape.projet.couleur}` : `3px solid transparent`,
+                            marginRight: type === "right" || type === "both" ? "-4px" : undefined,
+                            marginLeft: type === "left" || type === "both" ? "-4px" : undefined,
+                          }}
+                        >
+                          {(type === "standalone" || type === "right") && (
+                            <span className="truncate flex items-center gap-1">
+                              {isDeadline && (
+                                <span
+                                  className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: etape.joursRestants !== null && etape.joursRestants < 0 ? "var(--color-destructive)" : etape.projet.couleur }}
+                                />
+                              )}
+                              {etape.nom}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {overlapping.length > 3 && (
+                      <div className="text-[10px] text-muted-foreground pl-1">
+                        +{overlapping.length - 3} autres
+                      </div>
+                    )}
+                  </div>
+                )}
 
+                {/* Activity dots */}
                 {dayActivites.length > 0 && (
                   <div className="flex gap-0.5 mt-1 flex-wrap">
                     {[
-                      ...new Map(
-                        dayActivites.map((a) => [a.consultant.id, a.consultant])
-                      ).values(),
+                      ...new Map(dayActivites.map((a) => [a.consultant.id, a.consultant])).values(),
                     ]
                       .slice(0, 4)
                       .map((c) => (
                         <span
                           key={c.id}
-                          className="h-2 w-2 rounded-full shrink-0"
+                          className="h-1.5 w-1.5 rounded-full shrink-0"
                           style={{ backgroundColor: c.couleur }}
                           title={c.nom}
                         />
