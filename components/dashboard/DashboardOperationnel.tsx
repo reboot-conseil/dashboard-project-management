@@ -111,7 +111,12 @@ function formatEuros(v: number) {
 }
 
 // ── Component ──────────────────────────────────────────────────────────
-export function DashboardOperationnel() {
+interface DashboardOperationnelProps {
+  /** Period selected in the parent top bar — overrides internal filter when provided */
+  periode?: string;
+}
+
+export function DashboardOperationnel({ periode: periodeProp }: DashboardOperationnelProps = {}) {
   const [hydrated, setHydrated] = useState(false);
   const [filters, setFilters] = useState<DashboardFiltersValue>(getDefaultFilters("week"));
   const [projets, setProjets] = useState<ProjetOption[]>([]);

@@ -131,7 +131,12 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 // ── Main component ──────────────────────────────────────────────────────
-export function DashboardStrategique() {
+interface DashboardStrategiqueProps {
+  /** Period selected in the parent top bar */
+  periode?: string;
+}
+
+export function DashboardStrategique({ periode: _periodeProp }: DashboardStrategiqueProps = {}) {
   const [filters, setFilters] = React.useState<DashboardFiltersValue>(() =>
     loadFilters(STORAGE_KEY, "month")
   );

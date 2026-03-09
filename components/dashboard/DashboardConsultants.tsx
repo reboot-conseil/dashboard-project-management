@@ -167,7 +167,12 @@ function tauxVariant(t: number): "success" | "warning" | "danger" | "default" {
 }
 
 // ── Main component ──────────────────────────────────────────────────────
-export function DashboardConsultants() {
+interface DashboardConsultantsProps {
+  /** Period selected in the parent top bar */
+  periode?: string;
+}
+
+export function DashboardConsultants({ periode: _periodeProp }: DashboardConsultantsProps = {}) {
   const [consultantId, setConsultantId] = React.useState<number | null>(null);
   const [periode, setPeriode] = React.useState<Periode>("mois");
   const [data, setData] = React.useState<ApiResponse | null>(null);

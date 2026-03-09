@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
-import { AppShell } from "@/components/sidebar";
-import { PageTransition } from "@/components/layout/page-transition";
+import { ClientShell } from "@/components/client-shell";
 import { ShortcutsModal } from "@/components/ui/shortcuts-modal";
 import { SessionProvider } from "@/components/session-provider";
 import { SplashScreen } from "@/components/splash-screen";
@@ -44,9 +43,7 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <SessionProvider>
           <SplashScreen />
-          <AppShell>
-            <PageTransition>{children}</PageTransition>
-          </AppShell>
+          <ClientShell>{children}</ClientShell>
           <Toaster richColors position="top-right" />
           <ShortcutsModal />
         </SessionProvider>
