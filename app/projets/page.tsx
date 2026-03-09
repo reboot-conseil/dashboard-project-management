@@ -6,34 +6,28 @@ import Link from "next/link";
 import {
   FolderOpen,
   Eye,
-  Pencil,
   Calendar,
   Search,
   ArrowUp,
   ArrowDown,
   ArrowUpRight,
-  SlidersHorizontal,
   X,
   Download,
   Plus,
   RefreshCw,
-  ChevronRight,
   Activity,
   DollarSign,
   BarChart3,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { ProjetForm, type ProjetData } from "@/components/projet-form";
 
 interface ProjetListItem {
@@ -107,7 +101,6 @@ const STORAGE_KEY = "projets-filters";
 interface SavedFilters {
   sortKey: SortKey;
   sortAsc: boolean;
-  showAdvanced: boolean;
 }
 
 function exportCsvProjets(projets: ProjetListItem[]) {
@@ -146,15 +139,6 @@ export default function ProjetsPage() {
   // Sort
   const [sortKey, setSortKey] = useState<SortKey>("nom");
   const [sortAsc, setSortAsc] = useState(true);
-
-  // Advanced filters
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [budgetMin, setBudgetMin] = useState("");
-  const [budgetMax, setBudgetMax] = useState("");
-  const [dateRangeDebut, setDateRangeDebut] = useState("");
-  const [dateRangeFin, setDateRangeFin] = useState("");
-  const [consultantFilter, setConsultantFilter] = useState("all");
-  const [onlyWithAlertes, setOnlyWithAlertes] = useState(false);
 
   // KPI data for projects
   interface ProjetKpi {
@@ -199,18 +183,6 @@ export default function ProjetsPage() {
       .catch(() => {});
   }, []);
 
-  // Consultant options for filter
-  const [consultantOptions, setConsultantOptions] = useState<{ id: number; nom: string }[]>([]);
-  useEffect(() => {
-    fetch("/api/consultants")
-      .then((r) => r.json())
-      .then((d) => {
-        const list = Array.isArray(d) ? d : d.consultants ?? [];
-        setConsultantOptions(list.filter((c: { actif?: boolean }) => c.actif !== false));
-      })
-      .catch(() => {});
-  }, []);
-
   // Load saved filters
   useEffect(() => {
     try {
@@ -219,16 +191,15 @@ export default function ProjetsPage() {
         const parsed: SavedFilters = JSON.parse(saved);
         if (parsed.sortKey) setSortKey(parsed.sortKey);
         if (typeof parsed.sortAsc === "boolean") setSortAsc(parsed.sortAsc);
-        if (typeof parsed.showAdvanced === "boolean") setShowAdvanced(parsed.showAdvanced);
       }
     } catch { /* ignore */ }
   }, []);
 
   // Save filters
   useEffect(() => {
-    const toSave: SavedFilters = { sortKey, sortAsc, showAdvanced };
+    const toSave: SavedFilters = { sortKey, sortAsc };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-  }, [sortKey, sortAsc, showAdvanced]);
+  }, [sortKey, sortAsc]);
 
   const fetchProjets = useCallback(async () => {
     try {
@@ -260,34 +231,6 @@ export default function ProjetsPage() {
           p.nom.toLowerCase().includes(q) ||
           p.client.toLowerCase().includes(q)
       );
-    }
-
-    // Budget range
-    if (budgetMin) {
-      const min = parseFloat(budgetMin);
-      if (!isNaN(min)) result = result.filter((p) => Number(p.budget) >= min);
-    }
-    if (budgetMax) {
-      const max = parseFloat(budgetMax);
-      if (!isNaN(max)) result = result.filter((p) => Number(p.budget) <= max);
-    }
-
-    // Date range
-    if (dateRangeDebut) {
-      result = result.filter((p) => p.dateDebut && p.dateDebut >= dateRangeDebut);
-    }
-    if (dateRangeFin) {
-      result = result.filter((p) => p.dateFin && p.dateFin <= dateRangeFin);
-    }
-
-    // Consultant assigné — we don't have consultantId on ProjetListItem, but we can filter
-    // by checking if project has activities for that consultant (requires API enhancement).
-    // For now, this is a client-side placeholder; consultant filter is handled server-side
-    // if the API supports it. We keep the UI filter state.
-
-    // Only with alertes
-    if (onlyWithAlertes) {
-      result = result.filter((p) => p.alertes && p.alertes.length > 0);
     }
 
     // Sort
@@ -322,17 +265,7 @@ export default function ProjetsPage() {
     });
 
     return result;
-  }, [projets, search, sortKey, sortAsc, budgetMin, budgetMax, dateRangeDebut, dateRangeFin, consultantFilter, onlyWithAlertes]);
-
-  // Count active advanced filters
-  const advancedFilterCount = [
-    !!budgetMin,
-    !!budgetMax,
-    !!dateRangeDebut,
-    !!dateRangeFin,
-    consultantFilter !== "all",
-    onlyWithAlertes,
-  ].filter(Boolean).length;
+  }, [projets, search, sortKey, sortAsc]);
 
   function handleAdd() {
     setEditingProjet(null);
@@ -363,15 +296,6 @@ export default function ProjetsPage() {
 
   function toggleSortOrder() {
     setSortAsc((v) => !v);
-  }
-
-  function resetAdvanced() {
-    setBudgetMin("");
-    setBudgetMax("");
-    setDateRangeDebut("");
-    setDateRangeFin("");
-    setConsultantFilter("all");
-    setOnlyWithAlertes(false);
   }
 
   function openDetail(id: number) {
@@ -459,98 +383,7 @@ export default function ProjetsPage() {
                 {sortAsc ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
               </Button>
             </div>
-
-            {/* Advanced toggle */}
-            <Button
-              variant={showAdvanced ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowAdvanced((v) => !v)}
-              className="gap-1.5"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filtres avancés
-              {advancedFilterCount > 0 && (
-                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-1">
-                  {advancedFilterCount}
-                </Badge>
-              )}
-            </Button>
           </div>
-
-          {/* Advanced filters panel */}
-          {showAdvanced && (
-            <div className="border border-border rounded-lg p-4 space-y-4 bg-muted/30">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Filtres avancés</p>
-                {advancedFilterCount > 0 && (
-                  <Button variant="ghost" size="sm" onClick={resetAdvanced} className="text-xs">
-                    Réinitialiser
-                  </Button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Budget min (€)</Label>
-                  <Input
-                    type="number"
-                    placeholder="ex: 10000"
-                    value={budgetMin}
-                    onChange={(e) => setBudgetMin(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Budget max (€)</Label>
-                  <Input
-                    type="number"
-                    placeholder="ex: 100000"
-                    value={budgetMax}
-                    onChange={(e) => setBudgetMax(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Consultant assigné</Label>
-                  <Select
-                    value={consultantFilter}
-                    onChange={(e) => setConsultantFilter(e.target.value)}
-                  >
-                    <option value="all">Tous</option>
-                    {consultantOptions.map((c) => (
-                      <option key={c.id} value={String(c.id)}>{c.nom}</option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Date début (à partir de)</Label>
-                  <Input
-                    type="date"
-                    value={dateRangeDebut}
-                    onChange={(e) => setDateRangeDebut(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Date fin (jusqu&apos;à)</Label>
-                  <Input
-                    type="date"
-                    value={dateRangeFin}
-                    onChange={(e) => setDateRangeFin(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-end pb-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={onlyWithAlertes}
-                      onCheckedChange={(v) => setOnlyWithAlertes(!!v)}
-                    />
-                    <Label className="text-xs cursor-pointer">
-                      Uniquement projets avec alertes
-                    </Label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Results count */}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -665,14 +498,8 @@ export default function ProjetsPage() {
                     <span className="text-[11.5px] font-bold text-muted-foreground w-9 text-right">{realisePct.toFixed(1)}%</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11.5px] text-muted-foreground">
-                    <span>{p.budgetConsomme.toLocaleString("fr-FR")}€ / {budgetNum.toLocaleString("fr-FR")}€</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleEdit(p); }}
-                      className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Modifier
-                    </button>
+                  <div className="text-[11.5px] text-muted-foreground">
+                    {p.budgetConsomme.toLocaleString("fr-FR")}€ / {budgetNum.toLocaleString("fr-FR")}€
                   </div>
                 </div>
               </div>
@@ -705,7 +532,7 @@ export default function ProjetsPage() {
 // Project Detail Pane — slide-in from right, 4 tabs
 // ══════════════════════════════════════════════════════════════════════
 
-type DetailTab = "apercu" | "kanban" | "financier" | "activites";
+type DetailTab = "kanban" | "financier" | "activites" | "documents";
 
 interface DetailData {
   projet: {
@@ -729,10 +556,9 @@ interface DetailData {
 }
 
 function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose: () => void }) {
-  const [tab, setTab] = useState<DetailTab>("apercu");
+  const [tab, setTab] = useState<DetailTab>("kanban");
   const [data, setData] = useState<DetailData | null>(null);
   const [loading, setLoading] = useState(true);
-  const PROJET_COLORS = ["#3b82f6", "#6366f1", "#14b8a6", "#f43f5e", "#84cc16", "#f97316"];
 
   useEffect(() => {
     setLoading(true);
@@ -777,10 +603,10 @@ function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose:
   const budgetBarColor = budgetPct > 100 ? "#b91c1c" : budgetPct > 85 ? "#f97316" : "#2563EB";
 
   const TABS: { value: DetailTab; label: string }[] = [
-    { value: "apercu",     label: "Aperçu" },
     { value: "kanban",     label: "Kanban" },
     { value: "financier",  label: "Financier" },
     { value: "activites",  label: "Activités" },
+    { value: "documents",  label: "Documents" },
   ];
 
   return (
@@ -841,77 +667,9 @@ function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose:
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto">
 
-            {/* ── Aperçu ── */}
-            {tab === "apercu" && (
-              <div className="p-5 space-y-5">
-                {data.projet.description && (
-                  <p className="text-[13px] text-muted-foreground leading-relaxed">{data.projet.description}</p>
-                )}
-
-                {/* 3 KPIs */}
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: "Budget cons.", value: `${budgetPct.toFixed(1)}%`, color: budgetBarColor },
-                    { label: "Réalisé", value: `${realisePct.toFixed(1)}%`, color: "#2563EB" },
-                    { label: "Deadline", value: data.projet.dateFin ? format(new Date(data.projet.dateFin), "d MMM", { locale: fr }) : "—", color: "var(--foreground)" },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className="bg-muted/50 rounded-xl p-3 text-center">
-                      <div className="text-[10px] text-muted-foreground mb-1">{label}</div>
-                      <div className="text-[1.3rem] font-extrabold" style={{ color }}>{value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Barres */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-[11px] text-muted-foreground w-12 shrink-0">Budget</span>
-                    <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${Math.min(budgetPct, 100)}%`, background: budgetBarColor }} />
-                    </div>
-                    <span className="text-[11.5px] font-bold w-9 text-right" style={{ color: budgetBarColor }}>{budgetPct.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-[11px] text-muted-foreground w-12 shrink-0">Réalisé</span>
-                    <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
-                      <div className="h-full rounded-full bg-[#10b981]" style={{ width: `${realisePct}%` }} />
-                    </div>
-                    <span className="text-[11.5px] font-bold text-muted-foreground w-9 text-right">{realisePct.toFixed(1)}%</span>
-                  </div>
-                </div>
-
-                {/* Étapes */}
-                <div>
-                  <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Étapes</div>
-                  <div className="space-y-0">
-                    {data.etapes.map((e) => {
-                      const done = e.statut === "VALIDEE";
-                      const inProgress = e.statut === "EN_COURS";
-                      const dotColor = done ? "#10b981" : inProgress ? "#f59e0b" : "var(--border)";
-                      const hTotal = e.chargeEstimee ?? 0;
-                      const hDone = e.heuresRealisees ?? 0;
-                      const pct = hTotal > 0 ? Math.min(Math.round(hDone / hTotal * 100), 100) : 0;
-                      return (
-                        <div key={e.id} className="flex items-center gap-2.5 py-2 border-b border-border/50">
-                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: dotColor }} />
-                          <span className="flex-1 text-[12.5px] font-medium text-foreground truncate">{e.nom}</span>
-                          <span className="text-[11.5px] text-muted-foreground">{hDone}h / {hTotal}h</span>
-                          <div className="w-12">
-                            <div className="h-1 rounded-full bg-border overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: projColor }} />
-                            </div>
-                          </div>
-                          <span className="text-[11px] font-semibold text-muted-foreground w-8 text-right">{pct}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <Link href={`/projets/${data.projet.id}`} className="flex items-center gap-1.5 text-[12.5px] text-primary font-medium hover:underline">
-                  <ChevronRight className="h-3.5 w-3.5" />Voir le projet complet
-                </Link>
-              </div>
+            {/* ── Documents ── */}
+            {tab === "documents" && (
+              <DocumentsTab projectId={data.projet.id} />
             )}
 
             {/* ── Kanban ── */}
@@ -1017,6 +775,86 @@ function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose:
 
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Documents Tab
+// ══════════════════════════════════════════════════════════════════════
+
+interface DocumentItem {
+  id: number;
+  nom: string;
+  type: string;
+  taille?: number | null;
+  createdAt: string;
+  uploadedBy?: { nom: string } | null;
+}
+
+function DocumentsTab({ projectId }: { projectId: number }) {
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/documents?projetId=${projectId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list = Array.isArray(d) ? d : d.documents ?? [];
+        setDocuments(list);
+      })
+      .catch(() => setDocuments([]))
+      .finally(() => setLoading(false));
+  }, [projectId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-5">
+      <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">
+        Documents
+      </div>
+      {documents.length === 0 ? (
+        <div className="py-10 text-center space-y-3">
+          <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+          <p className="text-sm text-muted-foreground">Aucun document associé</p>
+          <a
+            href="/documents"
+            className="inline-flex items-center gap-1.5 text-[12.5px] text-primary font-medium hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Uploader un document
+          </a>
+        </div>
+      ) : (
+        <div className="space-y-0">
+          {documents.map((doc) => (
+            <div key={doc.id} className="flex items-center gap-3 py-2.5 border-b border-border/50">
+              <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12.5px] font-medium text-foreground truncate">{doc.nom}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {doc.uploadedBy?.nom ?? "—"}
+                  {" · "}
+                  {format(new Date(doc.createdAt), "dd/MM/yy", { locale: fr })}
+                  {doc.taille != null && ` · ${(doc.taille / 1024).toFixed(0)} Ko`}
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                {doc.type}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
