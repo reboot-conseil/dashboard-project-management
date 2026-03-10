@@ -131,6 +131,7 @@ export async function GET(request: Request) {
         nom: p.nom,
         client: p.client,
         budget: p.budget,
+        couleur: p.couleur,
         dateDebut: p.dateDebut,
         dateFin: p.dateFin,
         statut: p.statut,
