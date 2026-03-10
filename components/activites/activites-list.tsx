@@ -225,23 +225,30 @@ export function ActivitesList({
                           data-testid={`row-${a.id}`}
                           className="group border-b transition-colors hover:bg-muted/50"
                         >
-                          <TableCell>{a.consultant.nom}</TableCell>
-                          <TableCell>{a.projet.nom}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
+                          <TableCell className="py-1 text-[12.5px]">{a.consultant.nom}</TableCell>
+                          <TableCell className="py-1">
+                            <div className="flex items-center gap-1.5">
+                              {a.projet.couleur && (
+                                <span className="w-2 h-2 shrink-0" style={{ background: a.projet.couleur, borderRadius: "3px" }} />
+                              )}
+                              <span className="text-[12.5px]">{a.projet.nom}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-1 text-muted-foreground text-[12px]">
                             {a.etape ? a.etape.nom : "—"}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="py-1 text-right font-medium text-[12.5px]">
                             {Number(a.heures)}h
                           </TableCell>
-                          <TableCell className="text-muted-foreground max-w-[180px] truncate">
+                          <TableCell className="py-1 text-muted-foreground text-[12px] max-w-[180px] truncate">
                             {a.description || "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-1">
                             <Badge variant={a.facturable ? "success" : "secondary"} className="text-xs">
                               {a.facturable ? "Oui" : "Non"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="py-1 text-right">
                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button
                                 variant="ghost"
