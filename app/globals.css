@@ -4,10 +4,10 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Surfaces */
-  --color-background:     #F5F7FA;
+  /* Surfaces — Option A "Professional Blue" */
+  --color-background:     #F8FAFC;
   --color-surface:        #ffffff;
-  --color-surface-raised: #F0F3F8;
+  --color-surface-raised: #F1F5F9;
 
   /* Brand */
   --color-primary:        #2563EB;
@@ -17,8 +17,8 @@
   --color-accent-light:   #F5F3FF;
 
   /* Sémantique */
-  --color-success:        #16A34A;
-  --color-success-light:  #F0FDF4;
+  --color-success:        #059669;
+  --color-success-light:  #ECFDF5;
   --color-warning:        #D97706;
   --color-warning-light:  #FFFBEB;
   --color-destructive:    #DC2626;
@@ -42,12 +42,12 @@
 
   /* Surfaces (compat aliases) */
   --color-card:      #ffffff;
-  --color-muted:     #F0F3F8;
-  --color-secondary: #F0F3F8;
+  --color-muted:     #F1F5F9;
+  --color-secondary: #F1F5F9;
 
   /* Borders */
-  --color-border:       #E4E8EF;
-  --color-border-muted: #EFF2F6;
+  --color-border:       #E2E8F0;
+  --color-border-muted: #EEF2F7;
   --color-ring:         #93C5FD;
 
   /* Radius */
@@ -88,33 +88,96 @@
   --color-projet-5: #ddd6fe;
 }
 
-/* ── Dark mode overrides ──────────────────────────────────────── */
+/* ── Dark mode overrides — Option A ──────────────────────────── */
 .dark {
-  --color-background:     #0A0D14;
-  --color-surface:        #111827;
-  --color-surface-raised: #1C2333;
-  --color-card:           #111827;
-  --color-muted:          #1C2333;
-  --color-secondary:      #1C2333;
+  --color-background:     #0D1117;
+  --color-surface:        #161B22;
+  --color-surface-raised: #21262D;
+  --color-card:           #161B22;
+  --color-muted:          #21262D;
+  --color-secondary:      #21262D;
 
-  --color-foreground:           #F1F5F9;
-  --color-card-foreground:      #F1F5F9;
-  --color-muted-foreground:     #94A3B8;
-  --color-placeholder:          #475569;
-  --color-secondary-foreground: #F1F5F9;
+  --color-foreground:           #F0F6FF;
+  --color-card-foreground:      #F0F6FF;
+  --color-muted-foreground:     #8B949E;
+  --color-placeholder:          #484F58;
+  --color-secondary-foreground: #F0F6FF;
 
-  --color-border:       #1E2A3A;
-  --color-border-muted: #141B2A;
-  --color-ring:         #3B82F6;
+  --color-border:       #30363D;
+  --color-border-muted: #21262D;
+  --color-ring:         #60A5FA;
 
-  --color-primary:        #3B82F6;
-  --color-primary-hover:  #60A5FA;
-  --color-primary-light:  #172554;
+  --color-primary:        #60A5FA;
+  --color-primary-hover:  #93C5FD;
+  --color-primary-light:  #1C3557;
   --color-accent-light:   #1E1B4B;
-  --color-success-light:  #052E16;
+  --color-success:        #34D399;
+  --color-success-light:  #022C22;
+  --color-warning:        #FBBF24;
   --color-warning-light:  #2D1B00;
+  --color-destructive:    #F87171;
   --color-destructive-light: #2D0000;
   --color-info-light:     #062535;
+}
+
+/* ── Option B "Slate Neutral" — s'applique via data-palette="slate" ── */
+[data-palette="slate"] {
+  --color-background:     #FAFAF9;
+  --color-surface:        #ffffff;
+  --color-surface-raised: #F5F5F4;
+  --color-card:           #ffffff;
+  --color-muted:          #F5F5F4;
+  --color-secondary:      #F5F5F4;
+
+  --color-primary:        #475569;
+  --color-primary-hover:  #334155;
+  --color-primary-light:  #F1F5F9;
+  --color-accent:         #3B82F6;
+
+  --color-foreground:           #1C1917;
+  --color-card-foreground:      #1C1917;
+  --color-muted-foreground:     #78716C;
+  --color-placeholder:          #A8A29E;
+  --color-secondary-foreground: #1C1917;
+
+  --color-border:       #E7E5E4;
+  --color-border-muted: #F0EEE9;
+  --color-ring:         #475569;
+
+  --color-success:        #15803D;
+  --color-warning:        #B45309;
+  --color-destructive:    #B91C1C;
+}
+
+[data-palette="slate"].dark {
+  --color-background:     #1C1917;
+  --color-surface:        #292524;
+  --color-surface-raised: #3C3835;
+  --color-card:           #292524;
+  --color-muted:          #3C3835;
+  --color-secondary:      #3C3835;
+
+  --color-primary:        #CBD5E1;
+  --color-primary-hover:  #E2E8F0;
+  --color-primary-light:  #1E293B;
+  --color-accent:         #60A5FA;
+
+  --color-foreground:           #FAFAF9;
+  --color-card-foreground:      #FAFAF9;
+  --color-muted-foreground:     #A8A29E;
+  --color-placeholder:          #78716C;
+  --color-secondary-foreground: #FAFAF9;
+
+  --color-border:       #44403C;
+  --color-border-muted: #3C3835;
+  --color-ring:         #94A3B8;
+
+  --color-success:        #4ADE80;
+  --color-success-light:  #052E16;
+  --color-warning:        #FCD34D;
+  --color-warning-light:  #2D1B00;
+  --color-destructive:    #FCA5A5;
+  --color-destructive-light: #2D0000;
 }
 
 /* ── Thème Cerise (Graphic Charter — Design System) ──────────── */

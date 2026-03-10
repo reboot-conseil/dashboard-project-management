@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Settings } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useTheme, type Theme } from "@/lib/hooks/use-theme";
+import { useTheme, type Theme, type Palette } from "@/lib/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { GLOBAL_SHORTCUTS } from "@/lib/shortcuts";
 
@@ -13,18 +13,33 @@ const UI_THEMES: { value: Theme; label: string; description: string; preview: st
     value: "light",
     label: "Clair",
     description: "Interface lumineuse, fond blanc",
-    preview: ["#2563eb", "#f5f7fa", "#e4e8ef"],
+    preview: ["#2563eb", "#F8FAFC", "#E2E8F0"],
   },
   {
     value: "dark",
     label: "Sombre",
     description: "Interface sombre, confort nocturne",
-    preview: ["#3b82f6", "#0c0e14", "#252a3a"],
+    preview: ["#60A5FA", "#0D1117", "#30363D"],
+  },
+];
+
+const UI_PALETTES: { value: Palette; label: string; description: string; preview: string[] }[] = [
+  {
+    value: "default",
+    label: "Professional Blue",
+    description: "Bleu primaire, surfaces froides — par défaut",
+    preview: ["#2563EB", "#059669", "#D97706", "#DC2626"],
+  },
+  {
+    value: "slate",
+    label: "Slate Neutral",
+    description: "Gris-ardoise sobre, accent bleu sur les CTAs",
+    preview: ["#475569", "#15803D", "#B45309", "#B91C1C"],
   },
 ];
 
 export default function ParametresPage() {
-  const { theme, setTheme: setUiTheme, hydrated: themeHydrated } = useTheme();
+  const { theme, palette, setTheme: setUiTheme, setPalette, hydrated: themeHydrated } = useTheme();
 
   return (
     <div className="min-h-screen p-6 md:p-10 max-w-3xl mx-auto">
@@ -42,9 +57,9 @@ export default function ParametresPage() {
             <CardDescription>Choisissez votre thème visuel et mode d&apos;affichage</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Thème UI */}
+            {/* Mode clair / sombre */}
             <div role="group" aria-labelledby="mode-label">
-              <p id="mode-label" className="text-sm font-medium mb-3">Thème</p>
+              <p id="mode-label" className="text-sm font-medium mb-3">Mode d&apos;affichage</p>
               <div className="grid grid-cols-2 gap-3">
                 {UI_THEMES.map((t) => (
                   <button
@@ -72,6 +87,43 @@ export default function ParametresPage() {
                     <div>
                       <p className="text-sm font-medium">{t.label}</p>
                       <p className="text-xs text-muted-foreground">{t.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Palette de couleurs */}
+            <div role="group" aria-labelledby="palette-label">
+              <p id="palette-label" className="text-sm font-medium mb-1">Palette de couleurs</p>
+              <p className="text-xs text-muted-foreground mb-3">S&apos;applique dans les deux modes</p>
+              <div className="grid grid-cols-2 gap-3">
+                {UI_PALETTES.map((p) => (
+                  <button
+                    key={p.value}
+                    onClick={() => setPalette(p.value)}
+                    aria-pressed={themeHydrated ? palette === p.value : undefined}
+                    disabled={!themeHydrated}
+                    className={cn(
+                      "flex flex-col gap-2 p-4 rounded-lg border text-left transition-all",
+                      palette === p.value
+                        ? "border-primary ring-2 ring-primary ring-offset-2 bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex gap-1.5 items-center">
+                      {p.preview.map((c) => (
+                        <span
+                          key={c}
+                          className="h-4 w-4 rounded border border-black/10"
+                          style={{ backgroundColor: c, borderRadius: "3px" }}
+                          aria-hidden="true"
+                        />
+                      ))}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{p.label}</p>
+                      <p className="text-xs text-muted-foreground">{p.description}</p>
                     </div>
                   </button>
                 ))}
