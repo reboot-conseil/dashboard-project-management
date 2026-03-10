@@ -6,27 +6,28 @@ import Link from "next/link";
 import {
   FolderOpen,
   Eye,
-  Pencil,
   Calendar,
   Search,
   ArrowUp,
   ArrowDown,
-  SlidersHorizontal,
+  ArrowUpRight,
   X,
   Download,
   Plus,
+  RefreshCw,
+  Activity,
+  DollarSign,
+  BarChart3,
+  FileText,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { ProjetForm, type ProjetData } from "@/components/projet-form";
 
 interface ProjetListItem {
@@ -100,7 +101,6 @@ const STORAGE_KEY = "projets-filters";
 interface SavedFilters {
   sortKey: SortKey;
   sortAsc: boolean;
-  showAdvanced: boolean;
 }
 
 function exportCsvProjets(projets: ProjetListItem[]) {
@@ -131,6 +131,7 @@ export default function ProjetsPage() {
   const [filtre, setFiltre] = useState("TOUS");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProjet, setEditingProjet] = useState<ProjetData | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   // Search
   const [search, setSearch] = useState("");
@@ -138,15 +139,6 @@ export default function ProjetsPage() {
   // Sort
   const [sortKey, setSortKey] = useState<SortKey>("nom");
   const [sortAsc, setSortAsc] = useState(true);
-
-  // Advanced filters
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [budgetMin, setBudgetMin] = useState("");
-  const [budgetMax, setBudgetMax] = useState("");
-  const [dateRangeDebut, setDateRangeDebut] = useState("");
-  const [dateRangeFin, setDateRangeFin] = useState("");
-  const [consultantFilter, setConsultantFilter] = useState("all");
-  const [onlyWithAlertes, setOnlyWithAlertes] = useState(false);
 
   // KPI data for projects
   interface ProjetKpi {
@@ -191,18 +183,6 @@ export default function ProjetsPage() {
       .catch(() => {});
   }, []);
 
-  // Consultant options for filter
-  const [consultantOptions, setConsultantOptions] = useState<{ id: number; nom: string }[]>([]);
-  useEffect(() => {
-    fetch("/api/consultants")
-      .then((r) => r.json())
-      .then((d) => {
-        const list = Array.isArray(d) ? d : d.consultants ?? [];
-        setConsultantOptions(list.filter((c: { actif?: boolean }) => c.actif !== false));
-      })
-      .catch(() => {});
-  }, []);
-
   // Load saved filters
   useEffect(() => {
     try {
@@ -211,16 +191,15 @@ export default function ProjetsPage() {
         const parsed: SavedFilters = JSON.parse(saved);
         if (parsed.sortKey) setSortKey(parsed.sortKey);
         if (typeof parsed.sortAsc === "boolean") setSortAsc(parsed.sortAsc);
-        if (typeof parsed.showAdvanced === "boolean") setShowAdvanced(parsed.showAdvanced);
       }
     } catch { /* ignore */ }
   }, []);
 
   // Save filters
   useEffect(() => {
-    const toSave: SavedFilters = { sortKey, sortAsc, showAdvanced };
+    const toSave: SavedFilters = { sortKey, sortAsc };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-  }, [sortKey, sortAsc, showAdvanced]);
+  }, [sortKey, sortAsc]);
 
   const fetchProjets = useCallback(async () => {
     try {
@@ -252,34 +231,6 @@ export default function ProjetsPage() {
           p.nom.toLowerCase().includes(q) ||
           p.client.toLowerCase().includes(q)
       );
-    }
-
-    // Budget range
-    if (budgetMin) {
-      const min = parseFloat(budgetMin);
-      if (!isNaN(min)) result = result.filter((p) => Number(p.budget) >= min);
-    }
-    if (budgetMax) {
-      const max = parseFloat(budgetMax);
-      if (!isNaN(max)) result = result.filter((p) => Number(p.budget) <= max);
-    }
-
-    // Date range
-    if (dateRangeDebut) {
-      result = result.filter((p) => p.dateDebut && p.dateDebut >= dateRangeDebut);
-    }
-    if (dateRangeFin) {
-      result = result.filter((p) => p.dateFin && p.dateFin <= dateRangeFin);
-    }
-
-    // Consultant assigné — we don't have consultantId on ProjetListItem, but we can filter
-    // by checking if project has activities for that consultant (requires API enhancement).
-    // For now, this is a client-side placeholder; consultant filter is handled server-side
-    // if the API supports it. We keep the UI filter state.
-
-    // Only with alertes
-    if (onlyWithAlertes) {
-      result = result.filter((p) => p.alertes && p.alertes.length > 0);
     }
 
     // Sort
@@ -314,17 +265,7 @@ export default function ProjetsPage() {
     });
 
     return result;
-  }, [projets, search, sortKey, sortAsc, budgetMin, budgetMax, dateRangeDebut, dateRangeFin, consultantFilter, onlyWithAlertes]);
-
-  // Count active advanced filters
-  const advancedFilterCount = [
-    !!budgetMin,
-    !!budgetMax,
-    !!dateRangeDebut,
-    !!dateRangeFin,
-    consultantFilter !== "all",
-    onlyWithAlertes,
-  ].filter(Boolean).length;
+  }, [projets, search, sortKey, sortAsc]);
 
   function handleAdd() {
     setEditingProjet(null);
@@ -357,17 +298,16 @@ export default function ProjetsPage() {
     setSortAsc((v) => !v);
   }
 
-  function resetAdvanced() {
-    setBudgetMin("");
-    setBudgetMax("");
-    setDateRangeDebut("");
-    setDateRangeFin("");
-    setConsultantFilter("all");
-    setOnlyWithAlertes(false);
+  function openDetail(id: number) {
+    setSelectedProjectId((prev) => (prev === id ? null : id));
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
+    <div className="flex h-full overflow-hidden">
+    <div className={cn(
+      "flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl mx-auto space-y-5 transition-all",
+      selectedProjectId ? "xl:max-w-none" : ""
+    )}>
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <FolderOpen className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -443,98 +383,7 @@ export default function ProjetsPage() {
                 {sortAsc ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
               </Button>
             </div>
-
-            {/* Advanced toggle */}
-            <Button
-              variant={showAdvanced ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowAdvanced((v) => !v)}
-              className="gap-1.5"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filtres avancés
-              {advancedFilterCount > 0 && (
-                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-1">
-                  {advancedFilterCount}
-                </Badge>
-              )}
-            </Button>
           </div>
-
-          {/* Advanced filters panel */}
-          {showAdvanced && (
-            <div className="border border-border rounded-lg p-4 space-y-4 bg-muted/30">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Filtres avancés</p>
-                {advancedFilterCount > 0 && (
-                  <Button variant="ghost" size="sm" onClick={resetAdvanced} className="text-xs">
-                    Réinitialiser
-                  </Button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Budget min (€)</Label>
-                  <Input
-                    type="number"
-                    placeholder="ex: 10000"
-                    value={budgetMin}
-                    onChange={(e) => setBudgetMin(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Budget max (€)</Label>
-                  <Input
-                    type="number"
-                    placeholder="ex: 100000"
-                    value={budgetMax}
-                    onChange={(e) => setBudgetMax(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Consultant assigné</Label>
-                  <Select
-                    value={consultantFilter}
-                    onChange={(e) => setConsultantFilter(e.target.value)}
-                  >
-                    <option value="all">Tous</option>
-                    {consultantOptions.map((c) => (
-                      <option key={c.id} value={String(c.id)}>{c.nom}</option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Date début (à partir de)</Label>
-                  <Input
-                    type="date"
-                    value={dateRangeDebut}
-                    onChange={(e) => setDateRangeDebut(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Date fin (jusqu&apos;à)</Label>
-                  <Input
-                    type="date"
-                    value={dateRangeFin}
-                    onChange={(e) => setDateRangeFin(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-end pb-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={onlyWithAlertes}
-                      onCheckedChange={(v) => setOnlyWithAlertes(!!v)}
-                    />
-                    <Label className="text-xs cursor-pointer">
-                      Uniquement projets avec alertes
-                    </Label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Results count */}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -556,151 +405,104 @@ export default function ProjetsPage() {
             : "Aucun projet ne correspond aux filtres"}
         </p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className={cn(
+          "grid gap-4",
+          selectedProjectId
+            ? "grid-cols-1 md:grid-cols-2"
+            : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+        )}>
           {filteredProjets.map((p) => {
             const budgetNum = Number(p.budget);
-            const pctBudget = p.pctBudget;
-            const badge = statutBadge(p.statut);
-            const kpi = projetKpis.get(p.id);
+            const budgetPct = p.progressionBudgetPct ?? p.pctBudget;
+            const realisePct = p.progressionRealisationPct ?? 0;
+            const ecart = p.progressionEcart ?? 0;
+            const projColor = p.couleur ?? "#3b82f6";
+            const budgetBarColor = budgetPct > 100 ? "#b91c1c" : budgetPct > 85 ? "#f97316" : "#2563EB";
+            const margePct = ecart;
+            const margeBadgeClass = margePct >= 20
+              ? "bg-destructive/10 text-destructive"
+              : margePct >= 10
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-500"
+              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-500";
+            const isSelected = selectedProjectId === p.id;
 
             return (
-              <Card
+              <div
                 key={p.id}
-                className="transition-shadow hover:shadow-md flex flex-col overflow-hidden"
+                onClick={() => openDetail(p.id)}
+                className={cn(
+                  "relative rounded-xl border overflow-hidden cursor-pointer",
+                  "transition-all hover:-translate-y-0.5 hover:shadow-md",
+                  isSelected
+                    ? "border-primary ring-2 ring-primary/20 shadow-sm"
+                    : "border-border bg-card"
+                )}
               >
-                {/* Color bar */}
-                <div
-                  className="h-1.5 w-full shrink-0"
-                  style={{
-                    backgroundColor: p.couleur ?? (
-                      p.statut === "EN_COURS" ? "#3b82f6" :
-                      p.statut === "PLANIFIE" ? "#6366f1" :
-                      p.statut === "EN_PAUSE" ? "#f59e0b" : "#94a3b8"
-                    ),
-                  }}
-                />
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <Link
-                        href={`/projets/${p.id}`}
-                        className="hover:text-primary transition-colors"
-                      >
-                        <CardTitle className="text-lg truncate">
-                          {p.nom}
-                        </CardTitle>
-                      </Link>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {p.client}
-                      </p>
-                    </div>
-                    <Badge variant={badge.variant}>{badge.label}</Badge>
-                  </div>
-                </CardHeader>
+                {/* Top accent bar */}
+                <div className="h-[3px] w-full" style={{ background: projColor }} />
 
-                <CardContent className="flex-1 space-y-4">
-                  {/* Dates */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>
-                      {p.dateDebut
-                        ? format(new Date(p.dateDebut), "dd/MM/yyyy", { locale: fr })
-                        : "—"}
-                      {" → "}
-                      {p.dateFin
-                        ? format(new Date(p.dateFin), "dd/MM/yyyy", { locale: fr })
-                        : "—"}
-                    </span>
-                  </div>
-
-                  {/* Budget */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Budget</span>
-                      <span className="font-medium">
-                        {p.budgetConsomme.toLocaleString("fr-FR")} € / {budgetNum.toLocaleString("fr-FR")} €
+                {/* Tinted header */}
+                <div className="px-4 pt-3 pb-2.5" style={{ background: `${projColor}12` }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ background: projColor }} />
+                      <span className="text-[10.5px] font-semibold" style={{ color: projColor }}>
+                        {p.statut === "EN_COURS" ? "En cours" : p.statut === "PLANIFIE" ? "Planifié" : p.statut === "EN_PAUSE" ? "En pause" : "Terminé"}
                       </span>
                     </div>
-                    <Progress
-                      value={pctBudget}
-                      indicatorClassName={budgetColor(pctBudget)}
-                    />
-                    <p className="text-xs text-right text-muted-foreground">
-                      {pctBudget}% consommé
-                    </p>
+                    <span className={cn("text-[11.5px] font-semibold px-2 py-0.5 rounded-md", margeBadgeClass)}>
+                      Marge {ecart > 0 ? `-${ecart.toFixed(1)}` : `+${Math.abs(ecart).toFixed(1)}`}%
+                    </span>
                   </div>
+                </div>
 
-                  {/* Étapes + Health Score */}
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {p.etapesValidees}/{p.etapesTotal} étapes validées
-                    </Badge>
-                    {p.progressionHealth && (
-                      <Badge
-                        variant={
-                          p.progressionHealth === "bon" ? "success" :
-                          p.progressionHealth === "normal" ? "default" :
-                          "destructive"
-                        }
-                        className="text-xs"
-                      >
-                        {p.progressionHealth === "bon" ? "🟢" : p.progressionHealth === "normal" ? "🟡" : "🔴"}{" "}
-                        {Math.abs(p.progressionEcart ?? 0).toFixed(0)}%
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Mini Progress Bars (Budget vs Réalisation) */}
-                  {p.progressionBudgetPct !== undefined && (p.progressionBudgetPct > 0 || p.progressionRealisationPct !== undefined && p.progressionRealisationPct > 0) && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-[10px]">
-                        <span className="text-blue-700 font-medium w-14">Budget</span>
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 rounded-full transition-all"
-                            style={{ width: `${Math.min(p.progressionBudgetPct, 100)}%` }}
-                          />
-                        </div>
-                        <span className="text-muted-foreground w-8 text-right">{p.progressionBudgetPct}%</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px]">
-                        <span className="text-emerald-700 font-medium w-14">Réalisé</span>
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 rounded-full transition-all"
-                            style={{ width: `${Math.min(p.progressionRealisationPct ?? 0, 100)}%` }}
-                          />
-                        </div>
-                        <span className="text-muted-foreground w-8 text-right">{p.progressionRealisationPct ?? 0}%</span>
-                      </div>
+                {/* Card body */}
+                <div className="px-4 pt-2.5 pb-3.5">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[15px] font-bold text-foreground truncate">{p.nom}</div>
+                      <div className="text-[12px] text-muted-foreground mt-0.5">{p.client}</div>
                     </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 text-muted-foreground"
-                      onClick={() => handleEdit(p)}
+                    <Link
+                      href={`/projets/${p.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 ml-2 mt-0.5 text-muted-foreground hover:text-primary transition-colors"
+                      title="Ouvrir le projet"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
-                      Modifier
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="flex-1"
-                      asChild
-                    >
-                      <Link href={`/projets/${p.id}`}>
-                        <Eye className="h-3.5 w-3.5" />
-                        Voir détail
-                      </Link>
-                    </Button>
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Link>
                   </div>
-                </CardContent>
-              </Card>
+
+                  <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground mb-3">
+                    <Calendar className="h-3 w-3" />
+                    {p.dateDebut ? format(new Date(p.dateDebut), "dd/MM/yy", { locale: fr }) : "—"}
+                    {" → "}
+                    {p.dateFin ? format(new Date(p.dateFin), "dd/MM/yy", { locale: fr }) : "—"}
+                  </div>
+
+                  {/* Budget bar */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[11px] text-muted-foreground w-12 shrink-0">Budget</span>
+                    <div className="flex-1 h-[7px] rounded-full bg-border overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(budgetPct, 100)}%`, background: budgetBarColor }} />
+                    </div>
+                    <span className="text-[11.5px] font-bold w-9 text-right" style={{ color: budgetBarColor }}>{budgetPct.toFixed(1)}%</span>
+                  </div>
+
+                  {/* Réalisé bar */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[11px] text-muted-foreground w-12 shrink-0">Réalisé</span>
+                    <div className="flex-1 h-[7px] rounded-full bg-border overflow-hidden">
+                      <div className="h-full rounded-full bg-[#10b981]" style={{ width: `${realisePct}%` }} />
+                    </div>
+                    <span className="text-[11.5px] font-bold text-muted-foreground w-9 text-right">{realisePct.toFixed(1)}%</span>
+                  </div>
+
+                  <div className="text-[11.5px] text-muted-foreground">
+                    {p.budgetConsomme.toLocaleString("fr-FR")}€ / {budgetNum.toLocaleString("fr-FR")}€
+                  </div>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -714,6 +516,346 @@ export default function ProjetsPage() {
         onSuccess={handleSuccess}
         onError={(msg) => toast.error(msg)}
       />
+    </div>
+
+    {selectedProjectId && (
+      <ProjectDetailPane
+        projectId={selectedProjectId}
+        onClose={() => setSelectedProjectId(null)}
+      />
+    )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Project Detail Pane — slide-in from right, 4 tabs
+// ══════════════════════════════════════════════════════════════════════
+
+type DetailTab = "kanban" | "financier" | "activites" | "documents";
+
+interface DetailData {
+  projet: {
+    id: number; nom: string; client: string; statut: string; couleur?: string;
+    budget: string | number; dateDebut: string | null; dateFin: string | null;
+    description?: string;
+  };
+  etapes: {
+    id: number; nom: string; statut: string; deadline: string | null;
+    chargeEstimee: number | null; heuresRealisees?: number;
+  }[];
+  activites: {
+    id: number; date: string; heures: number; description?: string;
+    consultant: { id: number; nom: string; couleur: string };
+    etape: { id: number; nom: string } | null;
+  }[];
+  progression?: {
+    budgetConsommePct: number; realisationPct: number; ecart: number;
+    chargeEstimeeTotale: number; chargeEcouleeHeures: number;
+  };
+}
+
+function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose: () => void }) {
+  const [tab, setTab] = useState<DetailTab>("kanban");
+  const [data, setData] = useState<DetailData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    setData(null);
+    Promise.all([
+      fetch(`/api/projets/${projectId}`).then((r) => r.json()),
+      fetch(`/api/projets/${projectId}/progression`).then((r) => r.json()).catch(() => null),
+    ])
+      .then(([proj, progression]) => {
+        setData({
+          projet: {
+            id: proj.id, nom: proj.nom, client: proj.client, statut: proj.statut,
+            couleur: proj.couleur, budget: proj.budget,
+            dateDebut: proj.dateDebut, dateFin: proj.dateFin,
+            description: proj.description,
+          },
+          etapes: (proj.etapes ?? []).map((e: Record<string, unknown>) => ({
+            id: e.id, nom: e.nom, statut: e.statut, deadline: e.deadline,
+            chargeEstimee: e.chargeEstimee,
+            heuresRealisees: (proj.activites ?? [])
+              .filter((a: Record<string, unknown>) => a.etapeId === e.id)
+              .reduce((s: number, a: Record<string, unknown>) => s + Number(a.heures), 0),
+          })),
+          activites: (proj.activites ?? []).map((a: Record<string, unknown>) => ({
+            id: a.id, date: a.date as string, heures: Number(a.heures),
+            description: a.description as string | undefined,
+            consultant: a.consultant as { id: number; nom: string; couleur: string },
+            etape: a.etape as { id: number; nom: string } | null,
+          })),
+          progression: progression ?? undefined,
+        });
+      })
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [projectId]);
+
+  const projColor = data?.projet.couleur ?? "#3b82f6";
+  const budgetNum = data ? Number(data.projet.budget) : 0;
+  const budgetPct = data?.progression?.budgetConsommePct ?? 0;
+  const realisePct = data?.progression?.realisationPct ?? 0;
+  const ecart = data?.progression?.ecart ?? 0;
+  const budgetBarColor = budgetPct > 100 ? "#b91c1c" : budgetPct > 85 ? "#f97316" : "#2563EB";
+
+  const TABS: { value: DetailTab; label: string }[] = [
+    { value: "kanban",     label: "Kanban" },
+    { value: "financier",  label: "Financier" },
+    { value: "activites",  label: "Activités" },
+    { value: "documents",  label: "Documents" },
+  ];
+
+  return (
+    <div className="w-[520px] min-w-[520px] border-l border-border bg-card flex flex-col h-full overflow-hidden">
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : !data ? (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+          Impossible de charger le projet
+        </div>
+      ) : (
+        <>
+          {/* Header */}
+          <div className="shrink-0 px-5 pt-4 pb-0 border-b border-border">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${projColor}20` }}>
+                  <div className="w-3.5 h-3.5 rounded-sm" style={{ background: projColor }} />
+                </div>
+                <div>
+                  <div className="text-[16px] font-extrabold text-foreground leading-tight">{data.projet.nom}</div>
+                  <div className="text-[12px] text-muted-foreground mt-0.5">
+                    {data.projet.client}
+                    {data.projet.dateDebut && data.projet.dateFin && (
+                      <span className="ml-2">
+                        · {format(new Date(data.projet.dateDebut), "dd/MM/yy", { locale: fr })} → {format(new Date(data.projet.dateFin), "dd/MM/yy", { locale: fr })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex -mb-px">
+              {TABS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setTab(value)}
+                  className={cn(
+                    "px-4 py-2 text-[13px] font-medium border-b-2 transition-all",
+                    tab === value
+                      ? "border-primary text-primary font-semibold"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto">
+
+            {/* ── Documents ── */}
+            {tab === "documents" && (
+              <DocumentsTab projectId={data.projet.id} />
+            )}
+
+            {/* ── Kanban ── */}
+            {tab === "kanban" && (
+              <div className="p-4 flex gap-3 h-full">
+                {(["A_FAIRE", "EN_COURS", "VALIDEE"] as const).map((statut) => {
+                  const cols = { A_FAIRE: "À faire", EN_COURS: "En cours", VALIDEE: "Terminé" };
+                  const colEtapes = data.etapes.filter((e) => e.statut === statut);
+                  const colBg = { A_FAIRE: "bg-muted/50", EN_COURS: "bg-amber-50 dark:bg-amber-950/20", VALIDEE: "bg-emerald-50 dark:bg-emerald-950/20" }[statut];
+                  const countBg = { A_FAIRE: "bg-muted text-muted-foreground", EN_COURS: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500", VALIDEE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-500" }[statut];
+                  return (
+                    <div key={statut} className={cn("flex-1 rounded-xl p-3", colBg)}>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[11.5px] font-bold text-muted-foreground">{cols[statut]}</span>
+                        <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full", countBg)}>{colEtapes.length}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {colEtapes.map((e) => (
+                          <div key={e.id} className="bg-card border border-border rounded-lg p-2.5" style={{ borderLeft: `3px solid ${projColor}` }}>
+                            <div className="text-[12.5px] font-semibold text-foreground mb-1">{e.nom}</div>
+                            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                              <span>{e.heuresRealisees ?? 0}h / {e.chargeEstimee ?? 0}h</span>
+                              {e.deadline && <span>{format(new Date(e.deadline), "d MMM", { locale: fr })}</span>}
+                            </div>
+                            {(e.chargeEstimee ?? 0) > 0 && (
+                              <div className="mt-1.5 h-1 rounded-full bg-border overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.min(Math.round((e.heuresRealisees ?? 0) / (e.chargeEstimee ?? 1) * 100), 100)}%`, background: projColor }} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Financier ── */}
+            {tab === "financier" && (
+              <div className="p-5 space-y-5">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Budget total", value: `${budgetNum.toLocaleString("fr-FR")}€`, icon: DollarSign },
+                    { label: "Consommé", value: `${(budgetNum * budgetPct / 100).toLocaleString("fr-FR", { maximumFractionDigits: 0 })}€`, icon: BarChart3 },
+                    { label: "Écart", value: `${ecart > 0 ? "-" : "+"}${Math.abs(ecart).toFixed(1)}%`, icon: Activity },
+                    { label: "Restant", value: `${(100 - budgetPct).toFixed(1)}%`, icon: Eye },
+                  ].map(({ label, value, icon: Icon }) => (
+                    <div key={label} className="bg-muted/50 rounded-xl p-3.5">
+                      <div className="text-[10px] text-muted-foreground mb-1">{label}</div>
+                      <div className="text-[1.3rem] font-extrabold text-foreground">{value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Heures par étape</div>
+                  {data.etapes.map((e) => {
+                    const h = e.chargeEstimee ?? 0;
+                    const hd = e.heuresRealisees ?? 0;
+                    const pct = h > 0 ? Math.min(Math.round(hd / h * 100), 100) : 0;
+                    return (
+                      <div key={e.id} className="mb-2.5">
+                        <div className="flex justify-between text-[12px] text-muted-foreground mb-1">
+                          <span className="truncate">{e.nom}</span>
+                          <span className="font-semibold shrink-0 ml-2">{hd}h / {h}h</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-border overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: projColor }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Activités ── */}
+            {tab === "activites" && (
+              <div className="p-5">
+                <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Activités loguées</div>
+                {data.activites.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">Aucune activité</p>
+                ) : (
+                  <div>
+                    {data.activites.slice(0, 20).map((a) => (
+                      <div key={a.id} className="flex items-center gap-2.5 py-2.5 border-b border-border/50">
+                        <div className="text-[11px] text-muted-foreground w-14 shrink-0">
+                          {format(new Date(a.date), "dd/MM", { locale: fr })}
+                        </div>
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0"
+                          style={{ background: a.consultant.couleur }}>
+                          {a.consultant.nom.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        </div>
+                        <span className="flex-1 text-[12.5px] text-foreground truncate">{a.description ?? a.etape?.nom ?? "—"}</span>
+                        <span className="text-[13px] font-bold text-foreground shrink-0">{a.heures}h</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Documents Tab
+// ══════════════════════════════════════════════════════════════════════
+
+interface DocumentItem {
+  id: number;
+  nom: string;
+  type: string;
+  taille?: number | null;
+  createdAt: string;
+  uploadedBy?: { nom: string } | null;
+}
+
+function DocumentsTab({ projectId }: { projectId: number }) {
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/documents?projetId=${projectId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list = Array.isArray(d) ? d : d.documents ?? [];
+        setDocuments(list);
+      })
+      .catch(() => setDocuments([]))
+      .finally(() => setLoading(false));
+  }, [projectId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-5">
+      <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">
+        Documents
+      </div>
+      {documents.length === 0 ? (
+        <div className="py-10 text-center space-y-3">
+          <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+          <p className="text-sm text-muted-foreground">Aucun document associé</p>
+          <a
+            href="/documents"
+            className="inline-flex items-center gap-1.5 text-[12.5px] text-primary font-medium hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Uploader un document
+          </a>
+        </div>
+      ) : (
+        <div className="space-y-0">
+          {documents.map((doc) => (
+            <div key={doc.id} className="flex items-center gap-3 py-2.5 border-b border-border/50">
+              <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12.5px] font-medium text-foreground truncate">{doc.nom}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {doc.uploadedBy?.nom ?? "—"}
+                  {" · "}
+                  {format(new Date(doc.createdAt), "dd/MM/yy", { locale: fr })}
+                  {doc.taille != null && ` · ${(doc.taille / 1024).toFixed(0)} Ko`}
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                {doc.type}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

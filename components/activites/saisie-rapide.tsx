@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import type { Consultant, Projet, Etape, Activite } from "./types";
 
 export interface SaisieRapideFormState {
@@ -52,12 +51,8 @@ export function SaisieRapide({
     : null;
 
   return (
-    <Card className="border-primary/20" data-testid="saisie-rapide">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Saisie rapide</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 items-end">
+    <div data-testid="saisie-rapide">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
           <div className="space-y-1.5">
             <Label htmlFor="saisie-consultant" className="text-xs">Consultant</Label>
             {isConsultantRole ? (
@@ -170,10 +165,9 @@ export function SaisieRapide({
             </Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          Raccourci : <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">Ctrl+Enter</kbd> pour enregistrer
-        </p>
-      </CardContent>
-    </Card>
+      <p className="text-xs text-muted-foreground mt-2">
+        Raccourci : <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">Ctrl+Enter</kbd> pour enregistrer
+      </p>
+    </div>
   );
 }

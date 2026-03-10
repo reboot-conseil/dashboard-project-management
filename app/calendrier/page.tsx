@@ -15,40 +15,25 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Flag,
   LayoutGrid,
   GanttChart,
   Users,
   PanelRight,
+  Plus,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import type { CalData, EtapeInfo, Filtres, VueType } from "@/components/calendrier/types";
 import { buildParams } from "@/components/calendrier/types";
-import { FiltresBar } from "@/components/calendrier/filtres-bar";
 import { MonthView } from "@/components/calendrier/month-view";
 import { GanttView } from "@/components/calendrier/gantt-view";
 import { ChargeEquipeView } from "@/components/calendrier/charge-equipe-view";
 import { EtapeSidebar } from "@/components/calendrier/etape-sidebar";
-import { WeekSidePanel } from "@/components/calendrier/week-side-panel";
 import { ContextMenu } from "@/components/calendrier/context-menu";
-
-const WEEK_DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const EMPTY_DATA: CalData = {
   activites: [],
@@ -61,24 +46,34 @@ const EMPTY_DATA: CalData = {
   stats: { totalEtapes: 0, enRetard: 0, critiques: 0, surcharges: 0, capaciteDisponible: 0 },
 };
 
+const VUE_LABELS: Record<VueType, string> = {
+  mois: "Mois",
+  gantt: "Timeline",
+  charge: "Équipe",
+};
+
+const VUE_ICONS: Record<VueType, React.ReactNode> = {
+  mois: <LayoutGrid className="h-3.5 w-3.5" />,
+  gantt: <GanttChart className="h-3.5 w-3.5" />,
+  charge: <Users className="h-3.5 w-3.5" />,
+};
+
 export default function CalendrierPage() {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [vue, setVue] = useState<VueType>("mois");
   const [data, setData] = useState<CalData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filtres, setFiltres] = useState<Filtres>({
-    projetIds: [],
-    consultantIds: [],
-    statuts: ["A_FAIRE", "EN_COURS"],
-    urgences: [],
-    masquerPassees: true,
-  });
+
+  // Simplified 3-filter state
+  const [filtreProjetId, setFiltreProjetId] = useState("");
+  const [filtreConsultantId, setFiltreConsultantId] = useState("");
+  const [filtreStatut, setFiltreStatut] = useState("");
+
   const [selectedEtape, setSelectedEtape] = useState<EtapeInfo | null>(null);
-  const [showWeekPanel, setShowWeekPanel] = useState(true);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; etape: EtapeInfo } | null>(null);
   const [showConfirmReport, setShowConfirmReport] = useState<{ etape: EtapeInfo; newDeadline: string } | null>(null);
-  const [filtresOpen, setFiltresOpen] = useState<Record<string, boolean>>({});
 
   // Hydration guard + persistence
   const [hydrated, setHydrated] = useState(false);
@@ -87,8 +82,12 @@ export default function CalendrierPage() {
     try {
       const savedVue = localStorage.getItem("calendrier-vue-active") as VueType | null;
       if (savedVue) setVue(savedVue);
-      const savedFiltres = localStorage.getItem("calendrier-filtres");
-      if (savedFiltres) setFiltres(JSON.parse(savedFiltres));
+      const savedProjet = localStorage.getItem("calendrier-filtreProjet");
+      if (savedProjet) setFiltreProjetId(savedProjet);
+      const savedConsultant = localStorage.getItem("calendrier-filtreConsultant");
+      if (savedConsultant) setFiltreConsultantId(savedConsultant);
+      const savedStatut = localStorage.getItem("calendrier-filtreStatut");
+      if (savedStatut) setFiltreStatut(savedStatut);
     } catch {}
   }, []);
 
@@ -99,16 +98,25 @@ export default function CalendrierPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem("calendrier-filtres", JSON.stringify(filtres));
-  }, [filtres, hydrated]);
+    localStorage.setItem("calendrier-filtreProjet", filtreProjetId);
+    localStorage.setItem("calendrier-filtreConsultant", filtreConsultantId);
+    localStorage.setItem("calendrier-filtreStatut", filtreStatut);
+  }, [filtreProjetId, filtreConsultantId, filtreStatut, hydrated]);
 
   useEffect(() => {
-    function handleClick() {
-      setContextMenu(null);
-    }
+    function handleClick() { setContextMenu(null); }
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
   }, []);
+
+  // Compute Filtres object from simplified state
+  const filtres: Filtres = {
+    projetIds: filtreProjetId ? [parseInt(filtreProjetId)] : [],
+    consultantIds: filtreConsultantId ? [parseInt(filtreConsultantId)] : [],
+    statuts: filtreStatut ? [filtreStatut] : ["A_FAIRE", "EN_COURS", "VALIDEE"],
+    urgences: [],
+    masquerPassees: false,
+  };
 
   const getDateRange = useCallback(() => {
     if (vue === "gantt") {
@@ -142,7 +150,8 @@ export default function CalendrierPage() {
       .then((d) => setData(d))
       .catch(() => setData(EMPTY_DATA))
       .finally(() => setLoading(false));
-  }, [getDateRange, filtres]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getDateRange, filtreProjetId, filtreConsultantId, filtreStatut]);
 
   async function refresh() {
     const { dateDebut, dateFin } = getDateRange();
@@ -159,19 +168,7 @@ export default function CalendrierPage() {
   function navigateNext() {
     setCurrentDate((d) => (vue === "charge" ? addWeeks(d, 1) : addMonths(d, 1)));
   }
-  function goToday() {
-    setCurrentDate(new Date());
-  }
-
-  function applyRetroplanning() {
-    setVue("gantt");
-    setFiltres({ projetIds: [], consultantIds: [], statuts: ["A_FAIRE", "EN_COURS"], urgences: [], masquerPassees: true });
-  }
-  function applyActivitesConsultants() {
-    setVue("charge");
-    setCurrentDate(new Date());
-    setFiltres({ projetIds: [], consultantIds: [], statuts: ["A_FAIRE", "EN_COURS"], urgences: [], masquerPassees: false });
-  }
+  function goToday() { setCurrentDate(new Date()); }
 
   async function changerStatut(etape: EtapeInfo, statut: string) {
     await fetch(`/api/etapes/${etape.id}`, {
@@ -205,11 +202,7 @@ export default function CalendrierPage() {
     setContextMenu(null);
   }
 
-  async function handleEtapeDatesChange(
-    etapeId: number,
-    dateDebut: string | null,
-    deadline: string | null
-  ) {
+  async function handleEtapeDatesChange(etapeId: number, dateDebut: string | null, deadline: string | null) {
     try {
       await fetch(`/api/etapes/${etapeId}`, {
         method: "PATCH",
@@ -229,149 +222,148 @@ export default function CalendrierPage() {
     setContextMenu({ x: e.clientX, y: e.clientY, etape });
   }
 
+  function handleSelectEtape(etape: EtapeInfo) {
+    setSelectedEtape(etape);
+    setShowDetailPanel(true);
+  }
+
   function getHeaderTitle() {
     if (vue === "charge") {
       const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-      return `${format(weekStart, "d", { locale: fr })} - ${format(weekEnd, "d MMM yyyy", { locale: fr })}`;
+      return `${format(weekStart, "d", { locale: fr })} – ${format(weekEnd, "d MMM yyyy", { locale: fr })}`;
     }
     return format(currentDate, "MMMM yyyy", { locale: fr });
   }
 
   return (
     <div className="p-6 space-y-4">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-            {/* Sélecteur de vue */}
-            <div className="flex rounded-lg border border-border overflow-hidden">
-              {(["mois", "gantt", "charge"] as VueType[]).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setVue(v)}
-                  className={cn(
-                    "px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5",
-                    vue === v
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {v === "mois" && <LayoutGrid className="h-3.5 w-3.5" />}
-                  {v === "gantt" && <GanttChart className="h-3.5 w-3.5" />}
-                  {v === "charge" && <Users className="h-3.5 w-3.5" />}
-                  <span className="hidden sm:inline">
-                    {v === "mois" ? "Mois" : v === "gantt" ? "Gantt" : "Charge équipe"}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {/* Navigation */}
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="icon" onClick={navigatePrev} className="h-8 w-8" aria-label="Période précédente">
-                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-              </Button>
-              <span className="text-sm font-medium min-w-[150px] text-center capitalize">
-                {getHeaderTitle()}
-              </span>
-              <Button variant="outline" size="icon" onClick={navigateNext} className="h-8 w-8" aria-label="Période suivante">
-                <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-
-            <Button variant="outline" size="sm" onClick={goToday} className="text-xs">
-              Aujourd&apos;hui
-            </Button>
-
-            {/* Vues rapides — dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs gap-1">
-                  <ChevronDown className="h-3 w-3" />Actions
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={applyRetroplanning} className="text-xs gap-2 cursor-pointer">
-                  <Flag className="h-3 w-3" />Rétroplanning
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={applyActivitesConsultants} className="text-xs gap-2 cursor-pointer">
-                  <Users className="h-3 w-3" />Staffing hebdo
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Toggle WeekSidePanel */}
-            <Button
-              variant={showWeekPanel ? "default" : "outline"}
-              size="icon"
-              className="h-8 w-8 ml-auto"
-              onClick={() => setShowWeekPanel((v) => !v)}
-              title={showWeekPanel ? "Masquer le panneau semaine" : "Afficher le panneau semaine"}
+      {/* ── Top bar ─────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Left: view tabs */}
+        <div className="flex rounded-lg border border-border overflow-hidden">
+          {(["mois", "gantt", "charge"] as VueType[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setVue(v)}
+              className={cn(
+                "px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5",
+                vue === v
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:bg-muted"
+              )}
             >
-              <PanelRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
+              {VUE_ICONS[v]}
+              <span className="hidden sm:inline">{VUE_LABELS[v]}</span>
+            </button>
+          ))}
         </div>
 
-        <FiltresBar
-          filtres={filtres}
-          setFiltres={setFiltres}
-          consultants={data?.consultants ?? []}
-          projets={data?.projets ?? []}
-          filtresOpen={filtresOpen}
-          setFiltresOpen={setFiltresOpen}
-        />
+        {/* Centre: navigation */}
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" onClick={navigatePrev} className="h-8 w-8" aria-label="Période précédente">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium min-w-[160px] text-center capitalize">
+            {getHeaderTitle()}
+          </span>
+          <Button variant="outline" size="icon" onClick={navigateNext} className="h-8 w-8" aria-label="Période suivante">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <Button variant="outline" size="sm" onClick={goToday} className="text-xs">
+          Aujourd&apos;hui
+        </Button>
+
+        {/* Right: Détail + Nouvelle étape */}
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant={showDetailPanel ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => setShowDetailPanel((v) => !v)}
+          >
+            <PanelRight className="h-3.5 w-3.5" />Détail
+          </Button>
+          <Button size="sm" className="gap-1.5 text-xs" onClick={() => router.push("/projets")}>
+            <Plus className="h-3.5 w-3.5" />Nouvelle étape
+          </Button>
+        </div>
       </div>
 
-      {/* Stats alertes */}
-      {data && (data.stats.enRetard > 0 || data.stats.surcharges > 0) && (
-        <div className="flex flex-wrap gap-2">
-          {data.stats.enRetard > 0 && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
-              <AlertTriangle className="h-4 w-4" />
-              {data.stats.enRetard} deadline{data.stats.enRetard > 1 ? "s" : ""} en retard
-            </div>
-          )}
-          {data.stats.critiques > 0 && (
-            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-sm text-orange-700">
-              <Clock className="h-4 w-4" />
-              {data.stats.critiques} deadline{data.stats.critiques > 1 ? "s" : ""} critique{data.stats.critiques > 1 ? "s" : ""}
-            </div>
-          )}
-          {data.stats.surcharges > 0 && (
-            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-sm text-orange-700">
-              <AlertTriangle className="h-4 w-4" />
-              {data.stats.surcharges} surcharge{data.stats.surcharges > 1 ? "s" : ""} consultant
-            </div>
-          )}
-          {data.stats.capaciteDisponible > 0 && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm text-emerald-700">
-              <CheckCircle2 className="h-4 w-4" />
-              {data.stats.capaciteDisponible}j disponibles équipe
-            </div>
-          )}
-        </div>
-      )}
+      {/* ── Filter bar ─────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={filtreProjetId}
+          onChange={(e) => setFiltreProjetId(e.target.value)}
+          className="h-8 px-2 text-xs rounded-md border border-border bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          aria-label="Filtrer par projet"
+        >
+          <option value="">Tous les projets</option>
+          {(data?.projets ?? []).map((p) => (
+            <option key={p.id} value={p.id}>{p.nom}</option>
+          ))}
+        </select>
 
-      {/* Contenu principal */}
+        <select
+          value={filtreConsultantId}
+          onChange={(e) => setFiltreConsultantId(e.target.value)}
+          className="h-8 px-2 text-xs rounded-md border border-border bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          aria-label="Filtrer par consultant"
+        >
+          <option value="">Tous les consultants</option>
+          {(data?.consultants ?? []).map((c) => (
+            <option key={c.id} value={c.id}>{c.nom}</option>
+          ))}
+        </select>
+
+        <select
+          value={filtreStatut}
+          onChange={(e) => setFiltreStatut(e.target.value)}
+          className="h-8 px-2 text-xs rounded-md border border-border bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          aria-label="Filtrer par statut"
+        >
+          <option value="">Tous les statuts</option>
+          <option value="A_FAIRE">À faire</option>
+          <option value="EN_COURS">En cours</option>
+          <option value="VALIDEE">Validée</option>
+        </select>
+
+        {/* Légende */}
+        <div className="flex items-center gap-3 ml-auto text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />Réalisé
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-4 rounded-sm bg-primary/40" />Planifié
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-destructive" />Deadline
+          </span>
+        </div>
+      </div>
+
+      {/* ── Main content ────────────────────────────────────────── */}
       <div className="flex gap-4">
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="card py-20 text-center text-[var(--color-muted-foreground)]">
-              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mb-3" />
               Chargement...
             </div>
           ) : vue === "mois" ? (
             <MonthView
               currentDate={currentDate}
               data={data}
-              weekDayLabels={WEEK_DAY_LABELS}
-              onSelectEtape={setSelectedEtape}
+              onSelectEtape={handleSelectEtape}
               onContextMenu={handleContextMenu}
             />
           ) : vue === "gantt" ? (
             <GanttView
               currentDate={currentDate}
               data={data}
-              onSelectEtape={setSelectedEtape}
+              onSelectEtape={handleSelectEtape}
               onContextMenu={handleContextMenu}
               onEtapeDatesChange={handleEtapeDatesChange}
             />
@@ -379,52 +371,23 @@ export default function CalendrierPage() {
             <ChargeEquipeView
               currentDate={currentDate}
               data={data}
-              onSelectEtape={setSelectedEtape}
+              onSelectEtape={handleSelectEtape}
               onContextMenu={handleContextMenu}
             />
           )}
         </div>
 
-        {selectedEtape ? (
+        {/* Détail panel */}
+        {showDetailPanel && (
           <EtapeSidebar
             etape={selectedEtape}
-            onClose={() => setSelectedEtape(null)}
-            onChangerStatut={(s) => changerStatut(selectedEtape, s)}
-            onReporterDeadline={(d) => setShowConfirmReport({ etape: selectedEtape, newDeadline: d })}
-            onSupprimer={() => supprimerEtape(selectedEtape)}
+            onClose={() => { setShowDetailPanel(false); setSelectedEtape(null); }}
+            onChangerStatut={(s) => selectedEtape && changerStatut(selectedEtape, s)}
+            onReporterDeadline={(d) => selectedEtape && setShowConfirmReport({ etape: selectedEtape, newDeadline: d })}
+            onSupprimer={() => selectedEtape && supprimerEtape(selectedEtape)}
             onNavigate={(id) => router.push(`/projets/${id}`)}
           />
-        ) : showWeekPanel ? (
-          <WeekSidePanel
-            data={data}
-            currentDate={currentDate}
-            onSelectEtape={setSelectedEtape}
-          />
-        ) : null}
-      </div>
-
-      {/* Légende */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-[var(--color-muted-foreground)] px-1 py-2 border-t border-[var(--color-border-muted)]">
-        <span className="font-medium text-[var(--color-foreground)] text-[13px]">Consultants :</span>
-        {(data?.consultants ?? []).map((c) => (
-          <span key={c.id} className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: c.couleur }} />
-            {c.nom}
-          </span>
-        ))}
-        <span className="text-[var(--color-border)]" aria-hidden="true">|</span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-[var(--color-success)]" aria-hidden="true" />
-          On track
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-[var(--color-warning)]" aria-hidden="true" />
-          Attention
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-[var(--color-destructive)]" aria-hidden="true" />
-          Dérive
-        </span>
+        )}
       </div>
 
       {/* Context menu */}
@@ -434,17 +397,14 @@ export default function CalendrierPage() {
           y={contextMenu.y}
           etape={contextMenu.etape}
           onClose={() => setContextMenu(null)}
-          onOpenDetail={() => {
-            setSelectedEtape(contextMenu.etape);
-            setContextMenu(null);
-          }}
+          onOpenDetail={() => { setSelectedEtape(contextMenu.etape); setShowDetailPanel(true); setContextMenu(null); }}
           onChangerStatut={(s) => changerStatut(contextMenu.etape, s)}
           onNavigate={(id) => router.push(`/projets/${id}`)}
           onSupprimer={() => supprimerEtape(contextMenu.etape)}
         />
       )}
 
-      {/* Modal confirmation report */}
+      {/* Modal confirmation report deadline */}
       {showConfirmReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/50" onClick={() => setShowConfirmReport(null)} />
@@ -468,9 +428,7 @@ export default function CalendrierPage() {
               </strong>
             </p>
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowConfirmReport(null)}>
-                Annuler
-              </Button>
+              <Button variant="outline" onClick={() => setShowConfirmReport(null)}>Annuler</Button>
               <Button onClick={() => reporterDeadline(showConfirmReport.etape, showConfirmReport.newDeadline)}>
                 Confirmer
               </Button>

@@ -4,13 +4,12 @@ import * as React from "react";
 import { TrendingUp, RefreshCw, Target, BarChart3, Users, Activity, ShieldAlert } from "lucide-react";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { KpiCard } from "@/components/dashboard/KpiCard";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import {
-  DashboardFilters,
   loadFilters,
   saveFilters,
   type DashboardFiltersValue,
 } from "@/components/dashboard/DashboardFilters";
+import { cn } from "@/lib/utils";
 import { ObjectifsAnnuelsSection, loadObjectifsAnnuels } from "@/components/dashboard/strategique/ObjectifsAnnuelsSection";
 import { DonutChartSection } from "@/components/dashboard/strategique/DonutChartSection";
 import { CapaciteEquipeSection } from "@/components/dashboard/strategique/CapaciteEquipeSection";
@@ -131,7 +130,12 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 // ── Main component ──────────────────────────────────────────────────────
-export function DashboardStrategique() {
+interface DashboardStrategiqueProps {
+  /** Period selected in the parent top bar */
+  periode?: string;
+}
+
+export function DashboardStrategique({ periode: _periodeProp }: DashboardStrategiqueProps = {}) {
   const [filters, setFilters] = React.useState<DashboardFiltersValue>(() =>
     loadFilters(STORAGE_KEY, "month")
   );
@@ -226,20 +230,18 @@ export function DashboardStrategique() {
   }));
 
   return (
-    <div className="space-y-6">
-      {/* Header + Filtres */}
-      <DashboardHeader
-        viewName="Vue Stratégique"
-        icon={<TrendingUp className="h-5 w-5" />}
-        isRefreshing={isRefreshing}
-        onRefresh={() => fetchData(filters, true)}
-      >
-        <DashboardFilters
-          value={filters}
-          onChange={handleFilterChange}
-          defaultPeriode="month"
-        />
-      </DashboardHeader>
+    <div className="space-y-5">
+      {/* ── Inline filter bar (no header) ── */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => fetchData(filters, true)}
+          disabled={isRefreshing}
+          className="p-1.5 rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors ml-auto"
+          title="Rafraîchir"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+        </button>
+      </div>
 
       {/* 4 KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-4">

@@ -13,6 +13,8 @@ import {
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
 
+const PROJET_COLORS = ["#3b82f6", "#6366f1", "#14b8a6", "#f43f5e", "#84cc16", "#f97316"];
+
 // GET /api/dashboard/operationnel?dateDebut=YYYY-MM-DD&dateFin=YYYY-MM-DD&projetId=X
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -115,7 +117,7 @@ export async function GET(request: Request) {
       },
     }),
 
-    // Étapes critiques (deadline < 3j, non validées)
+    // Prochaines étapes non validées avec deadline (toutes, triées ASC)
     prisma.etape.findMany({
       where: {
         statut: { not: "VALIDEE" },
@@ -126,7 +128,7 @@ export async function GET(request: Request) {
         nom: true,
         deadline: true,
         statut: true,
-        projet: { select: { id: true, nom: true } },
+        projet: { select: { id: true, nom: true, couleur: true } },
       },
       orderBy: { deadline: "asc" },
     }),
@@ -214,11 +216,22 @@ export async function GET(request: Request) {
   });
 
   // ── Priorités cette semaine ──────────────────────────────────────
-  // 1. Deadlines critiques (< 3j)
+  // 1. Deadlines critiques (< 3j) — pour compatibilité rétrograde
   const deadlinesCritiques = etapesCritiques.filter((e) => {
     const j = differenceInDays(new Date(e.deadline!), now);
     return j >= 0 && j < 3;
   });
+
+  // Prochaines deadlines (toutes, jusqu'à 6, triées ASC)
+  const prochainesDeadlines = etapesCritiques.slice(0, 6).map((e) => ({
+    id: e.id,
+    nom: e.nom,
+    deadline: e.deadline,
+    joursRestants: differenceInDays(new Date(e.deadline!), now),
+    projetId: e.projet.id,
+    projetNom: e.projet.nom,
+    projetCouleur: e.projet.couleur,
+  }));
 
   // 2. Projets en dérive (écart < -10%)
   const projetsEnDerive = projetsAvecProgression.filter((p) => p.ecart < -10);
@@ -255,6 +268,35 @@ export async function GET(request: Request) {
       return scoreB - scoreA;
     })
     .slice(0, 5);
+
+  // ── Tous projets actifs (EN_COURS), max 5, triés par criticité ───
+  const projetsActifsList = projetsAvecProgression
+    .filter((p) => p.statut === "EN_COURS")
+    .sort((a, b) => {
+      const scoreA = Math.abs(Math.min(a.ecart, 0)) * 2 + Math.max(a.pctBudget - 80, 0);
+      const scoreB = Math.abs(Math.min(b.ecart, 0)) * 2 + Math.max(b.pctBudget - 80, 0);
+      return scoreB - scoreA;
+    })
+    .slice(0, 5);
+
+  // ── Répartition heures par projet (période filtrée, depuis projetsActifs Prisma) ──
+  const repartitionHeuresParProjet = projetsActifs
+    .filter((p) => p.statut === "EN_COURS")
+    .map((p, i) => {
+      const activitesPeriodeProjet = p.activites.filter((a) => {
+        return a.date >= debut && a.date <= fin;
+      });
+      const heures = activitesPeriodeProjet.reduce((s, a) => s + Number(a.heures), 0);
+      const etapesAvecHeures = new Set(activitesPeriodeProjet.map((a) => a.etapeId).filter(Boolean));
+      return {
+        nom: p.nom,
+        couleur: PROJET_COLORS[i % PROJET_COLORS.length],
+        heures: Math.round(heures * 10) / 10,
+        nbConsultants: etapesAvecHeures.size,
+      };
+    })
+    .filter((p) => p.heures > 0)
+    .sort((a, b) => b.heures - a.heures);
 
   // ── Graphique Activité Équipe (7 derniers jours) ─────────────────
   // Construire structure jour × consultant
@@ -408,8 +450,17 @@ export async function GET(request: Request) {
       },
     },
 
-    // Projets à surveiller
+    // Projets à surveiller (filtrés critiques — rétrocompatibilité)
     projetsASurveiller,
+
+    // Tous projets actifs EN_COURS (max 5, triés criticité)
+    projetsActifs: projetsActifsList,
+
+    // Prochaines deadlines (toutes, jusqu'à 6)
+    prochainesDeadlines,
+
+    // Répartition heures par projet sur la période
+    repartitionHeuresParProjet,
 
     // Graphique activité équipe (7 derniers jours)
     activiteEquipe: {

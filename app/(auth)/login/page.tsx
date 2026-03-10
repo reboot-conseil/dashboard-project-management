@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense, useState } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,6 +27,18 @@ function LoginForm() {
     if (res?.error) {
       setError("Email ou mot de passe incorrect.")
     } else {
+      // Set default dashboard view based on role
+      try {
+        const session = await getSession()
+        const role = session?.user?.role
+        if (role === "CONSULTANT") {
+          localStorage.setItem("dashboard-active-view", "consultants")
+        } else if (role === "ADMIN") {
+          localStorage.setItem("dashboard-active-view", "strategique")
+        } else {
+          localStorage.setItem("dashboard-active-view", "operationnel")
+        }
+      } catch (_) { /* ignore */ }
       window.location.href = callbackUrl
     }
   }

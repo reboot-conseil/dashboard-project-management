@@ -144,12 +144,8 @@ function SidebarVertical({
 
           return (
             <div key={section.label} className="mb-1">
-              {!collapsed && (
-                <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest px-3 pt-3 pb-1">
-                  {section.label}
-                </p>
-              )}
-              {collapsed && <div className="h-3" />}
+              <div className="h-px bg-border/50 mx-1 my-1.5" />
+              {collapsed && <div className="h-1" />}
               <div className="space-y-0.5">
                 {visibleItems.map(({ href, label, icon: Icon }) => {
                   const active = href === "/" ? pathname === "/" : pathname.startsWith(href);

@@ -5,17 +5,15 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import type { Consultant, Projet, Etape, Activite, Totaux, SavedFilter, EditForm } from "@/components/activites/types";
 import { getPeriodeDates } from "@/components/activites/types";
 import { SaisieRapide } from "@/components/activites/saisie-rapide";
 import type { SaisieRapideFormState } from "@/components/activites/saisie-rapide";
 import { ActivitesList } from "@/components/activites/activites-list";
-import { ActivitesFeed } from "@/components/activites/activites-feed";
 import { EditDialog } from "@/components/activites/edit-dialog";
 import { SaveFilterDialog } from "@/components/activites/save-filter-dialog";
-import { Clock, Download, List, LayoutList, Plus, X } from "lucide-react";
+import { Clock, Download, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -46,7 +44,6 @@ export default function ActivitesPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const heuresRef = useRef<HTMLInputElement>(null);
-  const [viewMode, setViewMode] = useState<"table" | "feed">("table");
   const [saisieOpen, setSaisieOpen] = useState(false);
 
   const [consultants, setConsultants] = useState<Consultant[]>([]);
@@ -71,7 +68,6 @@ export default function ActivitesPage() {
   const [filtreConsultant, setFiltreConsultant] = useState("");
   const [filtreProjet, setFiltreProjet] = useState("");
   const [filtrePeriode, setFiltrePeriode] = useState("month");
-  const [filtreFacturable] = useState("");
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingActivite, setEditingActivite] = useState<Activite | null>(null);
@@ -109,7 +105,7 @@ export default function ActivitesPage() {
       consultantId: filtreConsultant,
       projetId: filtreProjet,
       periode: filtrePeriode,
-      facturable: filtreFacturable,
+      facturable: "",
     };
     persistSavedFilters([...savedFilters, newFilter]);
     setSaveFilterName("");
@@ -183,8 +179,6 @@ export default function ActivitesPage() {
       const params = new URLSearchParams();
       if (filtreConsultant) params.set("consultantId", filtreConsultant);
       if (filtreProjet) params.set("projetId", filtreProjet);
-      if (filtreFacturable === "true") params.set("facturable", "true");
-      if (filtreFacturable === "false") params.set("facturable", "false");
       const dates = getPeriodeDates(filtrePeriode);
       if (dates.dateDebut) params.set("dateDebut", dates.dateDebut);
       if (dates.dateFin) params.set("dateFin", dates.dateFin);
@@ -194,7 +188,7 @@ export default function ActivitesPage() {
       setTotaux(data.totaux);
     } catch { toast.error("Erreur de chargement"); }
     finally { setLoading(false); }
-  }, [filtreConsultant, filtreProjet, filtrePeriode, filtreFacturable]);
+  }, [filtreConsultant, filtreProjet, filtrePeriode]);
 
   useEffect(() => { fetchActivites(); }, [fetchActivites]);
 
@@ -320,21 +314,6 @@ export default function ActivitesPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Toggle Table / Feed */}
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            <button
-              onClick={() => setViewMode("table")}
-              className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors${viewMode === "table" ? " bg-primary text-primary-foreground" : " bg-card text-muted-foreground hover:bg-muted"}`}
-            >
-              <List className="h-3.5 w-3.5" />Table
-            </button>
-            <button
-              onClick={() => setViewMode("feed")}
-              className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors${viewMode === "feed" ? " bg-primary text-primary-foreground" : " bg-card text-muted-foreground hover:bg-muted"}`}
-            >
-              <LayoutList className="h-3.5 w-3.5" />Feed
-            </button>
-          </div>
           <Button variant="outline" size="sm" onClick={() => exportCsvActivites(activites)}>
             <Download className="h-4 w-4 mr-1.5" />Exporter
           </Button>
@@ -359,16 +338,12 @@ export default function ActivitesPage() {
             form={form}
             saving={saving}
             heuresRef={heuresRef}
-            isConsultantRole={(session?.user as { role?: string })?.role === "CONSULTANT"}
             onFormChange={(field, value) => setForm((f) => ({ ...f, [field]: value }))}
             onSave={async () => { await handleQuickSave(); setSaisieOpen(false); }}
           />
         </DialogContent>
       </Dialog>
 
-      {viewMode === "feed" ? (
-        <ActivitesFeed activites={activites} onEdit={openEdit} onDelete={openDelete} />
-      ) : (
       <ActivitesList
         activites={activites}
         totaux={totaux}
@@ -378,13 +353,11 @@ export default function ActivitesPage() {
         filtreConsultant={filtreConsultant}
         filtreProjet={filtreProjet}
         filtrePeriode={filtrePeriode}
-        filtreFacturable={filtreFacturable}
         savedFilters={savedFilters}
         savedFiltersOpen={savedFiltersOpen}
         onFiltreConsultant={setFiltreConsultant}
         onFiltreProjet={setFiltreProjet}
         onFiltrePeriode={setFiltrePeriode}
-        onFiltreFacturable={() => {}}
         onToggleSavedFilters={() => setSavedFiltersOpen((v) => !v)}
         onOpenSaveFilterDialog={() => setSaveFilterDialogOpen(true)}
         onApplyFilter={applyFilter}
@@ -392,7 +365,6 @@ export default function ActivitesPage() {
         onEdit={openEdit}
         onDelete={openDelete}
       />
-      )}
 
       <EditDialog
         open={editDialogOpen}
@@ -433,7 +405,7 @@ export default function ActivitesPage() {
         filtreConsultant={filtreConsultant}
         filtreProjet={filtreProjet}
         filtrePeriode={filtrePeriode}
-        filtreFacturable={filtreFacturable}
+        filtreFacturable=""
       />
     </div>
   );
