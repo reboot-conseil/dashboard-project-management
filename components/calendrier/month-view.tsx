@@ -156,8 +156,14 @@ export function MonthView({
               <div className="absolute inset-x-0 overflow-hidden pointer-events-none" style={{ top: "26px", bottom: 0 }}>
                 {getWeekBars(week).map(({ etape, startCol, endCol, lane }) => {
                   const weekKey0 = format(week[0], "yyyy-MM-dd");
+                  const weekKeys = week.map((d) => format(d, "yyyy-MM-dd"));
                   const etapeStart = etape.dateDebut ?? etape.deadline;
                   const startsHere = etapeStart !== null && etapeStart >= weekKey0;
+                  const endsHere = etape.deadline !== null && weekKeys.includes(etape.deadline);
+                  const borderRadius =
+                    startsHere && endsHere ? "3px" :
+                    startsHere ? "3px 0 0 3px" :
+                    endsHere ? "0 3px 3px 0" : "0";
                   return (
                     <button
                       key={etape.id}
@@ -165,7 +171,7 @@ export function MonthView({
                       onContextMenu={(ev) => onContextMenu(ev, etape)}
                       title={`${etape.nom} — ${etape.projet.nom}`}
                       className={cn(
-                        "absolute h-[18px] text-[10px] leading-tight pointer-events-auto truncate",
+                        "absolute h-[18px] text-[10px] leading-tight pointer-events-auto overflow-hidden flex items-center",
                         etape.statut === "VALIDEE" && "opacity-50",
                       )}
                       style={{
@@ -174,11 +180,13 @@ export function MonthView({
                         top: `${lane * 20}px`,
                         backgroundColor: etape.projet.couleur + "30",
                         borderLeft: startsHere ? `3px solid ${etape.projet.couleur}` : "none",
-                        borderRadius: startsHere ? "3px 0 0 3px" : "0",
+                        borderRight: endsHere ? `3px solid ${etape.projet.couleur}` : "none",
+                        borderRadius,
                         paddingLeft: startsHere ? "4px" : "2px",
+                        paddingRight: endsHere ? "4px" : "2px",
                       }}
                     >
-                      {startsHere && <span className="truncate block">{etape.nom}</span>}
+                      <span className="truncate flex-1 block">{etape.nom}</span>
                     </button>
                   );
                 })}
