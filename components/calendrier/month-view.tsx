@@ -7,6 +7,7 @@ import {
   startOfWeek,
   endOfWeek,
   addDays,
+  subDays,
   isSameMonth,
   isToday,
   isWeekend,
@@ -156,17 +157,21 @@ export function MonthView({
               <div className="absolute inset-x-0 overflow-hidden pointer-events-none" style={{ top: "26px", bottom: 0 }}>
                 {getWeekBars(week).map(({ etape, startCol, endCol, lane }) => {
                   const weekKeys = week.map((d) => format(d, "yyyy-MM-dd"));
-                  const etapeStart = etape.dateDebut ?? etape.deadline;
-                  // Nom visible uniquement si startCol est exactement le jour de départ
-                  const startsHere = etapeStart !== null && weekKeys[startCol] === etapeStart;
-                  const endsHere = etape.deadline !== null && weekKeys.includes(etape.deadline);
-                  const borderRadius =
-                    startsHere && endsHere ? "3px" :
-                    startsHere ? "3px 0 0 3px" :
-                    endsHere ? "0 3px 3px 0" : "0";
-                  // Largeur d'un seul jour dans la barre (pour le hachage)
+                  // Normaliser la date de départ (slice pour ignorer le composant time éventuel)
+                  const etapeStartNorm = (etape.dateDebut ?? etape.deadline)?.slice(0, 10) ?? null;
+                  const deadlineNorm = etape.deadline?.slice(0, 10) ?? null;
+                  // Nom visible si l'étape a démarré après le vendredi de la semaine précédente
+                  // (couvre les démarrages samedi, dimanche, ou dans la semaine courante)
+                  const prevFriday = format(subDays(week[0], 3), "yyyy-MM-dd");
+                  const firstAppearsThisWeek =
+                    etapeStartNorm !== null && etapeStartNorm > prevFriday;
+                  const endsHere = deadlineNorm !== null && weekKeys.includes(deadlineNorm);
                   const spanCols = endCol - startCol + 1;
                   const hatchWidthPct = Math.round(100 / spanCols);
+                  const borderRadius =
+                    firstAppearsThisWeek && endsHere ? "3px" :
+                    firstAppearsThisWeek ? "3px 0 0 3px" :
+                    endsHere ? "0 3px 3px 0" : "0";
                   return (
                     <button
                       key={etape.id}
@@ -174,7 +179,7 @@ export function MonthView({
                       onContextMenu={(ev) => onContextMenu(ev, etape)}
                       title={`${etape.nom} — ${etape.projet.nom}`}
                       className={cn(
-                        "absolute h-[18px] text-[10px] leading-tight pointer-events-auto overflow-hidden flex items-center",
+                        "absolute h-[18px] text-[10px] leading-[18px] pointer-events-auto overflow-hidden truncate text-left",
                         etape.statut === "VALIDEE" && "opacity-50",
                       )}
                       style={{
@@ -182,13 +187,13 @@ export function MonthView({
                         width: `${(spanCols / 7) * 100}%`,
                         top: `${lane * 20}px`,
                         backgroundColor: etape.projet.couleur + "30",
-                        borderLeft: startsHere ? `3px solid ${etape.projet.couleur}` : "none",
+                        borderLeft: firstAppearsThisWeek ? `3px solid ${etape.projet.couleur}` : "none",
                         borderRadius,
-                        paddingLeft: startsHere ? "4px" : "2px",
-                        paddingRight: "2px",
+                        paddingLeft: firstAppearsThisWeek ? "4px" : "2px",
+                        paddingRight: `${hatchWidthPct + 2}%`,
                       }}
                     >
-                      {startsHere && <span className="truncate flex-1 block">{etape.nom}</span>}
+                      {firstAppearsThisWeek && etape.nom}
                       {endsHere && (
                         <span
                           className="absolute right-0 top-0 bottom-0 pointer-events-none"
