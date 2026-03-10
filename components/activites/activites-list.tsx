@@ -195,9 +195,9 @@ export function ActivitesList({
               <Table data-testid="activites-table">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Consultant</TableHead>
                     <TableHead>Projet</TableHead>
                     <TableHead>Étape</TableHead>
+                    <TableHead>Consultant</TableHead>
                     <TableHead className="text-right">Heures</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Fact.</TableHead>
@@ -225,7 +225,6 @@ export function ActivitesList({
                           data-testid={`row-${a.id}`}
                           className="group border-b transition-colors hover:bg-muted/50"
                         >
-                          <TableCell className="py-1 text-[12.5px]">{a.consultant.nom}</TableCell>
                           <TableCell className="py-1">
                             <div className="flex items-center gap-1.5">
                               {a.projet.couleur && (
@@ -237,6 +236,7 @@ export function ActivitesList({
                           <TableCell className="py-1 text-muted-foreground text-[12px]">
                             {a.etape ? a.etape.nom : "—"}
                           </TableCell>
+                          <TableCell className="py-1 text-[12.5px]">{a.consultant.nom}</TableCell>
                           <TableCell className="py-1 text-right font-medium text-[12.5px]">
                             {Number(a.heures)}h
                           </TableCell>
