@@ -309,10 +309,6 @@ export default function ProjetsPage() {
       selectedProjectId ? "xl:max-w-none" : ""
     )}>
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <FolderOpen className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <h1 className="text-lg font-semibold">{projets.length} projet{projets.length > 1 ? "s" : ""}</h1>
-        </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => exportCsvProjets(projets)}>
             <Download className="h-4 w-4 mr-1.5" />Exporter
