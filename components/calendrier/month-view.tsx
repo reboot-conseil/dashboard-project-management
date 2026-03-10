@@ -118,8 +118,9 @@ export function MonthView({
                     {format(day, "d")}
                   </span>
                   {hours > 0 && (
-                    <span className="text-[10px] text-emerald-700 font-medium">
-                      🟢 {hours}h
+                    <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-0.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                      {hours}h
                     </span>
                   )}
                 </div>
@@ -137,23 +138,24 @@ export function MonthView({
                         title={`${etape.nom} (${etape.projet.nom})`}
                         tabIndex={!inMonth ? -1 : undefined}
                         className={cn(
-                          "w-full text-left rounded px-1 py-0.5 text-[10px] leading-tight truncate transition-opacity cursor-pointer",
+                          "w-full text-left px-1.5 py-1 text-[11px] font-medium leading-tight truncate transition-opacity cursor-pointer min-h-[24px] flex items-center gap-0.5",
+                          isFirst && isDeadlineDay ? "rounded-[3px]" : isFirst ? "rounded-l-[3px] rounded-r-none" : isDeadlineDay ? "rounded-r-[3px] rounded-l-none" : "rounded-none",
                           etape.statut === "VALIDEE" && "opacity-50",
                           etape.urgence === "retard" && "ring-1 ring-red-400"
                         )}
                         style={{
-                          backgroundColor: etape.projet.couleur + "25",
-                          borderLeft: `3px solid ${etape.projet.couleur}`,
+                          backgroundColor: etape.projet.couleur + "33",
+                          borderLeft: isFirst ? `3px solid ${etape.projet.couleur}` : undefined,
                         }}
                       >
                         {isFirst && (
-                          <span className="truncate">
+                          <span className="truncate flex-1">
                             {healthIcon(etape.health)} {etape.nom}
                           </span>
                         )}
-                        {!isFirst && <span>&nbsp;</span>}
+                        {!isFirst && <span className="flex-1">&nbsp;</span>}
                         {isDeadlineDay && (
-                          <span className="ml-1 text-red-500">📍</span>
+                          <span className="text-red-500 shrink-0">📍</span>
                         )}
                       </button>
                     );
@@ -165,15 +167,13 @@ export function MonthView({
                   )}
                 </div>
 
-                {dayActivites.length > 0 && (
-                  <div className="flex gap-0.5 mt-1 flex-wrap">
-                    {[
-                      ...new Map(
-                        dayActivites.map((a) => [a.consultant.id, a.consultant])
-                      ).values(),
-                    ]
-                      .slice(0, 4)
-                      .map((c) => (
+                {dayActivites.length > 0 && (() => {
+                  const uniq = [
+                    ...new Map(dayActivites.map((a) => [a.consultant.id, a.consultant])).values(),
+                  ];
+                  return (
+                    <div className="flex gap-0.5 mt-1 flex-wrap items-center">
+                      {uniq.slice(0, 3).map((c) => (
                         <span
                           key={c.id}
                           className="h-2 w-2 rounded-full shrink-0"
@@ -181,8 +181,12 @@ export function MonthView({
                           title={c.nom}
                         />
                       ))}
-                  </div>
-                )}
+                      {uniq.length > 3 && (
+                        <span className="text-[9px] text-muted-foreground font-medium">+{uniq.length - 3}</span>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

@@ -5,20 +5,26 @@
 
 @theme {
   /* Surfaces */
-  --color-background:     #f8fafc;
+  --color-background:     #F5F7FA;
   --color-surface:        #ffffff;
-  --color-surface-raised: #f1f5f9;
+  --color-surface-raised: #F0F3F8;
 
   /* Brand */
-  --color-primary:        #1d4ed8;
-  --color-primary-hover:  #1e40af;
+  --color-primary:        #2563EB;
+  --color-primary-hover:  #1D4ED8;
+  --color-primary-light:  #EFF6FF;
   --color-accent:         #7c3aed;
+  --color-accent-light:   #F5F3FF;
 
   /* Sémantique */
-  --color-success:        #15803d;
-  --color-warning:        #ea580c;
-  --color-destructive:    #b91c1c;
+  --color-success:        #16A34A;
+  --color-success-light:  #F0FDF4;
+  --color-warning:        #D97706;
+  --color-warning-light:  #FFFBEB;
+  --color-destructive:    #DC2626;
+  --color-destructive-light: #FEF2F2;
   --color-info:           #0891b2;
+  --color-info-light:     #F0F9FF;
 
   /* Foregrounds sémantiques */
   --color-primary-foreground:     #ffffff;
@@ -28,30 +34,37 @@
   --color-destructive-foreground: #ffffff;
 
   /* Text */
-  --color-foreground:           #0f172a;
-  --color-muted-foreground:     #5a6a7a;
-  --color-card-foreground:      #0f172a;
-  --color-secondary-foreground: #0f172a;
+  --color-foreground:           #0F172A;
+  --color-muted-foreground:     #64748B;
+  --color-placeholder:          #94A3B8;
+  --color-card-foreground:      #0F172A;
+  --color-secondary-foreground: #0F172A;
 
   /* Surfaces (compat aliases) */
   --color-card:      #ffffff;
-  --color-muted:     #f1f5f9;
-  --color-secondary: #f1f5f9;
+  --color-muted:     #F0F3F8;
+  --color-secondary: #F0F3F8;
 
   /* Borders */
-  --color-border: #e2e8f0;
-  --color-ring:   #1d4ed8;
+  --color-border:       #E4E8EF;
+  --color-border-muted: #EFF2F6;
+  --color-ring:         #93C5FD;
 
   /* Radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --radius-xs:  0.25rem;   /* 4px  — badges, pills */
+  --radius-sm:  0.375rem;  /* 6px  — buttons, inputs */
+  --radius-md:  0.625rem;  /* 10px — small cards, dropdowns */
+  --radius-lg:  0.875rem;  /* 14px — main cards */
+  --radius-xl:  1.25rem;   /* 20px — hero cards, panels */
+  --radius-2xl: 1.5rem;    /* 24px — modals */
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -1px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 20px 40px -8px rgb(0 0 0 / 0.14);
+  --shadow-primary: 0 4px 16px rgb(37 99 235 / 0.25);
+  --shadow-primary-sm: 0 2px 8px rgb(37 99 235 / 0.20);
 
   /* Consultant palette (inchangée) */
   --color-consultant-1-bg:   #dbeafe;
@@ -77,20 +90,71 @@
 
 /* ── Dark mode overrides ──────────────────────────────────────── */
 .dark {
-  --color-background:     #09090b;
-  --color-surface:        #18181b;
-  --color-surface-raised: #27272a;
-  --color-card:           #18181b;
-  --color-muted:          #27272a;
-  --color-secondary:      #27272a;
+  --color-background:     #0A0D14;
+  --color-surface:        #111827;
+  --color-surface-raised: #1C2333;
+  --color-card:           #111827;
+  --color-muted:          #1C2333;
+  --color-secondary:      #1C2333;
 
-  --color-foreground:           #fafafa;
-  --color-card-foreground:      #fafafa;
-  --color-muted-foreground:     #a1a1aa;
-  --color-secondary-foreground: #fafafa;
+  --color-foreground:           #F1F5F9;
+  --color-card-foreground:      #F1F5F9;
+  --color-muted-foreground:     #94A3B8;
+  --color-placeholder:          #475569;
+  --color-secondary-foreground: #F1F5F9;
 
-  --color-border: #27272a;
-  --color-ring:   #3b82f6;
+  --color-border:       #1E2A3A;
+  --color-border-muted: #141B2A;
+  --color-ring:         #3B82F6;
+
+  --color-primary:        #3B82F6;
+  --color-primary-hover:  #60A5FA;
+  --color-primary-light:  #172554;
+  --color-accent-light:   #1E1B4B;
+  --color-success-light:  #052E16;
+  --color-warning-light:  #2D1B00;
+  --color-destructive-light: #2D0000;
+  --color-info-light:     #062535;
+}
+
+/* ── Thème Cerise (Graphic Charter — Design System) ──────────── */
+/* Cerise #FF30AD · Electric Violet #8F4DFF · Blue Ribbon #2B7EFF */
+.theme-cerise {
+  --color-background:           #fafafa;
+  --color-surface:              #ffffff;
+  --color-surface-raised:       #f5f2ff;
+  --color-primary:              #f50c8b;
+  --color-primary-hover:        #e60076;
+  --color-accent:               #8f4dff;
+  --color-ring:                 #c4aeff;
+  --color-border:               #e4e4e7;
+  --color-foreground:           #09090b;
+  --color-muted-foreground:     #71717b;
+  --color-card:                 #ffffff;
+  --color-card-foreground:      #09090b;
+  --color-muted:                #f4f4f5;
+  --color-secondary:            #f4f4f5;
+  --color-secondary-foreground: #09090b;
+}
+
+/* ── Thème Reboot Conseil (Charte Graphique v2) ───────────────── */
+/* Orange #EE6F03 · Violet #7146C1 · Crème #F4F0EC               */
+.theme-reboot {
+  --color-background:           #f4f0ec;
+  --color-surface:              #ffffff;
+  --color-surface-raised:       #ede7d8;
+  --color-primary:              #ee6f03;
+  --color-primary-hover:        #d4620a;
+  --color-accent:               #7146c1;
+  --color-ring:                 #ee6f03;
+  --color-border:               #ddd7cf;
+  --color-foreground:           #1a1a1a;
+  --color-muted-foreground:     #5a5a5a;
+  --color-card:                 #ffffff;
+  --color-card-foreground:      #1a1a1a;
+  --color-muted:                #ede9e3;
+  --color-secondary:            #ede9e3;
+  --color-secondary-foreground: #1a1a1a;
 }
 
 /* ── Glassmorphism utility ────────────────────────────────────── */
@@ -167,6 +231,59 @@ html {
 .animate-scale-in        { animation: scale-in 150ms ease-out both; }
 .animate-fade-out        { animation: fade-out 150ms ease-out both; }
 .transition-base         { transition: all 150ms ease; }
+
+/* ── Skeleton loading ─────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-raised) 25%,
+    var(--color-muted) 50%,
+    var(--color-surface-raised) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-sm);
+  color: transparent !important;
+}
+.skeleton * { visibility: hidden; }
+
+/* ── Card base utility ────────────────────────────────────── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 200ms ease-out, border-color 150ms ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Interactive card — adds lift on hover, cursor pointer */
+.card-interactive {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: box-shadow 200ms ease-out, transform 200ms ease-out, border-color 150ms ease;
+}
+.card-interactive:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* Flat card — border only, no shadow */
+.card-flat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: border-color 150ms ease, background 150ms ease;
+}
 
 /* ── Respect prefers-reduced-motion ─────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

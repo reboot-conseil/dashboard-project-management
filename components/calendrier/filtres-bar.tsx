@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { CheckCircle2, RotateCcw, ChevronDown } from "lucide-react";
+import { CheckCircle2, RotateCcw, ChevronDown, FolderOpen, User, BarChart2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Filtres, ConsultantInfo, ProjetInfo } from "./types";
 import { STATUT_LABELS, URGENCE_LABELS } from "./types";
@@ -31,7 +31,7 @@ export function FiltresBar({ filtres, setFiltres, consultants, projets, filtresO
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="filtres-bar">
       <FilterDropdown
-        label={filtres.projetIds.length > 0 ? `📁 Projets (${filtres.projetIds.length})` : "📁 Projets"}
+        label="Projets" count={filtres.projetIds.length}
         open={!!filtresOpen.projets} onToggle={() => toggleDropdown("projets")} active={filtres.projetIds.length > 0}
       >
         <div className="space-y-1">
@@ -51,7 +51,7 @@ export function FiltresBar({ filtres, setFiltres, consultants, projets, filtresO
       </FilterDropdown>
 
       <FilterDropdown
-        label={filtres.consultantIds.length > 0 ? `👤 Consultants (${filtres.consultantIds.length})` : "👤 Consultants"}
+        label="Consultants" count={filtres.consultantIds.length}
         open={!!filtresOpen.consultants} onToggle={() => toggleDropdown("consultants")} active={filtres.consultantIds.length > 0}
       >
         <div className="space-y-1">
@@ -70,7 +70,7 @@ export function FiltresBar({ filtres, setFiltres, consultants, projets, filtresO
         </div>
       </FilterDropdown>
 
-      <FilterDropdown label="📊 Statut" open={!!filtresOpen.statuts} onToggle={() => toggleDropdown("statuts")} active={filtres.statuts.length !== 2}>
+      <FilterDropdown label="Statut" open={!!filtresOpen.statuts} onToggle={() => toggleDropdown("statuts")} active={filtres.statuts.length !== 2}>
         <div className="space-y-1">
           {["A_FAIRE", "EN_COURS", "VALIDEE"].map((s) => (
             <label key={s} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-muted cursor-pointer text-xs">
@@ -86,7 +86,7 @@ export function FiltresBar({ filtres, setFiltres, consultants, projets, filtresO
       </FilterDropdown>
 
       <FilterDropdown
-        label={filtres.urgences.length > 0 ? `🚨 Urgence (${filtres.urgences.length})` : "🚨 Urgence"}
+        label="Urgence" count={filtres.urgences.length}
         open={!!filtresOpen.urgences} onToggle={() => toggleDropdown("urgences")} active={filtres.urgences.length > 0}
       >
         <div className="space-y-1">
@@ -120,8 +120,8 @@ export function FiltresBar({ filtres, setFiltres, consultants, projets, filtresO
   );
 }
 
-function FilterDropdown({ label, open, onToggle, active, children }: {
-  label: string; open: boolean; onToggle: () => void; active?: boolean; children: React.ReactNode;
+function FilterDropdown({ label, count, open, onToggle, active, children }: {
+  label: string; count?: number; open: boolean; onToggle: () => void; active?: boolean; children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -136,9 +136,15 @@ function FilterDropdown({ label, open, onToggle, active, children }: {
   return (
     <div ref={ref} className="relative">
       <button onClick={onToggle}
-        className={cn("flex items-center gap-1 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
           active ? "bg-primary/10 border-primary/30 text-primary" : "border-border text-muted-foreground hover:bg-muted")}>
-        {label}<ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
+        {label}
+        {count != null && count > 0 && (
+          <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold leading-none">
+            {count}
+          </span>
+        )}
+        <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
         <div className="absolute top-full left-0 mt-1 z-50 bg-background border border-border rounded-lg shadow-lg p-2 min-w-[180px]">

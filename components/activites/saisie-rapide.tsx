@@ -30,13 +30,14 @@ interface SaisieRapideProps {
   form: SaisieRapideFormState;
   saving: boolean;
   heuresRef: RefObject<HTMLInputElement | null>;
+  isConsultantRole?: boolean;
   onFormChange: (field: keyof SaisieRapideFormState, value: string | boolean) => void;
   onSave: () => void;
 }
 
 export function SaisieRapide({
   consultants, projets, etapes, etapesLoading, activites,
-  form, saving, heuresRef, onFormChange, onSave,
+  form, saving, heuresRef, isConsultantRole, onFormChange, onSave,
 }: SaisieRapideProps) {
   const selectedEtape = form.etapeId ? etapes.find((e) => String(e.id) === form.etapeId) : null;
   const chargeInfo = selectedEtape?.chargeEstimeeJours
@@ -59,12 +60,18 @@ export function SaisieRapide({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 items-end">
           <div className="space-y-1.5">
             <Label htmlFor="saisie-consultant" className="text-xs">Consultant</Label>
-            <Select id="saisie-consultant" value={form.consultantId} onChange={(e) => onFormChange("consultantId", e.target.value)}>
-              <option value="">Choisir...</option>
-              {consultants.map((c) => (
-                <option key={c.id} value={c.id}>{c.nom}</option>
-              ))}
-            </Select>
+            {isConsultantRole ? (
+              <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/50 px-3 text-sm text-muted-foreground">
+                {consultants.find((c) => String(c.id) === form.consultantId)?.nom ?? "—"}
+              </div>
+            ) : (
+              <Select id="saisie-consultant" value={form.consultantId} onChange={(e) => onFormChange("consultantId", e.target.value)}>
+                <option value="">Choisir...</option>
+                {consultants.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nom}</option>
+                ))}
+              </Select>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="saisie-projet" className="text-xs">Projet</Label>

@@ -159,8 +159,8 @@ export default function DocumentsPage() {
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Stats — masquées si tout à zéro */}
+      {stats.total > 0 && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "Total", value: stats.total, icon: FileText, color: "text-slate-700" },
           { label: "En attente", value: stats.enAttente, icon: AlertTriangle, color: "text-amber-600" },
@@ -177,7 +177,7 @@ export default function DocumentsPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </div>}
 
       {/* Filtre */}
       <div className="flex items-center gap-3">
@@ -204,14 +204,25 @@ export default function DocumentsPage() {
               ))}
             </div>
           ) : documents.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">Aucun document</p>
-              <p className="text-sm mt-1">
-                <Link href="/documents/upload" className="text-blue-600 hover:underline">
-                  Uploadez votre premier document
-                </Link>
+            <div className="text-center py-16 px-8">
+              <div className="mx-auto mb-4 flex items-center justify-center">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="10" y="6" width="34" height="44" rx="4" fill="currentColor" className="text-muted" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3"/>
+                  <path d="M18 20h18M18 27h18M18 34h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-muted-foreground" opacity="0.4"/>
+                  <circle cx="48" cy="46" r="13" fill="var(--color-primary)" opacity="0.12"/>
+                  <path d="M48 40v12M42 46h12" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <p className="font-semibold text-foreground">Aucun document</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-5">
+                Les devis et contrats seront analysés automatiquement
               </p>
+              <Link href="/documents/upload">
+                <Button size="sm">
+                  <Upload className="h-3.5 w-3.5 mr-1.5" />
+                  Uploader un document
+                </Button>
+              </Link>
             </div>
           ) : (
             <div className="divide-y">

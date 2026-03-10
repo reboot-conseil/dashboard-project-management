@@ -6,7 +6,8 @@ export function getRedirectPath(
   pathname: string
 ): string | null {
   if (user && pathname === "/login") return "/"
-  if (!user) return "/login"
+  if (!user && pathname !== "/login") return "/login"
+  if (!user) return null
 
   const { role } = user
 

@@ -110,15 +110,15 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
                     const dispo = heures > 0 && heures < 6;
                     const libre = heures === 0;
                     return (
-                      <div key={key} className={cn("p-1.5 border-r border-border min-h-[64px]", isToday(day) && "bg-primary/5", surcharge && "bg-red-50")}>
+                      <div key={key} className={cn("p-1.5 border-r border-border min-h-[64px]", isToday(day) && "bg-primary/5", surcharge && "bg-destructive/5")}>
                         <div className="flex items-center justify-between mb-1">
-                          {libre ? <span className="text-[10px] text-muted-foreground">DISPO</span>
-                            : surcharge ? <span className="text-[10px] font-medium text-red-600">⚠️ {heures}h</span>
-                            : dispo ? <span className="text-[10px] font-medium text-emerald-600">🟢 {heures}h</span>
+                          {libre ? <span className="text-[9px] font-medium text-muted-foreground/60 px-1.5 py-0.5 rounded-full bg-muted/50 border border-border/40 leading-tight">Dispo</span>
+                            : surcharge ? <span className="text-[10px] font-semibold text-destructive">⚠ {heures}h</span>
+                            : dispo ? <span className="text-[10px] font-medium text-emerald-600">{heures}h</span>
                             : <span className="text-[10px] font-medium">{heures}h</span>}
                         </div>
                         {!libre && (
-                          <div className="h-1 w-full rounded-full bg-muted mb-1 overflow-hidden">
+                          <div className="h-1.5 w-full rounded-full bg-muted mb-1 overflow-hidden">
                             <div
                               className={cn("h-full rounded-full", chargeColor(Math.round((heures / 8) * 100)))}
                               style={{ width: `${Math.min(100, Math.round((heures / 8) * 100))}%` }}
@@ -153,7 +153,7 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
             )}
 
             {consultants.length > 0 && (
-              <div className="grid border-t-2 border-border bg-muted/20" style={{ gridTemplateColumns: "200px repeat(5, 1fr) 100px" }}>
+              <div className="grid border-t-2 border-border bg-muted/50" style={{ gridTemplateColumns: "200px repeat(5, 1fr) 100px" }}>
                 <div className="p-2 text-xs font-semibold text-muted-foreground border-r border-border">TOTAL ÉQUIPE</div>
                 {weekDays.map((day) => {
                   const key = format(day, "yyyy-MM-dd");

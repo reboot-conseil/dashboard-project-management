@@ -23,6 +23,9 @@ const TEAMS_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Génère un build standalone (~200MB) pour Docker
+  output: "standalone",
+
   // pdf-parse charge @napi-rs/canvas au niveau module → exclure du bundle Next.js
   // pour éviter "DOMMatrix is not defined" lors de la collecte des pages
   serverExternalPackages: ["pdf-parse"],

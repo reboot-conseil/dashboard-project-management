@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 
-type Theme = "light" | "dark";
+export type Theme = "light" | "dark";
+
+const THEMES: Theme[] = ["light", "dark"];
 
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>("light");
@@ -17,18 +19,28 @@ export function useTheme() {
     setHydrated(true);
   }, []);
 
-  function toggle() {
+  function cycle() {
     setTheme((prev) => {
-      const next: Theme = prev === "light" ? "dark" : "light";
+      const next = THEMES[(THEMES.indexOf(prev) + 1) % THEMES.length];
       applyTheme(next);
       localStorage.setItem("theme", next);
       return next;
     });
   }
 
-  return { theme, toggle, hydrated };
+  function setThemeTo(t: Theme) {
+    applyTheme(t);
+    localStorage.setItem("theme", t);
+    setTheme(t);
+  }
+
+  return { theme, cycle, setTheme: setThemeTo, hydrated };
 }
 
 function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle("dark", theme === "dark");
+  const cl = document.documentElement.classList;
+  cl.remove("dark", "theme-cerise", "theme-reboot");
+  if (theme === "dark")   cl.add("dark");
+  if (theme === "cerise") cl.add("theme-cerise");
+  if (theme === "reboot") cl.add("theme-reboot");
 }

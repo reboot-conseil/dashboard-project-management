@@ -185,13 +185,14 @@ export default function ProjetDetailPage() {
   function getChartData() {
     if (!projet) return { consultantData: [], weeklyData: [] };
 
-    const consultantMap = new Map<string, number>();
+    const consultantMap = new Map<string, { heures: number; couleur: string }>();
     for (const a of projet.activites) {
-      const nom = a.consultant.nom;
-      consultantMap.set(nom, (consultantMap.get(nom) ?? 0) + Number(a.heures));
+      const { nom, couleur } = a.consultant;
+      if (!consultantMap.has(nom)) consultantMap.set(nom, { heures: 0, couleur: couleur ?? "#3b82f6" });
+      consultantMap.get(nom)!.heures += Number(a.heures);
     }
     const consultantData = Array.from(consultantMap.entries()).map(
-      ([nom, heures]) => ({ nom, heures })
+      ([nom, { heures, couleur }]) => ({ nom, heures, couleur })
     );
 
     const weekMap = new Map<string, number>();

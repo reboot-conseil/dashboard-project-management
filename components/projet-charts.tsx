@@ -3,6 +3,7 @@
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,6 +19,7 @@ const COLORS = ["#2563eb", "#7c3aed", "#059669", "#d97706", "#dc2626"];
 interface ConsultantProjetHours {
   nom: string;
   heures: number;
+  couleur?: string;
 }
 
 interface WeeklyHours {
@@ -67,8 +69,8 @@ export function HeuresConsultantProjetChart({
                 formatter={(value: any) => [`${value}h`, "Heures"]}
               />
               <Bar dataKey="heures" radius={[6, 6, 0, 0]}>
-                {data.map((_entry, index) => (
-                  <rect key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.couleur ?? COLORS[index % COLORS.length]} />
                 ))}
               </Bar>
             </BarChart>
