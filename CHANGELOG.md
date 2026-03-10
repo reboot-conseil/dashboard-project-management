@@ -5,6 +5,21 @@ Format : [version] — date — description
 
 ---
 
+## [v2.2.0] — 2026-03-10 (tag `v2.2.0`)
+Système de couleurs — Option A implémentée + Option B en paramètres
+
+### Design System
+- Option A "Professional Blue" : tokens mis à jour (fond #F8FAFC, borders #E2E8F0, success #059669 unifié)
+- Dark mode GitHub-inspired : surfaces #0D1117 / #161B22 / #21262D / borders #30363D
+- Option B "Slate Neutral" : thème `[data-palette="slate"]` disponible dans les paramètres
+- Palette persistée en localStorage (`palette`)
+
+### Page Paramètres
+- Nouvelle section "Palette de couleurs" : Professional Blue (défaut) / Slate Neutral
+- S'applique sur les deux modes clair et sombre
+
+---
+
 ## [v2.1.0] — 2026-03-10 (tag `v2.1.0`)
 Corrections post-audit UX + améliorations qualité
 
