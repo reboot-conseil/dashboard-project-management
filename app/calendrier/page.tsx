@@ -78,6 +78,7 @@ export default function CalendrierPage() {
   const [selectedEtape, setSelectedEtape] = useState<EtapeInfo | null>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [showLogHeures, setShowLogHeures] = useState(false);
+  const [logHeuresEtape, setLogHeuresEtape] = useState<EtapeInfo | null>(null);
   const [showNouvelleEtape, setShowNouvelleEtape] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; etape: EtapeInfo } | null>(null);
   const [showConfirmReport, setShowConfirmReport] = useState<{ etape: EtapeInfo; newDeadline: string } | null>(null);
@@ -293,9 +294,6 @@ export default function CalendrierPage() {
           >
             <PanelRight className="h-3.5 w-3.5" />Détail
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowLogHeures(true)}>
-            <Clock className="h-3.5 w-3.5" />Logger des heures
-          </Button>
           <Button size="sm" className="gap-1.5 text-xs" onClick={() => setShowNouvelleEtape(true)}>
             <Plus className="h-3.5 w-3.5" />Nouvelle étape
           </Button>
@@ -396,6 +394,7 @@ export default function CalendrierPage() {
             onReporterDeadline={(d) => selectedEtape && setShowConfirmReport({ etape: selectedEtape, newDeadline: d })}
             onSupprimer={() => selectedEtape && supprimerEtape(selectedEtape)}
             onNavigate={(id) => router.push(`/projets/${id}`)}
+            onLogHeures={(e) => { setLogHeuresEtape(e); setShowLogHeures(true); }}
           />
         )}
       </div>
@@ -449,9 +448,11 @@ export default function CalendrierPage() {
       {/* ── Dialog Logger des heures ── */}
       {showLogHeures && (
         <LoggerHeuresDialog
-          onClose={() => setShowLogHeures(false)}
-          onSuccess={() => { setShowLogHeures(false); refresh(); }}
+          onClose={() => { setShowLogHeures(false); setLogHeuresEtape(null); }}
+          onSuccess={() => { setShowLogHeures(false); setLogHeuresEtape(null); refresh(); }}
           defaultDate={format(currentDate, "yyyy-MM-dd")}
+          preselectedProjetId={logHeuresEtape?.projet.id}
+          preselectedEtapeId={logHeuresEtape?.id}
         />
       )}
 
@@ -468,10 +469,12 @@ export default function CalendrierPage() {
 }
 
 // ── Self-contained dialog : Logger des heures ──────────────────────────────
-function LoggerHeuresDialog({ onClose, onSuccess, defaultDate }: {
+function LoggerHeuresDialog({ onClose, onSuccess, defaultDate, preselectedProjetId, preselectedEtapeId }: {
   onClose: () => void;
   onSuccess: () => void;
   defaultDate: string;
+  preselectedProjetId?: number;
+  preselectedEtapeId?: number;
 }) {
   const [consultants, setConsultants] = useState<{ id: number; nom: string }[]>([]);
   const [projets, setProjets] = useState<{ id: number; nom: string }[]>([]);
@@ -480,8 +483,8 @@ function LoggerHeuresDialog({ onClose, onSuccess, defaultDate }: {
   const [form, setForm] = useState({
     date: defaultDate,
     consultantId: "",
-    projetId: "",
-    etapeId: "",
+    projetId: preselectedProjetId ? String(preselectedProjetId) : "",
+    etapeId: preselectedEtapeId ? String(preselectedEtapeId) : "",
     heures: "",
     description: "",
     facturable: true,

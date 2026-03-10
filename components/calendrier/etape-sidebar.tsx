@@ -18,9 +18,10 @@ interface EtapeSidebarProps {
   onReporterDeadline: (deadline: string) => void;
   onSupprimer: () => void;
   onNavigate: (projetId: number) => void;
+  onLogHeures: (etape: EtapeInfo) => void;
 }
 
-export function EtapeSidebar({ etape, onClose, onChangerStatut, onReporterDeadline, onSupprimer, onNavigate }: EtapeSidebarProps) {
+export function EtapeSidebar({ etape, onClose, onChangerStatut, onReporterDeadline, onSupprimer, onNavigate, onLogHeures }: EtapeSidebarProps) {
   const [newDeadline, setNewDeadline] = useState(etape?.deadline ?? "");
 
   useEffect(() => {
@@ -232,11 +233,10 @@ export function EtapeSidebar({ etape, onClose, onChangerStatut, onReporterDeadli
               </Button>
             </div>
 
-            <Link href={`/activites?etapeId=${etape.id}`} className="block">
-              <Button size="sm" variant="outline" className="w-full gap-1 text-xs">
-                <Clock className="h-3 w-3" aria-hidden="true" />Logger des heures
-              </Button>
-            </Link>
+            <Button size="sm" variant="outline" className="w-full gap-1 text-xs"
+              onClick={() => onLogHeures(etape)}>
+              <Clock className="h-3 w-3" aria-hidden="true" />Logger des heures
+            </Button>
 
             <Button
               size="sm"
