@@ -23,6 +23,15 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: updated.id, email: updated.email, role: updated.role })
 }
 
+export async function DELETE(req: Request) {
+  const authError = await requireRole(["ADMIN"])
+  if (authError) return authError
+  const { consultantId } = await req.json()
+  if (!consultantId) return NextResponse.json({ error: "consultantId manquant" }, { status: 400 })
+  await prisma.consultant.update({ where: { id: consultantId }, data: { password: null, actif: false } })
+  return NextResponse.json({ success: true })
+}
+
 export async function PATCH(req: Request) {
   const authError = await requireRole(["ADMIN"])
   if (authError) return authError

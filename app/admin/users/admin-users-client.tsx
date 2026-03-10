@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { UserPlus, RotateCcw, UserX, UserCheck } from "lucide-react"
+import { UserPlus, RotateCcw, UserX, UserCheck, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 type Role = "ADMIN" | "PM" | "CONSULTANT"
@@ -24,8 +24,11 @@ function nameToColor(nom: string): string {
 export function AdminUsersClient({ users }: { users: UserEntry[] }) {
   const router = useRouter()
   const [selected, setSelected] = useState<UserEntry | null>(null)
+  const [editingRole, setEditingRole] = useState<UserEntry | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<UserEntry | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [selectedRole, setSelectedRole] = useState<Role>(Role.CONSULTANT)
+  const [editRole, setEditRole] = useState<Role>(Role.CONSULTANT)
   const [loading, setLoading] = useState(false)
 
   async function activateAccount() {
@@ -46,6 +49,24 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
     try {
       await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consultantId: user.id, password }) })
       toast.success("Mot de passe réinitialisé")
+    } catch { toast.error("Erreur") } finally { setLoading(false) }
+  }
+
+  async function updateRole(user: UserEntry, role: Role) {
+    setLoading(true)
+    try {
+      await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consultantId: user.id, role }) })
+      toast.success(`Rôle mis à jour pour ${user.nom}`)
+      router.refresh(); setEditingRole(null)
+    } catch { toast.error("Erreur") } finally { setLoading(false) }
+  }
+
+  async function deleteUser(user: UserEntry) {
+    setLoading(true)
+    try {
+      await fetch("/api/admin/users", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consultantId: user.id }) })
+      toast.success(`Compte de ${user.nom} supprimé`)
+      router.refresh(); setConfirmDelete(null)
     } catch { toast.error("Erreur") } finally { setLoading(false) }
   }
 
@@ -94,10 +115,15 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 mt-1">
+                <div className="flex gap-2 mt-1 flex-wrap justify-center">
                   {!user.hasAccount && (
                     <Button size="sm" variant="outline" onClick={() => setSelected(user)} className="text-xs gap-1">
                       <UserPlus className="h-3 w-3" />Activer
+                    </Button>
+                  )}
+                  {user.hasAccount && (
+                    <Button size="sm" variant="outline" onClick={() => { setEditingRole(user); setEditRole(user.role); }} className="text-xs gap-1">
+                      <Pencil className="h-3 w-3" />Modifier
                     </Button>
                   )}
                   {user.hasAccount && (
@@ -108,6 +134,11 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                   {user.hasAccount && (
                     <Button size="sm" variant="ghost" onClick={() => toggleActive(user)} className="h-8 w-8 p-0" title={user.actif ? "Désactiver" : "Réactiver"}>
                       {user.actif ? <UserX className="h-3.5 w-3.5 text-destructive" /> : <UserCheck className="h-3.5 w-3.5 text-green-600" />}
+                    </Button>
+                  )}
+                  {user.hasAccount && (
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(user)} className="h-8 w-8 p-0" title="Supprimer le compte">
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   )}
                 </div>
@@ -135,6 +166,41 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
             <div className="flex gap-2">
               <Button onClick={activateAccount} disabled={loading || !newPassword}>Activer le compte</Button>
               <Button variant="outline" onClick={() => setSelected(null)}>Annuler</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {editingRole && (
+        <Card>
+          <CardHeader><CardTitle>Modifier le rôle — {editingRole.nom}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nouveau rôle</Label>
+              <Select value={editRole} onChange={(e) => setEditRole(e.target.value as Role)}>
+                <option value="ADMIN">Administrateur</option>
+                <option value="PM">Chef de projet</option>
+                <option value="CONSULTANT">Consultant</option>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => updateRole(editingRole, editRole)} disabled={loading}>Enregistrer</Button>
+              <Button variant="outline" onClick={() => setEditingRole(null)}>Annuler</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {confirmDelete && (
+        <Card className="border-destructive/50">
+          <CardHeader><CardTitle className="text-destructive">Supprimer le compte — {confirmDelete.nom}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Cette action désactivera le compte et supprimera l&apos;accès de <strong>{confirmDelete.nom}</strong>. Cette action est irréversible.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="destructive" onClick={() => deleteUser(confirmDelete)} disabled={loading}>Confirmer la suppression</Button>
+              <Button variant="outline" onClick={() => setConfirmDelete(null)}>Annuler</Button>
             </div>
           </CardContent>
         </Card>
