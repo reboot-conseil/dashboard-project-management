@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   RefreshCw,
@@ -86,6 +87,11 @@ function formatEuros(v: number) {
 interface DashboardOperationnelProps { periode?: string }
 
 export function DashboardOperationnel({ periode: periodeProp }: DashboardOperationnelProps = {}) {
+  const { data: session } = useSession();
+  const isPM = session?.user?.role === "PM";
+  const pmConsultantId = session?.user?.id ? Number(session.user.id) || null : null;
+  const [pmTjm, setPmTjm] = useState<number>(0);
+
   const [hydrated, setHydrated] = useState(false);
   const [filters, setFilters] = useState<DashboardFiltersValue>(getDefaultFilters("week"));
   const [projets, setProjets] = useState<ProjetOption[]>([]);
@@ -93,6 +99,16 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [objectifCA, setObjectifCA] = useState(0);
+
+  useEffect(() => {
+    if (!isPM || !pmConsultantId) return;
+    const controller = new AbortController();
+    fetch(`/api/consultants/${pmConsultantId}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((c) => setPmTjm(c.tjm ?? 0))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [isPM, pmConsultantId]);
 
   // Hydration + saved filters
   useEffect(() => {
@@ -154,6 +170,26 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
 
   return (
     <div className="space-y-5">
+
+      {/* ── Bande personnelle PM ── */}
+      {isPM && pmConsultantId && (() => {
+        const me = data?.consultants.find((c) => c.id === pmConsultantId);
+        const mesHeures = me?.heuresPeriode ?? 0;
+        const monCA = (mesHeures / 8) * pmTjm;
+        const occupation = me?.tauxOccupation ?? 0;
+        const mesProjets = data?.projetsActifs?.length ?? "—";
+        return (
+          <div className="flex items-center gap-4 px-4 py-2.5 rounded-xl bg-[var(--color-surface-raised)] border border-border text-[12.5px]">
+            <span className="font-semibold text-muted-foreground shrink-0">Moi ce mois</span>
+            <div className="flex items-center gap-4 flex-wrap">
+              <span><span className="text-muted-foreground">Heures :</span> <span className="font-bold text-foreground">{mesHeures}h</span></span>
+              <span><span className="text-muted-foreground">CA :</span> <span className="font-bold text-foreground">{pmTjm > 0 ? formatCA(monCA) : "—"}</span></span>
+              <span><span className="text-muted-foreground">Occupation :</span> <span className="font-bold text-foreground">{occupation.toFixed(0)}%</span></span>
+              <span><span className="text-muted-foreground">Projets :</span> <span className="font-bold text-foreground">{mesProjets}</span></span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Filter bar : project select + refresh ── */}
       <div className="flex items-center gap-3">
