@@ -325,7 +325,7 @@ export default function ActivitesPage() {
 
       {/* Dialog Saisie Rapide */}
       <Dialog open={saisieOpen} onOpenChange={setSaisieOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl" onClose={() => setSaisieOpen(false)}>
           <DialogHeader>
             <DialogTitle>Saisir une activité</DialogTitle>
           </DialogHeader>
