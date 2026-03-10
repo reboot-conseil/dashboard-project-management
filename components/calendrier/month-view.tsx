@@ -155,15 +155,18 @@ export function MonthView({
               {/* Bars overlay — absolutely positioned above cells, no border clipping */}
               <div className="absolute inset-x-0 overflow-hidden pointer-events-none" style={{ top: "26px", bottom: 0 }}>
                 {getWeekBars(week).map(({ etape, startCol, endCol, lane }) => {
-                  const weekKey0 = format(week[0], "yyyy-MM-dd");
                   const weekKeys = week.map((d) => format(d, "yyyy-MM-dd"));
                   const etapeStart = etape.dateDebut ?? etape.deadline;
-                  const startsHere = etapeStart !== null && etapeStart >= weekKey0;
+                  // Nom visible uniquement si startCol est exactement le jour de départ
+                  const startsHere = etapeStart !== null && weekKeys[startCol] === etapeStart;
                   const endsHere = etape.deadline !== null && weekKeys.includes(etape.deadline);
                   const borderRadius =
                     startsHere && endsHere ? "3px" :
                     startsHere ? "3px 0 0 3px" :
                     endsHere ? "0 3px 3px 0" : "0";
+                  // Largeur d'un seul jour dans la barre (pour le hachage)
+                  const spanCols = endCol - startCol + 1;
+                  const hatchWidthPct = Math.round(100 / spanCols);
                   return (
                     <button
                       key={etape.id}
@@ -176,17 +179,31 @@ export function MonthView({
                       )}
                       style={{
                         left: `${(startCol / 7) * 100}%`,
-                        width: `${((endCol - startCol + 1) / 7) * 100}%`,
+                        width: `${(spanCols / 7) * 100}%`,
                         top: `${lane * 20}px`,
                         backgroundColor: etape.projet.couleur + "30",
                         borderLeft: startsHere ? `3px solid ${etape.projet.couleur}` : "none",
-                        borderRight: endsHere ? `3px solid ${etape.projet.couleur}` : "none",
                         borderRadius,
                         paddingLeft: startsHere ? "4px" : "2px",
-                        paddingRight: endsHere ? "4px" : "2px",
+                        paddingRight: "2px",
                       }}
                     >
-                      <span className="truncate flex-1 block">{etape.nom}</span>
+                      {startsHere && <span className="truncate flex-1 block">{etape.nom}</span>}
+                      {endsHere && (
+                        <span
+                          className="absolute right-0 top-0 bottom-0 pointer-events-none"
+                          style={{
+                            width: `${hatchWidthPct}%`,
+                            background: `repeating-linear-gradient(
+                              45deg,
+                              transparent,
+                              transparent 3px,
+                              ${etape.projet.couleur}50 3px,
+                              ${etape.projet.couleur}50 5px
+                            )`,
+                          }}
+                        />
+                      )}
                     </button>
                   );
                 })}
