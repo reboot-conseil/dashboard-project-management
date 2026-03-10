@@ -46,6 +46,7 @@ interface ConsultantDashData {
     statut: string;
     heuresMois: number;
     pctBudget: number;
+    couleur?: string;
   }[];
   // Activités récentes
   activitesRecentes: {
@@ -61,6 +62,7 @@ interface ConsultantDashData {
     id: number;
     nom: string;
     projetNom: string;
+    projetCouleur?: string;
     deadline: string;
     joursRestants: number | null;
     statut: string;
@@ -139,6 +141,7 @@ export function DashboardConsultant() {
         statut: String(p.statut ?? ""),
         heuresMois: 0,
         pctBudget: Number(p.pctBudget ?? 0),
+        couleur: p.couleur ? String(p.couleur) : undefined,
       }));
 
       // Activités récentes
@@ -316,23 +319,36 @@ export function DashboardConsultant() {
           </CardHeader>
           <CardContent className="space-y-3">
             {data.mesProjets.length > 0 ? (
-              data.mesProjets.map((p) => (
-                <Link key={p.id} href={`/projets/${p.id}`}>
-                  <div className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{p.nom}</p>
-                      <p className="text-xs text-muted-foreground">{p.client}</p>
+              data.mesProjets.map((p) => {
+                const projColor = p.couleur ?? "#3b82f6";
+                const budgetBarColor = p.pctBudget > 100 ? "#b91c1c" : p.pctBudget > 85 ? "#f97316" : "#2563EB";
+                return (
+                  <Link key={p.id} href={`/projets/${p.id}`}>
+                    <div className="rounded-xl border border-border overflow-hidden hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer">
+                      <div className="h-[3px] w-full" style={{ background: projColor }} />
+                      <div className="px-3 pt-2.5 pb-2" style={{ background: `${projColor}12` }}>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-sm" style={{ background: projColor }} />
+                          <span className="text-[10.5px] font-semibold" style={{ color: projColor }}>
+                            {p.statut === "EN_COURS" ? "En cours" : p.statut === "PLANIFIE" ? "Planifié" : "En pause"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="px-3 pt-2 pb-3">
+                        <p className="text-[14px] font-bold text-foreground truncate">{p.nom}</p>
+                        <p className="text-[12px] text-muted-foreground mb-2">{p.client}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-muted-foreground w-12 shrink-0">Budget</span>
+                          <div className="flex-1 h-[6px] rounded-full bg-border overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${Math.min(p.pctBudget, 100)}%`, background: budgetBarColor }} />
+                          </div>
+                          <span className="text-[11.5px] font-bold w-9 text-right" style={{ color: budgetBarColor }}>{p.pctBudget.toFixed(0)}%</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      {p.pctBudget > 80 && (
-                        <Badge variant={p.pctBudget > 100 ? "destructive" : "warning"} className="text-xs">
-                          {p.pctBudget}%
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))
+                  </Link>
+                );
+              })
             ) : (
               <p className="text-center py-8 text-muted-foreground text-sm">
                 Aucun projet en cours
@@ -387,38 +403,34 @@ export function DashboardConsultant() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Mes prochaines deadlines</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent>
             {data.prochainesDeadlines.length > 0 ? (
-              data.prochainesDeadlines.map((d) => {
-                const urgence = d.joursRestants !== null && d.joursRestants < 3
-                  ? "border-destructive/30 bg-destructive/5"
-                  : d.joursRestants !== null && d.joursRestants < 7
-                    ? "border-amber-500/30 bg-amber-500/5"
-                    : "border-border";
-
-                return (
-                  <div key={d.id} className={`flex items-center justify-between rounded-lg border p-3 ${urgence}`}>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{d.nom}</p>
-                      <p className="text-xs text-muted-foreground">{d.projetNom}</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {data.prochainesDeadlines.map((d) => {
+                  const dotColor = d.projetCouleur ?? "#3b82f6";
+                  const dateColor = d.joursRestants !== null && d.joursRestants < 0
+                    ? "text-destructive"
+                    : d.joursRestants !== null && d.joursRestants <= 7
+                    ? "text-destructive"
+                    : d.joursRestants !== null && d.joursRestants <= 14
+                    ? "text-warning"
+                    : "text-muted-foreground";
+                  return (
+                    <div key={d.id} className="bg-card rounded-lg px-2.5 py-2 border border-border" style={{ borderLeft: `3px solid ${dotColor}` }}>
+                      <div className="flex items-baseline justify-between gap-1">
+                        <span className="text-[12.5px] font-bold text-foreground truncate">{d.nom}</span>
+                        <span className={`text-[11.5px] font-bold shrink-0 ${dateColor}`}>
+                          {new Date(d.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <div className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ background: dotColor }} />
+                        <span className="text-[10.5px] text-muted-foreground truncate">{d.projetNom}</span>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0 ml-2">
-                      {d.joursRestants !== null && (
-                        <p className={`text-sm font-bold ${
-                          d.joursRestants < 3 ? "text-destructive" : d.joursRestants < 7 ? "text-amber-600" : "text-muted-foreground"
-                        }`}>
-                          {d.joursRestants < 0 ? `${Math.abs(d.joursRestants)}j retard` : `${d.joursRestants}j`}
-                        </p>
-                      )}
-                      {d.deadline && (
-                        <p className="text-[11px] text-muted-foreground">
-                          {format(new Date(d.deadline), "d MMM", { locale: fr })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             ) : (
               <p className="text-center py-8 text-muted-foreground text-sm">
                 Aucune deadline à venir
