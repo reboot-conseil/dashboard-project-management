@@ -425,7 +425,7 @@ export default function ProjetsPage() {
             return (
               <div
                 key={p.id}
-                onClick={() => openDetail(p.id)}
+                onClick={() => router.push(`/projets/${p.id}`)}
                 className={cn(
                   "relative rounded-xl border overflow-hidden cursor-pointer",
                   "transition-all hover:-translate-y-0.5 hover:shadow-md",
@@ -459,14 +459,13 @@ export default function ProjetsPage() {
                       <div className="text-[15px] font-bold text-foreground truncate">{p.nom}</div>
                       <div className="text-[12px] text-muted-foreground mt-0.5">{p.client}</div>
                     </div>
-                    <Link
-                      href={`/projets/${p.id}`}
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openDetail(p.id); }}
                       className="shrink-0 ml-2 mt-0.5 text-muted-foreground hover:text-primary transition-colors"
-                      title="Ouvrir le projet"
+                      title="Aperçu rapide"
                     >
                       <ArrowUpRight className="h-4 w-4" />
-                    </Link>
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground mb-3">
