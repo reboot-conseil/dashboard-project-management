@@ -180,6 +180,11 @@ export function DashboardConsultants({ periode: _periodeProp }: DashboardConsult
 
   React.useEffect(() => {
     setHydrated(true);
+    const stored = localStorage.getItem("lastConsultantId");
+    if (stored) {
+      localStorage.removeItem("lastConsultantId");
+      setConsultantId(parseInt(stored));
+    }
   }, []);
 
   // Sync période depuis le parent
