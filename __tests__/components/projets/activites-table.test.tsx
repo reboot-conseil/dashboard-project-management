@@ -9,7 +9,7 @@ const makeActivite = (overrides: Partial<Activite> = {}): Activite => ({
   heures: 8,
   description: null,
   facturable: true,
-  consultant: { id: 1, nom: 'Alice Martin', tjm: 600 },
+  consultant: { id: 1, nom: 'Alice Martin', couleur: '#8B5CF6', tjm: 600 },
   etape: null,
   ...overrides,
 })
@@ -84,7 +84,7 @@ describe('ActivitesTable', () => {
     const etape2 = { id: 20, nom: 'Dev' }
     const activites = [
       makeActivite({ id: 1, etape: etape1 }),
-      makeActivite({ id: 2, etape: etape2, consultant: { id: 2, nom: 'Bob', tjm: 500 } }),
+      makeActivite({ id: 2, etape: etape2, consultant: { id: 2, nom: 'Bob', couleur: '#10B981', tjm: 500 } }),
     ]
     render(
       <ActivitesTable

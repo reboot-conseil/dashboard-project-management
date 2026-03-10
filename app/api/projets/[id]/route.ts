@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       etapes: { orderBy: { ordre: "asc" } },
       activites: {
         include: {
-          consultant: { select: { id: true, nom: true, tjm: true, coutJournalierEmployeur: true } },
+          consultant: { select: { id: true, nom: true, couleur: true, tjm: true, coutJournalierEmployeur: true } },
           etape: { select: { id: true, nom: true } },
         },
         orderBy: { date: "desc" },

@@ -546,6 +546,7 @@ interface DetailData {
   }[];
   activites: {
     id: number; date: string; heures: number; description?: string;
+    facturable?: boolean;
     consultant: { id: number; nom: string; couleur: string };
     etape: { id: number; nom: string } | null;
   }[];
@@ -559,6 +560,7 @@ function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose:
   const [tab, setTab] = useState<DetailTab>("kanban");
   const [data, setData] = useState<DetailData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSaisie, setShowSaisie] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -585,6 +587,7 @@ function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose:
           activites: (proj.activites ?? []).map((a: Record<string, unknown>) => ({
             id: a.id, date: a.date as string, heures: Number(a.heures),
             description: a.description as string | undefined,
+            facturable: a.facturable as boolean | undefined,
             consultant: a.consultant as { id: number; nom: string; couleur: string },
             etape: a.etape as { id: number; nom: string } | null,
           })),
@@ -663,6 +666,53 @@ function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose:
               ))}
             </div>
           </div>
+
+          {/* Saisie activité dialog */}
+          {showSaisie && (
+            <SaisieActiviteDialog
+              projectId={data.projet.id}
+              projectName={data.projet.nom}
+              etapes={data.etapes}
+              onClose={() => setShowSaisie(false)}
+              onSaved={() => {
+                setShowSaisie(false);
+                // Reload activites by re-fetching project data
+                setLoading(true);
+                setData(null);
+                Promise.all([
+                  fetch(`/api/projets/${projectId}`).then((r) => r.json()),
+                  fetch(`/api/projets/${projectId}/progression`).then((r) => r.json()).catch(() => null),
+                ])
+                  .then(([proj, progression]) => {
+                    setData({
+                      projet: {
+                        id: proj.id, nom: proj.nom, client: proj.client, statut: proj.statut,
+                        couleur: proj.couleur, budget: proj.budget,
+                        dateDebut: proj.dateDebut, dateFin: proj.dateFin,
+                        description: proj.description,
+                      },
+                      etapes: (proj.etapes ?? []).map((e: Record<string, unknown>) => ({
+                        id: e.id, nom: e.nom, statut: e.statut, deadline: e.deadline,
+                        chargeEstimee: e.chargeEstimee,
+                        heuresRealisees: (proj.activites ?? [])
+                          .filter((a: Record<string, unknown>) => a.etapeId === e.id)
+                          .reduce((s: number, a: Record<string, unknown>) => s + Number(a.heures), 0),
+                      })),
+                      activites: (proj.activites ?? []).map((a: Record<string, unknown>) => ({
+                        id: a.id, date: a.date as string, heures: Number(a.heures),
+                        description: a.description as string | undefined,
+                        facturable: a.facturable as boolean | undefined,
+                        consultant: a.consultant as { id: number; nom: string; couleur: string },
+                        etape: a.etape as { id: number; nom: string } | null,
+                      })),
+                      progression: progression ?? undefined,
+                    });
+                  })
+                  .catch(() => { setData(null); setLoading(false); })
+                  .finally(() => setLoading(false));
+              }}
+            />
+          )}
 
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto">
@@ -749,26 +799,48 @@ function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose:
 
             {/* ── Activités ── */}
             {tab === "activites" && (
-              <div className="p-5">
-                <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Activités loguées</div>
+              <div className="p-5 flex flex-col gap-4">
+                <button
+                  onClick={() => setShowSaisie(true)}
+                  className="flex items-center gap-2 self-start px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[12.5px] font-semibold hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Saisir une activité
+                </button>
+
                 {data.activites.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">Aucune activité</p>
+                  <p className="text-sm text-muted-foreground py-8 text-center">
+                    Aucune activité saisie sur ce projet
+                  </p>
                 ) : (
-                  <div>
-                    {data.activites.slice(0, 20).map((a) => (
-                      <div key={a.id} className="flex items-center gap-2.5 py-2.5 border-b border-border/50">
-                        <div className="text-[11px] text-muted-foreground w-14 shrink-0">
-                          {format(new Date(a.date), "dd/MM", { locale: fr })}
+                  <>
+                    <div className="space-y-0 divide-y divide-border/50">
+                      {data.activites.map((a) => (
+                        <div key={a.id} className="flex items-center gap-2.5 py-2.5">
+                          <div className="text-[11px] text-muted-foreground w-14 shrink-0">
+                            {format(new Date(a.date), "dd/MM", { locale: fr })}
+                          </div>
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0"
+                            style={{ background: a.consultant.couleur }}>
+                            {a.consultant.nom.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                          </div>
+                          <span className="flex-1 text-[12.5px] text-foreground truncate">
+                            {a.description ?? a.etape?.nom ?? "—"}
+                          </span>
+                          {a.facturable === false && (
+                            <span className="text-[10px] text-muted-foreground shrink-0">NF</span>
+                          )}
+                          <span className="text-[13px] font-bold text-foreground shrink-0">{Number(a.heures)}h</span>
                         </div>
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0"
-                          style={{ background: a.consultant.couleur }}>
-                          {a.consultant.nom.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                        </div>
-                        <span className="flex-1 text-[12.5px] text-foreground truncate">{a.description ?? a.etape?.nom ?? "—"}</span>
-                        <span className="text-[13px] font-bold text-foreground shrink-0">{a.heures}h</span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-border text-[12.5px]">
+                      <span className="text-muted-foreground">{data.activites.length} saisie{data.activites.length > 1 ? "s" : ""}</span>
+                      <span className="font-bold text-foreground">
+                        {data.activites.reduce((s, a) => s + Number(a.heures), 0)}h total
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -776,6 +848,185 @@ function ProjectDetailPane({ projectId, onClose }: { projectId: number; onClose:
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Saisie Activité Dialog — lightweight inline form for ProjectDetailPane
+// ══════════════════════════════════════════════════════════════════════
+
+interface SaisieActiviteDialogProps {
+  projectId: number;
+  projectName: string;
+  etapes: { id: number; nom: string; statut: string }[];
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function SaisieActiviteDialog({ projectId, projectName, etapes, onClose, onSaved }: SaisieActiviteDialogProps) {
+  const [consultants, setConsultants] = useState<{ id: number; nom: string }[]>([]);
+  const [form, setForm] = useState({
+    consultantId: "",
+    etapeId: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    heures: "",
+    description: "",
+    facturable: true,
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/consultants", { signal: controller.signal })
+      .then((r) => r.json())
+      .then((d) => setConsultants(Array.isArray(d) ? d : []))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  async function handleSave() {
+    if (!form.consultantId || !form.date || !form.heures) {
+      toast.error("Consultant, date et heures sont requis");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/activites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consultantId: parseInt(form.consultantId),
+          projetId: projectId,
+          etapeId: form.etapeId ? parseInt(form.etapeId) : null,
+          date: form.date,
+          heures: parseFloat(form.heures),
+          description: form.description || null,
+          facturable: form.facturable,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Activité enregistrée");
+      onSaved();
+    } catch {
+      toast.error("Erreur lors de l'enregistrement");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md mx-4 p-5 flex flex-col gap-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[14px] font-bold text-foreground">Saisir une activité</div>
+            <div className="text-[12px] text-muted-foreground mt-0.5">{projectName}</div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-muted-foreground">Consultant</label>
+            <select
+              value={form.consultantId}
+              onChange={(e) => setForm((f) => ({ ...f, consultantId: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Choisir...</option>
+              {consultants.map((c) => (
+                <option key={c.id} value={c.id}>{c.nom}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="col-span-2 flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-muted-foreground">Étape (optionnel)</label>
+            <select
+              value={form.etapeId}
+              onChange={(e) => setForm((f) => ({ ...f, etapeId: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Aucune étape spécifique</option>
+              {etapes.map((et) => (
+                <option key={et.id} value={et.id}>{et.nom}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-muted-foreground">Date</label>
+            <input
+              type="date"
+              value={form.date}
+              max={format(new Date(), "yyyy-MM-dd")}
+              onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-muted-foreground">Heures</label>
+            <input
+              type="number"
+              step={0.5}
+              min={0}
+              max={24}
+              placeholder="ex: 7.5"
+              value={form.heures}
+              onChange={(e) => setForm((f) => ({ ...f, heures: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div className="col-span-2 flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-muted-foreground">Description</label>
+            <input
+              type="text"
+              placeholder="ex: Développement features"
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div className="col-span-2 flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="dialog-facturable"
+              checked={form.facturable}
+              onChange={(e) => setForm((f) => ({ ...f, facturable: e.target.checked }))}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            <label htmlFor="dialog-facturable" className="text-[12px] text-muted-foreground cursor-pointer select-none">
+              Facturable
+            </label>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-[12.5px] font-medium text-muted-foreground hover:bg-muted transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-[12.5px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+          >
+            {saving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : null}
+            {saving ? "Enregistrement..." : "Enregistrer"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

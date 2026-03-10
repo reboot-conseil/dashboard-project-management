@@ -17,7 +17,7 @@ export interface Activite {
   heures: string | number;
   description: string | null;
   facturable: boolean;
-  consultant: { id: number; nom: string; tjm: string | number };
+  consultant: { id: number; nom: string; couleur: string; tjm: string | number };
   etape: { id: number; nom: string } | null;
 }
 
