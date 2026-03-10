@@ -175,7 +175,7 @@ export default function ConsultantsPage() {
   }
 
   function goToDashboard(consultantId: number) {
-    localStorage.setItem("dashboard-active-view", "consultants");
+    localStorage.setItem("dashboard-active-view", JSON.stringify("consultants"));
     localStorage.setItem("lastConsultantId", String(consultantId));
     router.push("/");
   }
