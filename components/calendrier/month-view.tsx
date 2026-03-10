@@ -133,10 +133,12 @@ export function MonthView({
 
                 {/* Etape bars (workdays only) */}
                 {!weekend && (
-                  <div className="space-y-0.5 overflow-hidden">
+                  <div className="space-y-0.5">
                     {overlapping.slice(0, 3).map((etape) => {
                       const type = barType(etape, key);
                       const isDeadline = etape.deadline === key;
+                      const extendsRight = type === "right" || type === "both";
+                      const extendsLeft = type === "left" || type === "both";
                       return (
                         <button
                           key={etape.id}
@@ -145,7 +147,7 @@ export function MonthView({
                           title={`${etape.nom} — ${etape.projet.nom}`}
                           tabIndex={!inMonth ? -1 : undefined}
                           className={cn(
-                            "w-full text-left px-1 py-0.5 text-[10px] leading-tight truncate transition-opacity cursor-pointer h-[18px]",
+                            "w-full text-left px-1 py-0.5 text-[10px] leading-tight truncate transition-opacity cursor-pointer h-[18px] relative z-10",
                             etape.statut === "VALIDEE" && "opacity-50",
                             type === "standalone" && "rounded",
                             type === "right" && "rounded-l",
@@ -154,9 +156,10 @@ export function MonthView({
                           )}
                           style={{
                             backgroundColor: etape.projet.couleur + "30",
-                            borderLeft: type === "right" || type === "standalone" ? `3px solid ${etape.projet.couleur}` : `3px solid transparent`,
-                            marginRight: type === "right" || type === "both" ? "-4px" : undefined,
-                            marginLeft: type === "left" || type === "both" ? "-4px" : undefined,
+                            borderLeft: !extendsLeft ? `3px solid ${etape.projet.couleur}` : "none",
+                            marginRight: extendsRight ? "-5px" : undefined,
+                            marginLeft: extendsLeft ? "-5px" : undefined,
+                            paddingLeft: extendsLeft ? "4px" : undefined,
                           }}
                         >
                           {(type === "standalone" || type === "right") && (
