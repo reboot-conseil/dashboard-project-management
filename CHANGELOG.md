@@ -5,7 +5,7 @@ Format : [version] — date — description
 
 ---
 
-## [v2.0.0] — en cours (branche `v2/redesign`)
+## [v2.0.0] — 2026-03-10 (tag `v2.0.0`, mergé dans `main`)
 Redesign complet de l'interface — "Professional Dark Soft"
 
 ### Changements
