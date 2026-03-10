@@ -210,11 +210,11 @@ export function ActivitesList({
                     const dayTotal = dayActivites.reduce((s, a) => s + Number(a.heures), 0);
                     return [
                       // Group header
-                      <TableRow key={`day-${day}`} className="bg-muted/30 hover:bg-muted/30">
-                        <TableCell colSpan={6} className="py-1.5 font-medium text-sm">
+                      <TableRow key={`day-${day}`} className="bg-muted/60 hover:bg-muted/60 border-t-2 border-border">
+                        <TableCell colSpan={6} className="py-1.5 font-semibold text-[12.5px] text-foreground capitalize">
                           {format(new Date(day), "EEEE d MMMM yyyy", { locale: fr })}
                         </TableCell>
-                        <TableCell className="py-1.5 text-right text-sm font-semibold text-muted-foreground pr-4">
+                        <TableCell className="py-1.5 text-right text-[12.5px] font-semibold text-muted-foreground pr-4">
                           {dayTotal}h
                         </TableCell>
                       </TableRow>,
