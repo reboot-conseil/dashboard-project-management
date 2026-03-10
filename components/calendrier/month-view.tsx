@@ -26,19 +26,6 @@ interface MonthViewProps {
   onContextMenu: (ev: React.MouseEvent, e: EtapeInfo) => void;
 }
 
-// Returns bar continuation type for a workday cell
-function barType(etape: EtapeInfo, key: string): "standalone" | "right" | "left" | "both" {
-  const start = etape.dateDebut;
-  const end = etape.deadline;
-  if (!end) return "standalone";
-  const comesLeft = start !== null && start < key;
-  const goesRight = end > key;
-  if (comesLeft && goesRight) return "both";
-  if (comesLeft && !goesRight) return "left";
-  if (!comesLeft && goesRight) return "right";
-  return "standalone";
-}
-
 export function MonthView({
   currentDate,
   data,
@@ -73,6 +60,31 @@ export function MonthView({
     return data.activites.filter((a) => a.date === key);
   }
 
+  // Group days into weeks and compute per-week bars in a separate overlay layer
+  const weeks: Date[][] = [];
+  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
+
+  function getWeekBars(week: Date[]) {
+    if (!data) return [];
+    const etapeMap = new Map<number, { etape: EtapeInfo; startCol: number; endCol: number }>();
+    week.forEach((day, col) => {
+      if (isWeekend(day)) return;
+      getEtapesOverlapping(day).forEach((etape) => {
+        const ex = etapeMap.get(etape.id);
+        if (!ex) etapeMap.set(etape.id, { etape, startCol: col, endCol: col });
+        else { ex.startCol = Math.min(ex.startCol, col); ex.endCol = Math.max(ex.endCol, col); }
+      });
+    });
+    const entries = Array.from(etapeMap.values()).sort((a, b) => a.startCol - b.startCol);
+    const laneEnds = [-1, -1, -1];
+    return entries.flatMap(({ etape, startCol, endCol }) => {
+      const lane = laneEnds.findIndex((e) => e < startCol);
+      if (lane === -1) return [];
+      laneEnds[lane] = endCol;
+      return [{ etape, startCol, endCol, lane }];
+    });
+  }
+
   return (
     <Card data-testid="month-view">
       <CardContent className="p-0">
@@ -91,119 +103,88 @@ export function MonthView({
           ))}
         </div>
 
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7">
-          {days.map((day, i) => {
-            const inMonth = isSameMonth(day, currentDate);
-            const today = isToday(day);
-            const weekend = isWeekend(day);
-            const key = format(day, "yyyy-MM-dd");
-            const overlapping = weekend ? [] : getEtapesOverlapping(day);
-            const dayActivites = weekend ? [] : getActivitesForDay(day);
-
-            return (
-              <div
-                key={i}
-                className={cn(
-                  "relative min-h-[90px] p-1 border-b border-r border-border",
-                  !inMonth && "opacity-50",
-                  today && "ring-2 ring-inset ring-primary"
-                )}
-                style={weekend ? { background: "var(--color-surface-raised, var(--muted))" } : undefined}
-              >
-                {/* Date number */}
-                <div className="flex items-center justify-between mb-1">
-                  <span
+        {/* Calendar grid — one row per week */}
+        <div>
+          {weeks.map((week, wi) => (
+            <div key={wi} className="relative grid grid-cols-7">
+              {/* Day cells — date number + activity dots only */}
+              {week.map((day, col) => {
+                const inMonth = isSameMonth(day, currentDate);
+                const today = isToday(day);
+                const weekend = isWeekend(day);
+                const key = format(day, "yyyy-MM-dd");
+                const dayActivites = weekend ? [] : getActivitesForDay(day);
+                return (
+                  <div
+                    key={col}
                     className={cn(
-                      "text-xs font-medium leading-none",
-                      weekend && "text-muted-foreground",
-                      today &&
-                        "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center"
+                      "relative min-h-[90px] p-1 border-b border-r border-border",
+                      !inMonth && "opacity-50",
+                      today && "ring-2 ring-inset ring-primary"
                     )}
+                    style={weekend ? { background: "var(--color-surface-raised, var(--muted))" } : undefined}
                   >
-                    {format(day, "d")}
-                  </span>
-                  {/* Heures loguées */}
-                  {(data?.heuresParJour?.[key] ?? 0) > 0 && (
-                    <span className="text-[10px] text-emerald-600 font-medium">
-                      {data!.heuresParJour[key]}h
-                    </span>
-                  )}
-                </div>
-
-                {/* Etape bars (workdays only) */}
-                {!weekend && (
-                  <div className="space-y-0.5">
-                    {overlapping.slice(0, 3).map((etape) => {
-                      const type = barType(etape, key);
-                      const isDeadline = etape.deadline === key;
-                      const extendsRight = type === "right" || type === "both";
-                      const extendsLeft = type === "left" || type === "both";
-                      return (
-                        <button
-                          key={etape.id}
-                          onContextMenu={(ev) => onContextMenu(ev, etape)}
-                          onClick={() => onSelectEtape(etape)}
-                          title={`${etape.nom} — ${etape.projet.nom}`}
-                          tabIndex={!inMonth ? -1 : undefined}
-                          className={cn(
-                            "w-full text-left px-1 py-0.5 text-[10px] leading-tight truncate transition-opacity cursor-pointer h-[18px] relative z-10",
-                            etape.statut === "VALIDEE" && "opacity-50",
-                            type === "standalone" && "rounded",
-                            type === "right" && "rounded-l",
-                            type === "left" && "rounded-r",
-                            type === "both" && "rounded-none",
-                          )}
-                          style={{
-                            backgroundColor: etape.projet.couleur + "30",
-                            borderLeft: !extendsLeft ? `3px solid ${etape.projet.couleur}` : "none",
-                            marginRight: extendsRight ? "-5px" : undefined,
-                            marginLeft: extendsLeft ? "-5px" : undefined,
-                            paddingLeft: extendsLeft ? "4px" : undefined,
-                          }}
-                        >
-                          {(type === "standalone" || type === "right") && (
-                            <span className="truncate flex items-center gap-1">
-                              {isDeadline && (
-                                <span
-                                  className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
-                                  style={{ backgroundColor: etape.joursRestants !== null && etape.joursRestants < 0 ? "var(--color-destructive)" : etape.projet.couleur }}
-                                />
-                              )}
-                              {etape.nom}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                    {overlapping.length > 3 && (
-                      <div className="text-[10px] text-muted-foreground pl-1">
-                        +{overlapping.length - 3} autres
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={cn(
+                        "text-xs font-medium leading-none",
+                        weekend && "text-muted-foreground",
+                        today && "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center"
+                      )}>
+                        {format(day, "d")}
+                      </span>
+                      {(data?.heuresParJour?.[key] ?? 0) > 0 && (
+                        <span className="text-[10px] text-emerald-600 font-medium">
+                          {data!.heuresParJour[key]}h
+                        </span>
+                      )}
+                    </div>
+                    {dayActivites.length > 0 && (
+                      <div className="absolute bottom-1 left-1 flex gap-0.5 flex-wrap">
+                        {[...new Map(dayActivites.map((a) => [a.consultant.id, a.consultant])).values()]
+                          .slice(0, 4)
+                          .map((c) => (
+                            <span key={c.id} className="h-1.5 w-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: c.couleur }} title={c.nom} />
+                          ))}
                       </div>
                     )}
                   </div>
-                )}
+                );
+              })}
 
-                {/* Activity dots */}
-                {dayActivites.length > 0 && (
-                  <div className="flex gap-0.5 mt-1 flex-wrap">
-                    {[
-                      ...new Map(dayActivites.map((a) => [a.consultant.id, a.consultant])).values(),
-                    ]
-                      .slice(0, 4)
-                      .map((c) => (
-                        <span
-                          key={c.id}
-                          className="h-1.5 w-1.5 rounded-full shrink-0"
-                          style={{ backgroundColor: c.couleur }}
-                          title={c.nom}
-                        />
-                      ))}
-                  </div>
-                )}
+              {/* Bars overlay — absolutely positioned above cells, no border clipping */}
+              <div className="absolute inset-x-0 overflow-hidden pointer-events-none" style={{ top: "26px", bottom: 0 }}>
+                {getWeekBars(week).map(({ etape, startCol, endCol, lane }) => {
+                  const weekKey0 = format(week[0], "yyyy-MM-dd");
+                  const etapeStart = etape.dateDebut ?? etape.deadline;
+                  const startsHere = etapeStart !== null && etapeStart >= weekKey0;
+                  return (
+                    <button
+                      key={etape.id}
+                      onClick={() => onSelectEtape(etape)}
+                      onContextMenu={(ev) => onContextMenu(ev, etape)}
+                      title={`${etape.nom} — ${etape.projet.nom}`}
+                      className={cn(
+                        "absolute h-[18px] text-[10px] leading-tight pointer-events-auto truncate",
+                        etape.statut === "VALIDEE" && "opacity-50",
+                      )}
+                      style={{
+                        left: `${(startCol / 7) * 100}%`,
+                        width: `${((endCol - startCol + 1) / 7) * 100}%`,
+                        top: `${lane * 20}px`,
+                        backgroundColor: etape.projet.couleur + "30",
+                        borderLeft: startsHere ? `3px solid ${etape.projet.couleur}` : "none",
+                        borderRadius: startsHere ? "3px 0 0 3px" : "0",
+                        paddingLeft: startsHere ? "4px" : "2px",
+                      }}
+                    >
+                      {startsHere && <span className="truncate block">{etape.nom}</span>}
+                    </button>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
