@@ -23,6 +23,7 @@ import {
   loadFilters,
   saveFilters,
   type DashboardFiltersValue,
+  type PeriodeKey,
 } from "@/components/dashboard/DashboardFilters";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -109,6 +110,15 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
       .catch(() => {});
     return () => controller.abort();
   }, [isPM, pmConsultantId]);
+
+  // Sync période depuis le parent
+  useEffect(() => {
+    const map: Record<string, PeriodeKey> = {
+      jour: "today", semaine: "week", mois: "month", trimestre: "quarter", annee: "year",
+    };
+    const key = map[periodeProp ?? ""] ?? "week";
+    setFilters(getDefaultFilters(key));
+  }, [periodeProp]);
 
   // Hydration + saved filters
   useEffect(() => {

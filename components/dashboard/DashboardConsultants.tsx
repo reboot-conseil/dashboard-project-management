@@ -182,6 +182,15 @@ export function DashboardConsultants({ periode: _periodeProp }: DashboardConsult
     setHydrated(true);
   }, []);
 
+  // Sync période depuis le parent
+  React.useEffect(() => {
+    const map: Record<string, Periode> = {
+      jour: "mois", semaine: "mois", mois: "mois", trimestre: "trimestre", annee: "annee",
+    };
+    const per = map[_periodeProp ?? ""] ?? "mois";
+    setPeriode(per);
+  }, [_periodeProp]);
+
   const fetchData = React.useCallback(
     async (cId: number | null, per: Periode, refreshing = false) => {
       if (refreshing) setIsRefreshing(true);

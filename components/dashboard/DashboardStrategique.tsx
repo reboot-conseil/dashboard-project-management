@@ -5,9 +5,11 @@ import { TrendingUp, RefreshCw, Target, BarChart3, Users, Activity, ShieldAlert 
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import {
+  getDefaultFilters,
   loadFilters,
   saveFilters,
   type DashboardFiltersValue,
+  type PeriodeKey,
 } from "@/components/dashboard/DashboardFilters";
 import { cn } from "@/lib/utils";
 import { ObjectifsAnnuelsSection, loadObjectifsAnnuels } from "@/components/dashboard/strategique/ObjectifsAnnuelsSection";
@@ -150,6 +152,15 @@ export function DashboardStrategique({ periode: _periodeProp }: DashboardStrateg
     if (!hydrated) return { caObjectif: 0, margeObjectif: 40 };
     return loadObjectifsAnnuels();
   }, [hydrated]);
+
+  // Sync période depuis le parent
+  React.useEffect(() => {
+    const map: Record<string, PeriodeKey> = {
+      jour: "today", semaine: "week", mois: "month", trimestre: "quarter", annee: "year",
+    };
+    const key = map[_periodeProp ?? ""] ?? "month";
+    setFilters(getDefaultFilters(key));
+  }, [_periodeProp]);
 
   // Hydration guard
   React.useEffect(() => {
