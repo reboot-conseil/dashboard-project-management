@@ -26,7 +26,8 @@ const defaultCallbacks = {
   onChangerStatut: vi.fn(),
   onReporterDeadline: vi.fn(),
   onSupprimer: vi.fn(),
-  onNavigate: vi.fn(),\n  onLogHeures: vi.fn(),
+  onNavigate: vi.fn(),
+  onLogHeures: vi.fn(),
 };
 
 function renderSidebar(etape: EtapeInfo = makeEtape(), callbacks = defaultCallbacks) {
