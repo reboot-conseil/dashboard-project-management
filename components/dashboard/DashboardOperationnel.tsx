@@ -405,7 +405,7 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
                             : "text-muted-foreground";
                         const dotColor = dl.projetCouleur || PROJET_COLORS[0];
                         return (
-                          <div key={dl.id} className="bg-muted/50 rounded-lg px-2.5 py-2">
+                          <div key={dl.id} className="bg-card rounded-lg px-2.5 py-2 border border-border" style={{ borderLeft: `3px solid ${dotColor}` }}>
                             <div className="flex items-baseline justify-between gap-1">
                               <span className="text-[12.5px] font-bold text-foreground truncate">{dl.nom}</span>
                               <span className={cn("text-[11.5px] font-bold shrink-0", dateColor)}>
