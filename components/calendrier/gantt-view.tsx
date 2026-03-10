@@ -179,7 +179,6 @@ export function GanttView({
                         className="shrink-0 px-3 py-1 text-xs text-muted-foreground pl-8 flex items-center gap-1"
                         style={{ width: "200px" }}
                       >
-                        <span>{healthIcon(etape.health)}</span>
                         <span className="truncate">{etape.nom}</span>
                       </div>
 
@@ -284,22 +283,6 @@ export function GanttView({
                           </button>
                         )}
 
-                        {etape.deadline && (
-                          <div
-                            className={cn(
-                              "absolute top-2 h-3 w-3 rounded-full border-2 border-white z-20",
-                              etape.urgence === "retard"
-                                ? "bg-red-600"
-                                : etape.urgence === "critique"
-                                  ? "bg-orange-500"
-                                  : "bg-red-400"
-                            )}
-                            style={{
-                              left: `${dayPercent(etape.deadline) * COL_WIDTH + COL_WIDTH / 2 - 6}px`,
-                            }}
-                            title={`Deadline: ${etape.deadline}`}
-                          />
-                        )}
 
                         {etape.consultants.length > 0 && etape.deadline && (
                           <div
@@ -343,8 +326,6 @@ export function GanttView({
           <div className="px-4 py-2 text-xs text-muted-foreground flex items-center gap-2">
             <div className="h-3 w-0.5 bg-red-500" />
             <span>Aujourd&apos;hui</span>
-            <div className="h-2.5 w-2.5 rounded-full bg-red-400 border-2 border-white shadow ml-3" />
-            <span>Deadline</span>
           </div>
         </div>
       </CardContent>
