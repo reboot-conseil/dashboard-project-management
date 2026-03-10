@@ -275,7 +275,7 @@ export function ActivitesList({
             </div>
 
             {/* Footer : totaux + pagination */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-border" data-testid="totaux">
+            <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-border bg-background" data-testid="totaux">
               <div className="flex flex-wrap gap-4">
                 <div className="text-sm">
                   <span className="text-muted-foreground">Total : </span>
