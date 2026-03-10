@@ -5,6 +5,43 @@ Format : [version] — date — description
 
 ---
 
+## [v2.1.0] — 2026-03-10 (tag `v2.1.0`)
+Corrections post-audit UX + améliorations qualité
+
+### Dashboard
+- Bande personnelle PM (Heures · CA · Occupation · Projets) en haut du dashboard Opérationnel
+- Synchronisation filtre période (Jour/Semaine/Mois/Trimestre/Année) sur les 3 dashboards
+- Aligner visuellement les sections Projets et Deadlines dans Dashboard/Consultant et Dashboard/Consultants
+- Bouton Dashboard consultants → redirige vers le bon consultant (JSON.stringify fix)
+
+### Projets
+- Clic carte → page détail · clic flèche ↗ → side panel d'aperçu
+- Couleur distincte par projet : picker 6 swatches dans le formulaire, auto-assign à la création
+- Couleur incluse dans la réponse GET /api/projets
+- Suppression titre "X projets" redondant
+- Onglet Activités dans le side panel : CTA saisie, footer total, indicateur NF
+
+### Calendrier
+- Vue Mois : barres continues (overlay absolu par semaine, plus de coupure)
+- Vue Mois : nom affiché uniquement au premier jour de démarrage + hachures fin d'étape
+- Vue Timeline : suppression emojis health et rond rouge deadline
+- Vue Équipe : heures loguées réelles, dark mode (bg-destructive/10), sans banners planifiés
+- Popups "Logger des heures" et "Nouvelle étape" directement dans le calendrier
+- Bouton "Logger des heures" dans la sidebar étape → popup pré-rempli
+
+### Activités
+- Colonnes réordonnées : Projet → Étape → Consultant
+- Rangées plus fines + carré coloré projet
+- Ligne de date contrastée (surface-raised token, light + dark mode)
+- Footer totaux sticky
+- Bouton X pour fermer le dialog saisie
+
+### Gestion utilisateurs
+- Bouton "Modifier" pour changer le rôle d'un compte
+- Bouton "Supprimer" avec confirmation + API DELETE
+
+---
+
 ## [v2.0.0] — 2026-03-10 (tag `v2.0.0`, mergé dans `main`)
 Redesign complet de l'interface — "Professional Dark Soft"
 
