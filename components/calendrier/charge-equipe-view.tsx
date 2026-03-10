@@ -53,6 +53,26 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
     return Math.round(total);
   }
 
+  function getHeuresLogueesConsultantJour(consultantId: number, day: Date): number {
+    if (!data) return 0;
+    const key = format(day, "yyyy-MM-dd");
+    return Math.round(
+      data.activites
+        .filter((a) => a.consultant.id === consultantId && a.date === key)
+        .reduce((s, a) => s + Number(a.heures), 0) * 10
+    ) / 10;
+  }
+
+  function getHeuresLogueesEtapeJour(etapeId: number, consultantId: number, day: Date): number {
+    if (!data) return 0;
+    const key = format(day, "yyyy-MM-dd");
+    return Math.round(
+      data.activites
+        .filter((a) => a.consultant.id === consultantId && a.date === key && a.etape?.id === etapeId)
+        .reduce((s, a) => s + Number(a.heures), 0) * 10
+    ) / 10;
+  }
+
   function getEtapesConsultantJour(consultantId: number, day: Date): EtapeInfo[] {
     if (!data) return [];
     const key = format(day, "yyyy-MM-dd");
@@ -66,17 +86,6 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
 
   return (
     <div className="space-y-3" data-testid="charge-equipe-view">
-      <div className="flex gap-3 flex-wrap">
-        <div className="bg-card border border-border rounded-lg px-4 py-2 text-sm">
-          <span className="text-muted-foreground">Heures planifiées :</span>{" "}
-          <strong>{totalHeuresSemaine()}h</strong>
-        </div>
-        <div className="bg-card border border-border rounded-lg px-4 py-2 text-sm">
-          <span className="text-muted-foreground">CA estimé :</span>{" "}
-          <strong>{caEstimeSemaine().toLocaleString("fr-FR")} €</strong>
-        </div>
-      </div>
-
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <div className="min-w-[900px]">
@@ -139,10 +148,10 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
                   {weekDays.map((day) => {
                     const key = format(day, "yyyy-MM-dd");
                     const weekend = isWeekend(day);
-                    const heures = Math.round((jourMap[key] ?? 0) * 10) / 10;
-                    if (!weekend) totalHeures += heures;
+                    const heuresLoguees = weekend ? 0 : getHeuresLogueesConsultantJour(consultant.id, day);
+                    if (!weekend) totalHeures += heuresLoguees;
                     const etapesJour = weekend ? [] : getEtapesConsultantJour(consultant.id, day);
-                    const surcharge = !weekend && heures > 8;
+                    const surcharge = !weekend && heuresLoguees > 8;
 
                     return (
                       <div
@@ -150,48 +159,51 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
                         className={cn(
                           "p-1.5 border-r border-border min-h-[60px]",
                           isToday(day) && "bg-primary/5",
-                          surcharge && "bg-red-50",
-                          weekend && "opacity-40"
+                          surcharge && "bg-destructive/10",
                         )}
                         style={weekend ? { background: "var(--color-surface-raised, var(--muted))" } : undefined}
                       >
                         {!weekend && (
                           <>
                             <div className="flex items-center justify-between mb-1">
-                              {heures === 0 ? (
+                              {heuresLoguees === 0 ? (
                                 <span className="text-[10px] text-muted-foreground">—</span>
-                              ) : surcharge ? (
-                                <span className="text-[10px] font-medium text-destructive">{heures}h</span>
                               ) : (
-                                <span className="text-[10px] font-medium">{heures}h</span>
+                                <span className={cn("text-[10px] font-bold", surcharge ? "text-destructive" : "text-foreground")}>
+                                  {heuresLoguees}h
+                                </span>
                               )}
                             </div>
-                            {heures > 0 && (
+                            {heuresLoguees > 0 && (
                               <div className="h-1 w-full rounded-full bg-muted mb-1 overflow-hidden">
                                 <div
-                                  className={cn("h-full rounded-full", chargeColor(Math.round((heures / 8) * 100)))}
-                                  style={{ width: `${Math.min(100, Math.round((heures / 8) * 100))}%` }}
+                                  className={cn("h-full rounded-full", chargeColor(Math.round((heuresLoguees / 8) * 100)))}
+                                  style={{ width: `${Math.min(100, Math.round((heuresLoguees / 8) * 100))}%` }}
                                 />
                               </div>
                             )}
                             <div className="space-y-0.5">
-                              {etapesJour.slice(0, 2).map((e) => (
-                                <button
-                                  key={e.id}
-                                  onContextMenu={(ev) => onContextMenu(ev, e)}
-                                  onClick={() => onSelectEtape(e)}
-                                  className="w-full text-left text-[9px] rounded px-1 py-0.5 truncate cursor-pointer transition-opacity hover:opacity-80"
-                                  style={{
-                                    backgroundColor: e.projet.couleur + "20",
-                                    borderLeft: `2px solid ${e.projet.couleur}`,
-                                  }}
-                                >
-                                  {e.projet.nom}
-                                </button>
-                              ))}
-                              {etapesJour.length > 2 && (
+                              {etapesJour.slice(0, 3).map((e) => {
+                                const h = getHeuresLogueesEtapeJour(e.id, consultant.id, day);
+                                return (
+                                  <button
+                                    key={e.id}
+                                    onContextMenu={(ev) => onContextMenu(ev, e)}
+                                    onClick={() => onSelectEtape(e)}
+                                    className="w-full text-left text-[9px] rounded px-1 py-0.5 truncate cursor-pointer transition-opacity hover:opacity-80 flex items-center justify-between gap-1"
+                                    style={{
+                                      backgroundColor: e.projet.couleur + "20",
+                                      borderLeft: `2px solid ${e.projet.couleur}`,
+                                    }}
+                                  >
+                                    <span className="truncate">{e.projet.nom}</span>
+                                    {h > 0 && <span className="shrink-0 font-semibold">{h}h</span>}
+                                  </button>
+                                );
+                              })}
+                              {etapesJour.length > 3 && (
                                 <div className="text-[9px] text-muted-foreground pl-1">
-                                  +{etapesJour.length - 2}
+                                  +{etapesJour.length - 3}
                                 </div>
                               )}
                             </div>
