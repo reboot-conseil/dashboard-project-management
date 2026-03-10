@@ -1,0 +1,21 @@
+version: "3.9"
+
+# Local dev database only — run with: docker compose -f docker-compose.dev.yml up -d
+# Next.js runs separately with: npm run dev
+
+services:
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: dashboard_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dashboard
+      POSTGRES_PASSWORD: dashboard_local
+      POSTGRES_DB: dashboard
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_dev_data:

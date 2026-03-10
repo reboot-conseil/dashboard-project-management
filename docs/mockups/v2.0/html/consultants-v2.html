@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PM Dashboard — Consultants v2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#F5F7FA;--surface:#FFFFFF;--surface-raised:#F0F3F8;
+      --primary:#2563EB;--primary-10:rgba(37,99,235,.10);
+      --border:#E4E8EF;--border-muted:#EFF2F6;
+      --text:#0F172A;--text-muted:#5a6a7a;--text-secondary:#94A3B8;
+      --success:#15803d;--success-bg:#dcfce7;
+      --warning:#b45309;--warning-bg:#fef3c7;
+      --danger:#b91c1c;--danger-bg:#fee2e2;
+      --r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;
+    }
+    html.dark{
+      --bg:#0C0E14;--surface:#161920;--surface-raised:#1E2130;
+      --primary-10:rgba(37,99,235,.15);
+      --border:#252A3A;--border-muted:#1E2130;
+      --text:#F1F5F9;--text-muted:#94A3B8;--text-secondary:#475569;
+      --success-bg:rgba(21,128,61,.18);--warning-bg:rgba(180,83,9,.18);--danger-bg:rgba(185,28,28,.18);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;margin:0;display:flex;height:100vh;overflow:hidden;}
+
+    .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);font-size:13.5px;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .12s;}
+    .nav-item:hover{background:var(--surface-raised);color:var(--text);}
+    .nav-item.active{background:var(--primary-10);color:var(--primary);border-left:2px solid var(--primary);padding-left:8px;}
+    .nav-item svg{width:17px;height:17px;flex-shrink:0;}
+    .nav-sep{height:1px;background:var(--border-muted);margin:5px 0;}
+
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+    /* VIEW TOGGLE */
+    .vtog{padding:5px 7px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text-muted);transition:all .12s;display:flex;align-items:center;}
+    .vtog.active{background:var(--primary-10);border-color:rgba(37,99,235,.2);color:var(--primary);}
+
+    /* TABLE */
+    .cons-table{width:100%;border-collapse:collapse;}
+    .cons-table th{font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;padding:9px 14px;border-bottom:2px solid var(--border);text-align:left;background:var(--surface);position:sticky;top:0;z-index:5;white-space:nowrap;}
+    .cons-table td{padding:12px 14px;border-bottom:1px solid var(--border-muted);font-size:13px;color:var(--text);vertical-align:middle;}
+    .cons-row{background:var(--surface);transition:background .12s;}
+    .cons-row:hover{background:var(--surface-raised);}
+    .cons-row:hover .row-actions{opacity:1;}
+    .row-actions{opacity:0;transition:opacity .15s;display:flex;align-items:center;gap:4px;white-space:nowrap;}
+    .row-actions button{display:flex;align-items:center;gap:4px;padding:4px 9px;border:1px solid var(--border);background:var(--surface);cursor:pointer;border-radius:var(--r-sm);font-size:11.5px;font-weight:500;color:var(--text-muted);font-family:inherit;transition:all .12s;white-space:nowrap;}
+    .row-actions button:hover{background:var(--surface-raised);color:var(--text);}
+    .row-actions button.primary:hover{background:var(--primary-10);color:var(--primary);border-color:rgba(37,99,235,.2);}
+
+    /* Expand row */
+    .expand-row td{background:var(--surface-raised);padding:0;}
+    .expand-content{padding:14px 20px 16px 60px;display:none;}
+    .expand-content.open{display:flex;gap:24px;}
+
+    /* STATUS BADGE clickable */
+    .stat-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--r-sm);font-size:11.5px;font-weight:600;cursor:pointer;transition:opacity .12s;}
+    .stat-badge:hover{opacity:.8;}
+    .stat-actif{background:var(--success-bg);color:var(--success);}
+    .stat-inactif{background:var(--surface-raised);color:var(--text-secondary);border:1px solid var(--border);}
+
+    /* OCCUPATION BAR */
+    .occ-bar{height:6px;border-radius:9999px;background:var(--border);overflow:hidden;width:80px;}
+    .occ-fill{height:100%;border-radius:9999px;}
+
+    /* SPARKLINE SVG inline */
+    .sparkline{display:block;}
+
+    /* CARDS VIEW */
+    .cons-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;transition:box-shadow .15s,transform .15s;cursor:default;}
+    .cons-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.08);transform:translateY(-2px);}
+
+    /* SEARCH */
+    .search-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:7px 12px 7px 36px;font-size:13px;color:var(--text);outline:none;font-family:inherit;max-width:320px;}
+    .search-input:focus{border-color:var(--primary);}
+
+    /* BADGE */
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--r-sm);font-size:11.5px;font-weight:600;}
+    .badge-success{background:var(--success-bg);color:var(--success);}
+    .badge-warning{background:var(--warning-bg);color:var(--warning);}
+    .badge-danger{background:var(--danger-bg);color:var(--danger);}
+
+    /* MINI PBAR */
+    .pbar{height:5px;border-radius:9999px;background:var(--border);overflow:hidden;}
+    .pfill{height:100%;border-radius:9999px;}
+
+    ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div style="padding:13px 14px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div style="width:30px;height:30px;border-radius:8px;background:#2563EB;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>
+      <span style="font-size:13.5px;font-weight:600;color:var(--text);">PM Dashboard</span>
+    </div>
+    <button onclick="toggleTheme()" style="padding:5px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <svg id="theme-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+  <nav style="flex:1;padding:10px 10px 0;display:flex;flex-direction:column;gap:2px;overflow-y:auto;">
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+    <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Consultants</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Projets</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Activités</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendrier</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documents</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Paramètres</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Utilisateurs</a>
+    <div class="nav-sep" style="margin-top:auto;"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-md);background:var(--surface-raised);border:1px solid var(--border-muted);cursor:text;margin-bottom:2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span style="font-size:12px;flex:1;color:var(--text-muted);">Rechercher...</span><span style="font-size:10px;color:var(--text-secondary);">⌘K</span></div>
+  </nav>
+  <div style="padding:8px 10px 10px;border-top:1px solid var(--border-muted);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--r-md);cursor:pointer;" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+      <div style="flex:1;min-width:0;"><p style="font-size:12.5px;font-weight:600;color:var(--text);margin:0;">Jonathan Braun</p><p style="font-size:11px;color:var(--text-muted);margin:0;">Admin · Reboot Conseil</p></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOP BAR -->
+  <div style="padding:14px 24px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span style="font-size:17px;font-weight:800;color:var(--text);">Consultants</span>
+      <span style="font-size:13px;color:var(--text-muted);">· 4 actifs</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <!-- Table / Cards toggle -->
+      <div style="display:flex;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;">
+        <button class="vtog active" id="btn-table" onclick="setView('table')" title="Vue table"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg></button>
+        <button class="vtog" id="btn-cards" onclick="setView('cards')" title="Vue cards" style="border-left:1px solid var(--border);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></button>
+      </div>
+      <button style="display:flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--text-muted);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='var(--surface)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Exporter CSV</button>
+      <button style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-md);background:var(--primary);color:white;border:none;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau consultant</button>
+    </div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div style="padding:10px 24px;border-bottom:1px solid var(--border-muted);background:var(--surface);flex-shrink:0;display:flex;align-items:center;gap:10px;">
+    <div style="position:relative;flex:1;max-width:340px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" style="max-width:100%;" type="text" placeholder="Rechercher un consultant..."/>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-muted);margin-left:auto;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      <span>Clic sur une ligne pour voir le détail · Clic sur le statut pour activer/désactiver</span>
+    </div>
+  </div>
+
+  <!-- TABLE VIEW -->
+  <div id="view-table" style="flex:1;overflow-y:auto;">
+    <table class="cons-table">
+      <thead>
+        <tr>
+          <th style="width:200px;">Consultant</th>
+          <th style="width:190px;">Email</th>
+          <th style="width:80px;text-align:right;">TJM</th>
+          <th style="width:110px;text-align:right;">Occupation</th>
+          <th style="width:110px;text-align:right;">CA ce mois</th>
+          <th style="width:110px;text-align:center;">Tendance 4 mois</th>
+          <th style="width:90px;text-align:center;">Statut</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- ── Sophie Leroux ── -->
+        <tr class="cons-row" onclick="toggleExpand('sl')">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:34px;height:34px;border-radius:50%;background:#8B5CF6;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;">SL</div>
+              <div><div style="font-size:13.5px;font-weight:700;color:var(--text);">Sophie Leroux</div><div style="font-size:11px;color:var(--text-muted);">Senior Dev</div></div>
+            </div>
+          </td>
+          <td style="font-size:12.5px;color:var(--text-muted);">sophie.leroux@reboot-conseil.com</td>
+          <td style="text-align:right;font-weight:700;">700€</td>
+          <td style="text-align:right;">
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+              <div class="occ-bar"><div class="occ-fill" style="width:88%;background:#10b981;"></div></div>
+              <span style="font-weight:700;font-size:13px;">88%</span>
+            </div>
+          </td>
+          <td style="text-align:right;font-weight:700;font-size:13px;">12.6k€</td>
+          <td style="text-align:center;">
+            <!-- Mini sparkline: 4 months trend (oct→janv) — bars -->
+            <div style="display:flex;align-items:flex-end;gap:2px;height:24px;justify-content:center;">
+              <div style="width:8px;border-radius:2px 2px 0 0;height:60%;background:#8B5CF6;opacity:.5;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:75%;background:#8B5CF6;opacity:.65;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:85%;background:#8B5CF6;opacity:.8;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:100%;background:#8B5CF6;"></div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="stat-badge stat-actif" onclick="event.stopPropagation()">Actif</span></td>
+          <td style="padding-right:10px;"><div class="row-actions">
+            <button class="primary" onclick="event.stopPropagation();goToDashboard('sl')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</button>
+            <button onclick="event.stopPropagation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>
+          </div></td>
+        </tr>
+        <!-- Expand SL -->
+        <tr class="expand-row" id="expand-sl"><td colspan="8"><div class="expand-content" id="content-sl">
+          <div style="flex:1;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Projets en cours</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);"><div style="width:8px;height:8px;border-radius:2px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:12.5px;font-weight:500;color:var(--text);flex:1;">Dashboard RH Analytics</span><span style="font-size:11.5px;color:var(--text-muted);">Dév. Frontend · 75%</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);"><div style="width:8px;height:8px;border-radius:50%;background:#14b8a6;flex-shrink:0;"></div><span style="font-size:12.5px;font-weight:500;color:var(--text);flex:1;">Refonte Site Web</span><span style="font-size:11.5px;color:var(--text-muted);">Intégr. React · 0%</span></div>
+            </div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Activités récentes</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">ven. 6/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Intégration React / composants UI</span><span style="font-weight:700;color:var(--text);">7h</span></div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">jeu. 5/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Intégration React / composants UI</span><span style="font-weight:700;color:var(--text);">7h</span></div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">mer. 4/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Setup Next.js + configuration routing</span><span style="font-weight:700;color:var(--text);">7h</span></div>
+            </div>
+          </div>
+        </div></td></tr>
+
+        <!-- ── Marc Dubois ── -->
+        <tr class="cons-row" onclick="toggleExpand('md')">
+          <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:#F59E0B;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;">MD</div><div><div style="font-size:13.5px;font-weight:700;color:var(--text);">Marc Dubois</div><div style="font-size:11px;color:var(--text-muted);">Consultant</div></div></div></td>
+          <td style="font-size:12.5px;color:var(--text-muted);">marc.dubois@reboot-conseil.com</td>
+          <td style="text-align:right;font-weight:700;">640€</td>
+          <td style="text-align:right;"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;"><div class="occ-bar"><div class="occ-fill" style="width:68%;background:#f59e0b;"></div></div><span style="font-weight:700;font-size:13px;color:#b45309;">68%</span></div></td>
+          <td style="text-align:right;font-weight:700;font-size:13px;">10.9k€</td>
+          <td style="text-align:center;">
+            <div style="display:flex;align-items:flex-end;gap:2px;height:24px;justify-content:center;">
+              <div style="width:8px;border-radius:2px 2px 0 0;height:70%;background:#F59E0B;opacity:.5;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:65%;background:#F59E0B;opacity:.65;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:80%;background:#F59E0B;opacity:.8;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:68%;background:#F59E0B;"></div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="stat-badge stat-actif" onclick="event.stopPropagation()">Actif</span></td>
+          <td style="padding-right:10px;"><div class="row-actions">
+            <button class="primary" onclick="event.stopPropagation();goToDashboard('md')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</button>
+            <button onclick="event.stopPropagation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>
+          </div></td>
+        </tr>
+        <tr class="expand-row" id="expand-md"><td colspan="8"><div class="expand-content" id="content-md">
+          <div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Projets en cours</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);"><div style="width:8px;height:8px;border-radius:50%;background:#14b8a6;flex-shrink:0;"></div><span style="font-size:12.5px;font-weight:500;color:var(--text);flex:1;">Refonte Site Web</span><span style="font-size:11.5px;color:var(--text-muted);">Design Maquettes · 50%</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);"><div style="width:8px;height:8px;border-radius:50%;background:#6366f1;flex-shrink:0;"></div><span style="font-size:12.5px;font-weight:500;color:var(--text);flex:1;">Migration Cloud</span><span style="font-size:11.5px;color:var(--text-muted);">Migration Données · 60%</span></div>
+            </div>
+          </div>
+          <div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Activités récentes</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">ven. 6/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Maquettes pages produit et services</span><span style="font-weight:700;color:var(--text);">6h</span></div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">jeu. 5/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Scripts migration ETL batch 2</span><span style="font-weight:700;color:var(--text);">7h</span></div>
+            </div>
+          </div>
+        </div></td></tr>
+
+        <!-- ── Julie Chen ── -->
+        <tr class="cons-row" onclick="toggleExpand('jc')">
+          <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;">JC</div><div><div style="font-size:13.5px;font-weight:700;color:var(--text);">Julie Chen</div><div style="font-size:11px;color:var(--text-muted);">Data Consultant</div></div></div></td>
+          <td style="font-size:12.5px;color:var(--text-muted);">julie.chen@reboot-conseil.com</td>
+          <td style="text-align:right;font-weight:700;">680€</td>
+          <td style="text-align:right;"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;"><div class="occ-bar"><div class="occ-fill" style="width:82%;background:#10b981;"></div></div><span style="font-weight:700;font-size:13px;">82%</span></div></td>
+          <td style="text-align:right;font-weight:700;font-size:13px;">11.6k€</td>
+          <td style="text-align:center;">
+            <div style="display:flex;align-items:flex-end;gap:2px;height:24px;justify-content:center;">
+              <div style="width:8px;border-radius:2px 2px 0 0;height:55%;background:#10B981;opacity:.5;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:70%;background:#10B981;opacity:.65;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:78%;background:#10B981;opacity:.8;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:82%;background:#10B981;"></div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="stat-badge stat-actif" onclick="event.stopPropagation()">Actif</span></td>
+          <td style="padding-right:10px;"><div class="row-actions">
+            <button class="primary" onclick="event.stopPropagation();goToDashboard('jc')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</button>
+            <button onclick="event.stopPropagation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>
+          </div></td>
+        </tr>
+        <tr class="expand-row" id="expand-jc"><td colspan="8"><div class="expand-content" id="content-jc">
+          <div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Projets en cours</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);"><div style="width:8px;height:8px;border-radius:50%;background:#6366f1;flex-shrink:0;"></div><span style="font-size:12.5px;font-weight:500;color:var(--text);flex:1;">Migration Cloud</span><span style="font-size:11.5px;color:var(--text-muted);">Migration Données · 60%</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);"><div style="width:8px;height:8px;border-radius:2px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:12.5px;font-weight:500;color:var(--text);flex:1;">Dashboard RH Analytics</span><span style="font-size:11.5px;color:var(--text-muted);">Dév. Frontend · 75%</span></div>
+            </div>
+          </div>
+          <div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Activités récentes</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">ven. 6/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Validation intégrité données post-migration</span><span style="font-weight:700;color:var(--text);">7h</span></div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">jeu. 5/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Validation intégrité données batch 1</span><span style="font-weight:700;color:var(--text);">7h</span></div>
+            </div>
+          </div>
+        </div></td></tr>
+
+        <!-- ── Jonathan Braun ── -->
+        <tr class="cons-row" onclick="toggleExpand('jb')">
+          <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;">JB</div><div><div style="font-size:13.5px;font-weight:700;color:var(--text);">Jonathan Braun</div><div style="font-size:11px;color:var(--text-muted);">PM / Senior Dev</div></div></div></td>
+          <td style="font-size:12.5px;color:var(--text-muted);">jonathan.braun@reboot-conseil.com</td>
+          <td style="text-align:right;font-weight:700;">720€</td>
+          <td style="text-align:right;"><div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;"><div class="occ-bar"><div class="occ-fill" style="width:74%;background:#2563EB;"></div></div><span style="font-weight:700;font-size:13px;">74%</span></div></td>
+          <td style="text-align:right;font-weight:700;font-size:13px;">5.2k€</td>
+          <td style="text-align:center;">
+            <div style="display:flex;align-items:flex-end;gap:2px;height:24px;justify-content:center;">
+              <div style="width:8px;border-radius:2px 2px 0 0;height:80%;background:#6366f1;opacity:.5;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:75%;background:#6366f1;opacity:.65;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:85%;background:#6366f1;opacity:.8;"></div>
+              <div style="width:8px;border-radius:2px 2px 0 0;height:74%;background:#6366f1;"></div>
+            </div>
+          </td>
+          <td style="text-align:center;"><span class="stat-badge stat-actif" onclick="event.stopPropagation()">Actif</span></td>
+          <td style="padding-right:10px;"><div class="row-actions">
+            <button class="primary" onclick="event.stopPropagation();goToDashboard('jb')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</button>
+            <button onclick="event.stopPropagation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>
+          </div></td>
+        </tr>
+        <tr class="expand-row" id="expand-jb"><td colspan="8"><div class="expand-content" id="content-jb">
+          <div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Projets en cours</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);"><div style="width:8px;height:8px;border-radius:2px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:12.5px;font-weight:500;color:var(--text);flex:1;">Dashboard RH Analytics</span><span style="font-size:11.5px;color:var(--text-muted);">Design UI · 50%</span></div>
+            </div>
+          </div>
+          <div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Activités récentes</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">jeu. 5/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Design UI composants navigation</span><span style="font-weight:700;color:var(--text);">4h</span></div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="color:var(--text-muted);width:60px;flex-shrink:0;">mer. 4/03</span><span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Revue design système graphique</span><span style="font-weight:700;color:var(--text);">4h</span></div>
+            </div>
+          </div>
+        </div></td></tr>
+
+      </tbody>
+    </table>
+  </div><!-- end table view -->
+
+  <!-- CARDS VIEW (hidden) -->
+  <div id="view-cards" style="display:none;flex:1;overflow-y:auto;padding:20px 24px;">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
+
+      <!-- Card SL -->
+      <div class="cons-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:48px;height:48px;border-radius:50%;background:#8B5CF6;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;flex-shrink:0;">SL</div>
+            <div><div style="font-size:15px;font-weight:800;color:var(--text);">Sophie Leroux</div><div style="font-size:12px;color:var(--text-muted);">Senior Dev · 700€/j</div></div>
+          </div>
+          <span class="stat-badge stat-actif">Actif</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:10px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:3px;">CA ce mois</div><div style="font-size:1.2rem;font-weight:800;color:var(--text);">12.6k€</div></div>
+          <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:10px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:3px;">Occupation</div><div style="font-size:1.2rem;font-weight:800;color:var(--success);">88%</div></div>
+        </div>
+        <div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);margin-bottom:4px;"><span>Taux d'occupation</span><span style="font-weight:600;color:var(--success);">88%</span></div><div class="pbar" style="height:6px;"><div class="pfill" style="width:88%;background:#10b981;"></div></div></div>
+        <!-- Tendance mini bars -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:28px;">
+            <div style="width:10px;border-radius:2px 2px 0 0;height:55%;background:#8B5CF6;opacity:.5;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:70%;background:#8B5CF6;opacity:.65;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:85%;background:#8B5CF6;opacity:.8;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:100%;background:#8B5CF6;"></div>
+          </div>
+          <button onclick="goToDashboard('sl')" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r-md);background:var(--primary-10);border:1px solid rgba(37,99,235,.2);color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;" onmouseover="this.style.background='rgba(37,99,235,.15)'" onmouseout="this.style.background='var(--primary-10)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Voir dashboard</button>
+        </div>
+      </div>
+
+      <!-- Card MD -->
+      <div class="cons-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:12px;"><div style="width:48px;height:48px;border-radius:50%;background:#F59E0B;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;flex-shrink:0;">MD</div><div><div style="font-size:15px;font-weight:800;color:var(--text);">Marc Dubois</div><div style="font-size:12px;color:var(--text-muted);">Consultant · 640€/j</div></div></div>
+          <span class="stat-badge stat-actif">Actif</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:10px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:3px;">CA ce mois</div><div style="font-size:1.2rem;font-weight:800;color:var(--text);">10.9k€</div></div>
+          <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:10px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:3px;">Occupation</div><div style="font-size:1.2rem;font-weight:800;color:#b45309;">68%</div></div>
+        </div>
+        <div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);margin-bottom:4px;"><span>Taux d'occupation</span><span style="font-weight:600;color:#b45309;">68%</span></div><div class="pbar" style="height:6px;"><div class="pfill" style="width:68%;background:#F59E0B;"></div></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:28px;">
+            <div style="width:10px;border-radius:2px 2px 0 0;height:70%;background:#F59E0B;opacity:.5;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:65%;background:#F59E0B;opacity:.65;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:80%;background:#F59E0B;opacity:.8;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:68%;background:#F59E0B;"></div>
+          </div>
+          <button onclick="goToDashboard('md')" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r-md);background:var(--primary-10);border:1px solid rgba(37,99,235,.2);color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='rgba(37,99,235,.15)'" onmouseout="this.style.background='var(--primary-10)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Voir dashboard</button>
+        </div>
+      </div>
+
+      <!-- Card JC -->
+      <div class="cons-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:12px;"><div style="width:48px;height:48px;border-radius:50%;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;flex-shrink:0;">JC</div><div><div style="font-size:15px;font-weight:800;color:var(--text);">Julie Chen</div><div style="font-size:12px;color:var(--text-muted);">Data Consultant · 680€/j</div></div></div>
+          <span class="stat-badge stat-actif">Actif</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:10px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:3px;">CA ce mois</div><div style="font-size:1.2rem;font-weight:800;color:var(--text);">11.6k€</div></div>
+          <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:10px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:3px;">Occupation</div><div style="font-size:1.2rem;font-weight:800;color:var(--success);">82%</div></div>
+        </div>
+        <div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);margin-bottom:4px;"><span>Taux d'occupation</span><span style="font-weight:600;color:var(--success);">82%</span></div><div class="pbar" style="height:6px;"><div class="pfill" style="width:82%;background:#10b981;"></div></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:28px;">
+            <div style="width:10px;border-radius:2px 2px 0 0;height:55%;background:#10B981;opacity:.5;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:70%;background:#10B981;opacity:.65;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:78%;background:#10B981;opacity:.8;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:82%;background:#10B981;"></div>
+          </div>
+          <button onclick="goToDashboard('jc')" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r-md);background:var(--primary-10);border:1px solid rgba(37,99,235,.2);color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='rgba(37,99,235,.15)'" onmouseout="this.style.background='var(--primary-10)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Voir dashboard</button>
+        </div>
+      </div>
+
+      <!-- Card JB -->
+      <div class="cons-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:12px;"><div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;flex-shrink:0;">JB</div><div><div style="font-size:15px;font-weight:800;color:var(--text);">Jonathan Braun</div><div style="font-size:12px;color:var(--text-muted);">PM / Senior Dev · 720€/j</div></div></div>
+          <span class="stat-badge stat-actif">Actif</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:10px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:3px;">CA ce mois</div><div style="font-size:1.2rem;font-weight:800;color:var(--text);">5.2k€</div></div>
+          <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:10px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:3px;">Occupation</div><div style="font-size:1.2rem;font-weight:800;color:var(--text);">74%</div></div>
+        </div>
+        <div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);margin-bottom:4px;"><span>Taux d'occupation</span><span style="font-weight:600;">74%</span></div><div class="pbar" style="height:6px;"><div class="pfill" style="width:74%;background:#2563EB;"></div></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:28px;">
+            <div style="width:10px;border-radius:2px 2px 0 0;height:80%;background:#6366f1;opacity:.5;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:75%;background:#6366f1;opacity:.65;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:85%;background:#6366f1;opacity:.8;"></div>
+            <div style="width:10px;border-radius:2px 2px 0 0;height:74%;background:#6366f1;"></div>
+          </div>
+          <button onclick="goToDashboard('jb')" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r-md);background:var(--primary-10);border:1px solid rgba(37,99,235,.2);color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='rgba(37,99,235,.15)'" onmouseout="this.style.background='var(--primary-10)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Voir dashboard</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<script>
+  const expanded = {};
+  function toggleExpand(id){
+    const c = document.getElementById('content-'+id);
+    const wasOpen = expanded[id];
+    // close all
+    Object.keys(expanded).forEach(k=>{
+      if(expanded[k]){document.getElementById('content-'+k).style.display='none';expanded[k]=false;}
+    });
+    if(!wasOpen){c.style.display='flex';expanded[id]=true;}
+  }
+  function goToDashboard(id){
+    const names={sl:'Sophie Leroux',md:'Marc Dubois',jc:'Julie Chen',jb:'Jonathan Braun'};
+    // In production: navigate to Dashboard > tab Consultants filtered on this consultant
+    const msg = document.createElement('div');
+    msg.textContent = `→ Dashboard filtré sur ${names[id]}`;
+    msg.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0F172A;color:white;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;animation:fadeIn .2s;';
+    document.body.appendChild(msg);
+    setTimeout(()=>msg.remove(),2000);
+  }
+  function setView(v){
+    document.getElementById('view-table').style.display=v==='table'?'block':'none';
+    document.getElementById('view-cards').style.display=v==='cards'?'block':'none';
+    document.getElementById('btn-table').classList.toggle('active',v==='table');
+    document.getElementById('btn-cards').classList.toggle('active',v==='cards');
+  }
+  function toggleTheme(){
+    document.documentElement.classList.toggle('dark');
+    const i=document.getElementById('theme-icon');
+    if(document.documentElement.classList.contains('dark')){i.innerHTML='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';}
+    else{i.innerHTML='<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';}
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PM Dashboard — Projets v2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#F5F7FA;--surface:#FFFFFF;--surface-raised:#F0F3F8;
+      --primary:#2563EB;--primary-10:rgba(37,99,235,.10);
+      --border:#E4E8EF;--border-muted:#EFF2F6;
+      --text:#0F172A;--text-muted:#5a6a7a;--text-secondary:#94A3B8;
+      --success:#15803d;--success-bg:#dcfce7;
+      --warning:#b45309;--warning-bg:#fef3c7;
+      --danger:#b91c1c;--danger-bg:#fee2e2;
+      --r-sm:6px;--r-md:10px;--r-lg:14px;
+    }
+    html.dark{
+      --bg:#0C0E14;--surface:#161920;--surface-raised:#1E2130;
+      --primary-10:rgba(37,99,235,.15);
+      --border:#252A3A;--border-muted:#1E2130;
+      --text:#F1F5F9;--text-muted:#94A3B8;--text-secondary:#475569;
+      --success-bg:rgba(21,128,61,.18);--warning-bg:rgba(180,83,9,.18);--danger-bg:rgba(185,28,28,.18);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;margin:0;display:flex;height:100vh;overflow:hidden;}
+
+    .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);font-size:13.5px;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .12s;}
+    .nav-item:hover{background:var(--surface-raised);color:var(--text);}
+    .nav-item.active{background:var(--primary-10);color:var(--primary);border-left:2px solid var(--primary);padding-left:8px;}
+    .nav-item svg{width:17px;height:17px;flex-shrink:0;}
+    .nav-sep{height:1px;background:var(--border-muted);margin:5px 0;}
+
+    /* LAYOUT */
+    .workspace{flex:1;display:flex;overflow:hidden;}
+    .list-pane{flex:1;overflow-y:auto;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;transition:all .25s;}
+    .detail-pane{width:0;min-width:0;overflow:hidden;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;transition:width .25s,min-width .25s;}
+    .detail-pane.open{width:520px;min-width:520px;}
+
+    /* STATUS TABS */
+    .stab{padding:6px 16px;border-radius:20px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .12s;}
+    .stab.active{background:var(--primary-10);color:var(--primary);font-weight:600;}
+    .stab:hover:not(.active){background:var(--surface-raised);color:var(--text);}
+
+    /* VIEW TOGGLE */
+    .vtog{padding:6px 8px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text-muted);transition:all .12s;display:flex;align-items:center;}
+    .vtog.active{background:var(--primary-10);border-color:rgba(37,99,235,.2);color:var(--primary);}
+
+    /* SEARCH / SORT */
+    .search-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:7px 12px 7px 36px;font-size:13px;color:var(--text);outline:none;font-family:inherit;}
+    .search-input:focus{border-color:var(--primary);}
+    .sort-sel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:7px 28px 7px 10px;font-size:12.5px;color:var(--text-muted);font-family:inherit;outline:none;cursor:pointer;appearance:none;}
+
+    /* CARDS */
+    .proj-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;transition:box-shadow .15s,transform .15s,border-color .15s;cursor:pointer;}
+    .proj-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.08);transform:translateY(-2px);}
+    .proj-card.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-10);}
+    .card-header{height:52px;position:relative;display:flex;align-items:flex-end;padding:0 16px 10px;}
+    .card-body{padding:14px 16px 16px;}
+
+    /* BARS */
+    .pbar{height:7px;border-radius:9999px;background:var(--border);overflow:hidden;}
+    .pfill{height:100%;border-radius:9999px;}
+
+    /* BADGES */
+    .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:var(--r-sm);font-size:12px;font-weight:600;}
+    .badge-success{background:var(--success-bg);color:var(--success);}
+    .badge-warning{background:var(--warning-bg);color:var(--warning);}
+    .badge-danger{background:var(--danger-bg);color:var(--danger);}
+    .badge-blue{background:var(--primary-10);color:var(--primary);}
+
+    /* LIST VIEW */
+    .list-row{display:grid;grid-template-columns:2fr 1.2fr 90px 90px 100px 100px 48px;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border-muted);background:var(--surface);transition:background .12s;cursor:pointer;}
+    .list-row:hover{background:var(--surface-raised);}
+    .list-row.selected{background:var(--primary-10);}
+    .list-hdr{font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;padding:8px 16px;border-bottom:2px solid var(--border);background:var(--surface);display:grid;grid-template-columns:2fr 1.2fr 90px 90px 100px 100px 48px;gap:12px;}
+
+    /* DETAIL PANE TABS */
+    .dtab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;border:none;background:none;font-family:inherit;white-space:nowrap;}
+    .dtab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600;}
+    .dtab:hover:not(.active){color:var(--text);}
+
+    /* KANBAN */
+    .kan-col{flex:1;border-radius:var(--r-md);background:var(--surface-raised);padding:10px;min-width:0;}
+    .kan-col-hdr{font-size:11.5px;font-weight:700;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+    .kan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .12s;}
+    .kan-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);}
+
+    ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div style="padding:13px 14px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div style="width:30px;height:30px;border-radius:8px;background:#2563EB;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>
+      <span style="font-size:13.5px;font-weight:600;color:var(--text);">PM Dashboard</span>
+    </div>
+    <button onclick="toggleTheme()" style="padding:5px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <svg id="theme-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+  <nav style="flex:1;padding:10px 10px 0;display:flex;flex-direction:column;gap:2px;overflow-y:auto;">
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Consultants</a>
+    <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Projets</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Activités</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendrier</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documents</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Paramètres</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Utilisateurs</a>
+    <div class="nav-sep" style="margin-top:auto;"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-md);background:var(--surface-raised);border:1px solid var(--border-muted);cursor:text;margin-bottom:2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span style="font-size:12px;flex:1;color:var(--text-muted);">Rechercher...</span><span style="font-size:10px;color:var(--text-secondary);">⌘K</span></div>
+  </nav>
+  <div style="padding:8px 10px 10px;border-top:1px solid var(--border-muted);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--r-md);cursor:pointer;" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+      <div style="flex:1;min-width:0;"><p style="font-size:12.5px;font-weight:600;color:var(--text);margin:0;">Jonathan Braun</p><p style="font-size:11px;color:var(--text-muted);margin:0;">Admin · Reboot Conseil</p></div>
+    </div>
+  </div>
+</aside>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- LIST PANE -->
+  <div class="list-pane">
+
+    <!-- TOP BAR -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button class="stab active" onclick="setStatus(this)">Tous <span style="font-size:11px;opacity:.7;">(3)</span></button>
+        <button class="stab" onclick="setStatus(this)">En cours <span style="font-size:11px;opacity:.7;">(3)</span></button>
+        <button class="stab" onclick="setStatus(this)">Planifiés <span style="font-size:11px;opacity:.7;">(0)</span></button>
+        <button class="stab" onclick="setStatus(this)">Terminés <span style="font-size:11px;opacity:.7;">(0)</span></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--text-muted);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='var(--surface)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Exporter</button>
+        <button style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-md);background:var(--primary);color:white;border:none;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouveau projet</button>
+      </div>
+    </div>
+
+    <!-- SEARCH / SORT / VIEW -->
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="position:relative;flex:1;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" placeholder="Rechercher projet ou client..."/>
+      </div>
+      <div style="position:relative;">
+        <select class="sort-sel"><option>Nom (A–Z)</option><option>Date début (récent)</option><option>Prochaine deadline</option><option>Budget (décroissant)</option><option>Marge (décroissant)</option></select>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div style="display:flex;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;">
+        <button class="vtog active" id="btn-cards" onclick="setView('cards')" title="Vue cards"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></button>
+        <button class="vtog" id="btn-list" onclick="setView('list')" title="Vue liste" style="border-left:1px solid var(--border);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+      </div>
+    </div>
+
+    <div style="font-size:12.5px;color:var(--text-muted);">3 projets trouvés</div>
+
+    <!-- CARDS VIEW -->
+    <div id="view-cards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
+
+      <div class="proj-card" id="card-rh" onclick="openDetail('rh')">
+        <div class="card-header" style="background:rgba(59,130,246,.10);">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#3b82f6;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+            <div style="display:flex;align-items:center;gap:7px;"><div style="width:10px;height:10px;border-radius:3px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:10.5px;font-weight:600;color:#3b82f6;">En cours</span></div>
+            <span class="badge badge-danger" style="font-size:11px;">Marge −22.8%</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px;">
+            <div><div style="font-size:15px;font-weight:700;color:var(--text);">Dashboard RH Analytics</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Optima Group</div></div>
+            <span style="color:var(--text-muted);flex-shrink:0;margin-left:8px;margin-top:3px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>03/02 → 21/03/2026</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span style="font-size:11px;color:var(--text-muted);width:52px;flex-shrink:0;">Budget</span><div class="pbar" style="flex:1;"><div class="pfill" style="width:97.5%;background:#f97316;"></div></div><span style="font-size:11.5px;font-weight:700;color:#f97316;width:36px;text-align:right;">97.5%</span></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:11px;color:var(--text-muted);width:52px;flex-shrink:0;">Réalisé</span><div class="pbar" style="flex:1;"><div class="pfill" style="width:74.7%;background:#2563EB;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:36px;text-align:right;">74.7%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);"><span>20 281€ / 22 000€</span><span style="color:var(--danger);font-weight:600;">J+1 retard</span></div>
+        </div>
+      </div>
+
+      <div class="proj-card" id="card-cloud" onclick="openDetail('cloud')">
+        <div class="card-header" style="background:rgba(99,102,241,.10);">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#6366f1;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+            <div style="display:flex;align-items:center;gap:7px;"><div style="width:10px;height:10px;border-radius:50%;background:#6366f1;flex-shrink:0;"></div><span style="font-size:10.5px;font-weight:600;color:#6366f1;">En cours</span></div>
+            <span class="badge badge-success" style="font-size:11px;">Marge 38.4%</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px;">
+            <div><div style="font-size:15px;font-weight:700;color:var(--text);">Migration Cloud</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">TechFlow Industries</div></div>
+            <span style="color:var(--text-muted);flex-shrink:0;margin-left:8px;margin-top:3px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>13/01 → 28/03/2026</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span style="font-size:11px;color:var(--text-muted);width:52px;flex-shrink:0;">Budget</span><div class="pbar" style="flex:1;"><div class="pfill" style="width:74%;background:#2563EB;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:36px;text-align:right;">74%</span></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:11px;color:var(--text-muted);width:52px;flex-shrink:0;">Réalisé</span><div class="pbar" style="flex:1;"><div class="pfill" style="width:83.6%;background:#2563EB;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:36px;text-align:right;">83.6%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);"><span>28 245€ / 38 000€</span><span style="color:var(--success);font-weight:600;">J+22</span></div>
+        </div>
+      </div>
+
+      <div class="proj-card" id="card-refonte" onclick="openDetail('refonte')">
+        <div class="card-header" style="background:rgba(20,184,166,.10);">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#14b8a6;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+            <div style="display:flex;align-items:center;gap:7px;"><div style="width:10px;height:10px;border-radius:50%;background:#14b8a6;flex-shrink:0;"></div><span style="font-size:10.5px;font-weight:600;color:#14b8a6;">En cours</span></div>
+            <span class="badge badge-warning" style="font-size:11px;">Marge 41.2%</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px;">
+            <div><div style="font-size:15px;font-weight:700;color:var(--text);">Refonte Site Web</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Eco Green Solutions</div></div>
+            <span style="color:var(--text-muted);flex-shrink:0;margin-left:8px;margin-top:3px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>06/01 → 31/03/2026</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span style="font-size:11px;color:var(--text-muted);width:52px;flex-shrink:0;">Budget</span><div class="pbar" style="flex:1;"><div class="pfill" style="width:76.5%;background:#2563EB;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:36px;text-align:right;">76.5%</span></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:11px;color:var(--text-muted);width:52px;flex-shrink:0;">Réalisé</span><div class="pbar" style="flex:1;"><div class="pfill" style="width:73.1%;background:#2563EB;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:36px;text-align:right;">73.1%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);"><span>31 042€ / 45 000€</span><span style="color:var(--warning);font-weight:600;">J+8</span></div>
+        </div>
+      </div>
+
+    </div><!-- end cards -->
+
+    <!-- LIST VIEW (hidden) -->
+    <div id="view-list" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;">
+      <div class="list-hdr"><span>Projet</span><span>Client</span><span style="text-align:right;">Budget %</span><span style="text-align:right;">Marge</span><span style="text-align:center;">Deadline</span><span style="text-align:center;">Statut</span><span></span></div>
+      <div class="list-row" id="row-rh" onclick="openDetail('rh')">
+        <div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:3px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:13px;font-weight:600;color:var(--text);">Dashboard RH Analytics</span></div>
+        <span style="font-size:12.5px;color:var(--text-muted);">Optima Group</span>
+        <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#f97316;">97.5%</div><div class="pbar" style="margin-top:3px;"><div class="pfill" style="width:97.5%;background:#f97316;"></div></div></div>
+        <div style="text-align:right;"><span class="badge badge-danger" style="font-size:11px;">−22.8%</span></div>
+        <div style="text-align:center;font-size:12px;font-weight:600;color:var(--danger);">7 mars</div>
+        <div style="text-align:center;"><span class="badge badge-danger" style="font-size:11px;">Dérive</span></div>
+        <div style="display:flex;justify-content:center;color:var(--text-muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></div>
+      </div>
+      <div class="list-row" id="row-cloud" onclick="openDetail('cloud')">
+        <div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:50%;background:#6366f1;flex-shrink:0;"></div><span style="font-size:13px;font-weight:600;color:var(--text);">Migration Cloud</span></div>
+        <span style="font-size:12.5px;color:var(--text-muted);">TechFlow Industries</span>
+        <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:var(--text-muted);">74%</div><div class="pbar" style="margin-top:3px;"><div class="pfill" style="width:74%;background:#2563EB;"></div></div></div>
+        <div style="text-align:right;"><span class="badge badge-success" style="font-size:11px;">38.4%</span></div>
+        <div style="text-align:center;font-size:12px;font-weight:600;color:var(--text);">28 mars</div>
+        <div style="text-align:center;"><span class="badge badge-success" style="font-size:11px;">On track</span></div>
+        <div style="display:flex;justify-content:center;color:var(--text-muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></div>
+      </div>
+      <div class="list-row" id="row-refonte" onclick="openDetail('refonte')" style="border-bottom:none;">
+        <div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:50%;background:#14b8a6;flex-shrink:0;"></div><span style="font-size:13px;font-weight:600;color:var(--text);">Refonte Site Web</span></div>
+        <span style="font-size:12.5px;color:var(--text-muted);">Eco Green Solutions</span>
+        <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:var(--text-muted);">76.5%</div><div class="pbar" style="margin-top:3px;"><div class="pfill" style="width:76.5%;background:#2563EB;"></div></div></div>
+        <div style="text-align:right;"><span class="badge badge-warning" style="font-size:11px;">41.2%</span></div>
+        <div style="text-align:center;font-size:12px;font-weight:600;color:var(--warning);">31 mars</div>
+        <div style="text-align:center;"><span class="badge badge-warning" style="font-size:11px;">Attention</span></div>
+        <div style="display:flex;justify-content:center;color:var(--text-muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></div>
+      </div>
+    </div>
+
+  </div><!-- end list-pane -->
+
+  <!-- DETAIL PANE (slide-in) -->
+  <div class="detail-pane" id="detail-pane">
+    <div id="detail-content" style="display:flex;flex-direction:column;height:100%;overflow:hidden;"></div>
+  </div>
+
+</div><!-- end workspace -->
+
+<script>
+  const PROJECTS = {
+    rh: {
+      name:'Dashboard RH Analytics', client:'Optima Group', color:'#3b82f6', shape:'square',
+      status:'En cours', start:'03/02/2026', end:'21/03/2026',
+      budget:22000, budgetUsed:20281, budgetPct:97.5,
+      realise:74.7, marge:-22.8, margeBadge:'danger',
+      deadlineLabel:'7 mars', deadlineColor:'var(--danger)', retard:'J+1 retard',
+      description:'Développement d\'un dashboard RH analytique complet avec visualisations temps réel, KPIs RH, et intégration SIRH.',
+      etapes:[
+        {name:'Cadrage & specs',statut:'Terminé',pct:100,heures:24,total:24,who:'JB'},
+        {name:'Design UI/UX',statut:'Terminé',pct:100,heures:24,total:24,who:'MD'},
+        {name:'Développement Frontend',statut:'En cours',pct:75,heures:42,total:56,who:'SL'},
+        {name:'Tests unitaires',statut:'À faire',pct:0,heures:0,total:24,who:'SL'},
+        {name:'Recette client',statut:'À faire',pct:0,heures:0,total:16,who:'JB'},
+      ],
+      activites:[
+        {date:'Ven 6/03',who:'SL',desc:'Intégration React / composants UI',h:'7h'},
+        {date:'Jeu 5/03',who:'SL',desc:'Développement composants Dashboard',h:'6h'},
+        {date:'Jeu 5/03',who:'JC',desc:'Développement composants Dashboard',h:'8h'},
+        {date:'Mer 4/03',who:'SL',desc:'UI composants dashboard',h:'6h'},
+      ]
+    },
+    cloud: {
+      name:'Migration Cloud', client:'TechFlow Industries', color:'#6366f1', shape:'circle',
+      status:'En cours', start:'13/01/2026', end:'28/03/2026',
+      budget:38000, budgetUsed:28245, budgetPct:74,
+      realise:83.6, marge:38.4, margeBadge:'success',
+      deadlineLabel:'28 mars', deadlineColor:'var(--text)', retard:'J+22',
+      description:'Migration complète de l\'infrastructure on-premise vers AWS, incluant base de données, applicatifs et data warehouse.',
+      etapes:[
+        {name:'Audit infrastructure',statut:'Terminé',pct:100,heures:32,total:32,who:'JC'},
+        {name:'Architecture cible',statut:'Terminé',pct:100,heures:24,total:24,who:'JB'},
+        {name:'Migration Données',statut:'En cours',pct:60,heures:84,total:140,who:'JC'},
+        {name:'Tests API',statut:'À faire',pct:0,heures:0,total:40,who:'MD'},
+        {name:'Recette & go-live',statut:'À faire',pct:0,heures:0,total:24,who:'JB'},
+      ],
+      activites:[
+        {date:'Ven 6/03',who:'JC',desc:'Validation intégrité données',h:'7h'},
+        {date:'Jeu 5/03',who:'MD',desc:'Scripts migration ETL',h:'7h'},
+        {date:'Mer 4/03',who:'MD',desc:'Scripts migration ETL',h:'8h'},
+        {date:'Lun 2/03',who:'JC',desc:'Audit base existante',h:'8h'},
+      ]
+    },
+    refonte: {
+      name:'Refonte Site Web', client:'Eco Green Solutions', color:'#14b8a6', shape:'circle',
+      status:'En cours', start:'06/01/2026', end:'31/03/2026',
+      budget:45000, budgetUsed:31042, budgetPct:76.5,
+      realise:73.1, marge:41.2, margeBadge:'warning',
+      deadlineLabel:'31 mars', deadlineColor:'var(--warning)', retard:'J+8',
+      description:'Refonte complète du site institutionnel avec nouveau design system, optimisation SEO et intégration CMS headless.',
+      etapes:[
+        {name:'Brief & benchmark',statut:'Terminé',pct:100,heures:20,total:20,who:'JB'},
+        {name:'Design Maquettes',statut:'En cours',pct:50,heures:28,total:56,who:'MD'},
+        {name:'Intégration React',statut:'En cours',pct:0,heures:0,total:80,who:'SL'},
+        {name:'Optimisation perf.',statut:'À faire',pct:0,heures:0,total:16,who:'SL'},
+        {name:'Mise en prod.',statut:'À faire',pct:0,heures:0,total:8,who:'JB'},
+      ],
+      activites:[
+        {date:'Ven 6/03',who:'MD',desc:'Maquettes pages produit',h:'6h'},
+        {date:'Mer 4/03',who:'MD',desc:'Design système graphique',h:'6h'},
+        {date:'Lun 2/03',who:'MD',desc:'Analyse brief client',h:'6h'},
+      ]
+    }
+  };
+
+  let currentProj = null;
+  let currentTab = 'apercu';
+
+  function openDetail(id) {
+    currentProj = id;
+    // highlight selected
+    document.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('selected'));
+    document.querySelectorAll('.list-row').forEach(r=>r.classList.remove('selected'));
+    const card = document.getElementById('card-'+id);
+    const row = document.getElementById('row-'+id);
+    if(card) card.classList.add('selected');
+    if(row) row.classList.add('selected');
+    // open pane
+    document.getElementById('detail-pane').classList.add('open');
+    renderDetail('apercu');
+  }
+
+  function closeDetail() {
+    document.getElementById('detail-pane').classList.remove('open');
+    document.querySelectorAll('.proj-card').forEach(c=>c.classList.remove('selected'));
+    document.querySelectorAll('.list-row').forEach(r=>r.classList.remove('selected'));
+    currentProj = null;
+  }
+
+  function renderDetail(tab) {
+    currentTab = tab;
+    const p = PROJECTS[currentProj];
+    const marginBadge = p.margeBadge==='danger'?`<span class="badge badge-danger">Marge ${p.marge}%</span>`:
+      p.margeBadge==='success'?`<span class="badge badge-success">Marge ${p.marge}%</span>`:
+      `<span class="badge badge-warning">Marge ${p.marge}%</span>`;
+
+    const tabs = ['apercu','kanban','financier','activites'];
+    const tabLabels = {'apercu':'Aperçu','kanban':'Kanban','financier':'Financier','activites':'Activités'};
+    const tabNav = tabs.map(t=>`<button class="dtab${t===tab?' active':''}" onclick="renderDetail('${t}')">${tabLabels[t]}</button>`).join('');
+
+    let content = '';
+    if(tab==='apercu') {
+      content = `
+        <div style="padding:16px 20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;flex:1;">
+          <!-- Description -->
+          <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">${p.description}</div>
+          <!-- KPI row -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:12px;text-align:center;">
+              <div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:4px;">Budget consommé</div>
+              <div style="font-size:1.4rem;font-weight:800;color:${p.budgetPct>90?'#f97316':'var(--text)'};">${p.budgetPct}%</div>
+              <div style="font-size:11px;color:var(--text-muted);">${p.budgetUsed.toLocaleString('fr')}€</div>
+            </div>
+            <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:12px;text-align:center;">
+              <div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:4px;">Réalisé</div>
+              <div style="font-size:1.4rem;font-weight:800;color:var(--text);">${p.realise}%</div>
+              <div style="font-size:11px;color:var(--text-muted);">avancement</div>
+            </div>
+            <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:12px;text-align:center;">
+              <div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:4px;">Deadline</div>
+              <div style="font-size:1.1rem;font-weight:800;color:${p.deadlineColor};">${p.deadlineLabel}</div>
+              <div style="font-size:11px;color:${p.deadlineColor};font-weight:600;">${p.retard}</div>
+            </div>
+          </div>
+          <!-- Barres -->
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:5px;"><span>Budget</span><span style="font-weight:700;color:${p.budgetPct>90?'#f97316':'var(--text-muted)'};">${p.budgetPct}%</span></div>
+            <div class="pbar" style="height:8px;"><div class="pfill" style="width:${p.budgetPct}%;background:${p.budgetPct>90?'#f97316':'#2563EB'};"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-top:10px;margin-bottom:5px;"><span>Réalisé</span><span style="font-weight:700;">${p.realise}%</span></div>
+            <div class="pbar" style="height:8px;"><div class="pfill" style="width:${p.realise}%;background:#2563EB;"></div></div>
+          </div>
+          <!-- Étapes summary -->
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Étapes</div>
+            ${p.etapes.map(e=>`
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-muted);">
+                <div style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${e.statut==='Terminé'?'var(--success)':e.statut==='En cours'?'#f59e0b':'var(--border)'};"></div>
+                <span style="flex:1;font-size:12.5px;font-weight:500;color:var(--text);">${e.name}</span>
+                <span style="font-size:11.5px;color:var(--text-muted);">${e.heures}h / ${e.total}h</span>
+                <div style="width:50px;"><div class="pbar" style="height:5px;"><div class="pfill" style="width:${e.pct}%;background:${p.color};"></div></div></div>
+                <span style="font-size:11px;font-weight:600;color:var(--text-muted);width:28px;text-align:right;">${e.pct}%</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    } else if(tab==='kanban') {
+      const todo = p.etapes.filter(e=>e.statut==='À faire');
+      const inProgress = p.etapes.filter(e=>e.statut==='En cours');
+      const done = p.etapes.filter(e=>e.statut==='Terminé');
+      const kanCard = (e,col) => `
+        <div class="kan-card" style="border-left:3px solid ${p.color};">
+          <div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:4px;">${e.name}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-muted);">
+            <span>${e.heures}h / ${e.total}h</span>
+            <div style="width:8px;height:8px;border-radius:50%;background:${col==='done'?'var(--success)':col==='progress'?'#f59e0b':'var(--border)'};"></div>
+          </div>
+          ${e.pct>0?`<div class="pbar" style="margin-top:6px;"><div class="pfill" style="width:${e.pct}%;background:${p.color};"></div></div>`:''}
+        </div>`;
+      content = `
+        <div style="padding:16px 14px;flex:1;overflow-y:auto;display:flex;gap:10px;">
+          <div class="kan-col">
+            <div class="kan-col-hdr"><span>À faire <span style="background:var(--border);color:var(--text-muted);padding:1px 6px;border-radius:20px;font-size:10px;">${todo.length}</span></span></div>
+            ${todo.map(e=>kanCard(e,'todo')).join('')}
+          </div>
+          <div class="kan-col">
+            <div class="kan-col-hdr"><span>En cours <span style="background:#fef3c7;color:#b45309;padding:1px 6px;border-radius:20px;font-size:10px;">${inProgress.length}</span></span></div>
+            ${inProgress.map(e=>kanCard(e,'progress')).join('')}
+          </div>
+          <div class="kan-col">
+            <div class="kan-col-hdr"><span>Terminé <span style="background:var(--success-bg);color:var(--success);padding:1px 6px;border-radius:20px;font-size:10px;">${done.length}</span></span></div>
+            ${done.map(e=>kanCard(e,'done')).join('')}
+          </div>
+        </div>`;
+    } else if(tab==='financier') {
+      const marge = p.budget - p.budgetUsed;
+      const margeColor = p.marge < 0 ? 'var(--danger)' : p.marge < 30 ? 'var(--warning)' : 'var(--success)';
+      content = `
+        <div style="padding:16px 20px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:14px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:4px;">Budget total</div><div style="font-size:1.5rem;font-weight:800;color:var(--text);">${p.budget.toLocaleString('fr')}€</div></div>
+            <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:14px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:4px;">Consommé</div><div style="font-size:1.5rem;font-weight:800;color:${p.budgetPct>90?'#f97316':'var(--text)'};">${p.budgetUsed.toLocaleString('fr')}€</div></div>
+            <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:14px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:4px;">Marge</div><div style="font-size:1.5rem;font-weight:800;color:${margeColor};">${p.marge}%</div><div style="font-size:11px;color:var(--text-muted);">${marge.toLocaleString('fr')}€</div></div>
+            <div style="background:var(--surface-raised);border-radius:var(--r-md);padding:14px;"><div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:4px;">Restant</div><div style="font-size:1.5rem;font-weight:800;color:var(--text);">${(100-p.budgetPct).toFixed(1)}%</div><div style="font-size:11px;color:var(--text-muted);">${(p.budget-p.budgetUsed).toLocaleString('fr')}€</div></div>
+          </div>
+          <!-- Budget burndown (CSS bars) -->
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Heures par étape</div>
+            ${p.etapes.map(e=>`
+              <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px;"><span>${e.name}</span><span style="font-weight:600;">${e.heures}h / ${e.total}h</span></div>
+                <div class="pbar" style="height:8px;"><div class="pfill" style="width:${e.total>0?Math.round(e.heures/e.total*100):0}%;background:${p.color};"></div></div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    } else if(tab==='activites') {
+      content = `
+        <div style="padding:16px 20px;flex:1;overflow-y:auto;">
+          <div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Activités récentes</div>
+          ${p.activites.map(a=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-muted);">
+              <div style="font-size:11px;color:var(--text-muted);width:60px;flex-shrink:0;">${a.date}</div>
+              <div style="width:22px;height:22px;border-radius:50%;background:${a.who==='SL'?'#8B5CF6':a.who==='MD'?'#F59E0B':a.who==='JC'?'#10B981':'#2563EB'};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:white;flex-shrink:0;">${a.who}</div>
+              <span style="flex:1;font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.desc}</span>
+              <span style="font-size:13px;font-weight:700;color:var(--text);flex-shrink:0;">${a.h}</span>
+            </div>`).join('')}
+          <a href="#" style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--primary);font-weight:500;text-decoration:none;margin-top:12px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Saisir une activité
+          </a>
+        </div>`;
+    }
+
+    document.getElementById('detail-content').innerHTML = `
+      <!-- Header -->
+      <div style="padding:16px 20px 0;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:${p.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <div style="width:14px;height:14px;border-radius:${p.shape==='square'?'3px':'50%'};background:${p.color};"></div>
+            </div>
+            <div>
+              <div style="font-size:16px;font-weight:800;color:var(--text);line-height:1.2;">${p.name}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:1px;">${p.client} · ${p.start} → ${p.end}</div>
+            </div>
+          </div>
+          <button onclick="closeDetail()" style="padding:5px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);flex-shrink:0;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+          <span class="badge badge-blue" style="font-size:11px;">${p.status}</span>
+          ${marginBadge}
+          <span style="font-size:12px;color:${p.deadlineColor};font-weight:600;margin-left:4px;">${p.retard}</span>
+        </div>
+        <!-- Tabs -->
+        <div style="display:flex;overflow-x:auto;margin:0 -20px;padding:0 20px;">${tabNav}</div>
+      </div>
+      <!-- Tab content -->
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">${content}</div>`;
+  }
+
+  function setStatus(btn){document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');}
+  function setView(v){
+    document.getElementById('view-cards').style.display=v==='cards'?'grid':'none';
+    document.getElementById('view-list').style.display=v==='list'?'block':'none';
+    document.getElementById('btn-cards').classList.toggle('active',v==='cards');
+    document.getElementById('btn-list').classList.toggle('active',v==='list');
+  }
+  function toggleTheme(){
+    document.documentElement.classList.toggle('dark');
+    const i=document.getElementById('theme-icon');
+    if(document.documentElement.classList.contains('dark')){i.innerHTML='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';}
+    else{i.innerHTML='<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';}
+  }
+</script>
+</body>
+</html>

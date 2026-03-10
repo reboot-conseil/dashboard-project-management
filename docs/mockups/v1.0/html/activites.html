@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Activités</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F5F7FA; color: #0f172a; margin: 0; }
+    .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #94a3b8; text-transform: uppercase; padding: 0 12px; margin: 16px 0 4px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #5a6a7a; cursor: pointer; transition: all 0.15s; margin: 1px 6px; }
+    .nav-item:hover { background: #f1f5f9; color: #0f172a; }
+    .nav-item.active { background: rgba(29,78,216,0.08); color: #1d4ed8; border-left: 3px solid #1d4ed8; margin-left: 6px; padding-left: 9px; }
+    .date-group { font-size: 11.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; padding: 16px 20px 8px; background: #f8fafc; position: sticky; top: 0; z-index: 5; }
+    .activity-row { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.1s; }
+    .activity-row:hover { background: #f8fafc; }
+    .activity-row.selected { background: #eff6ff; }
+    .color-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .detail-panel { width: 380px; background: white; border-left: 1px solid #e2e8f0; height: 100%; position: fixed; right: 0; top: 0; bottom: 0; display: flex; flex-direction: column; z-index: 50; box-shadow: -4px 0 16px rgba(0,0,0,0.06); }
+    .tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    /* ── Collapsed sidebar ────────────────────────────────── */
+    #sidebar-act { transition: width 0.2s ease; }
+    #sidebar-act.collapsed { width: 64px !important; }
+    #sidebar-act.collapsed .nav-text,
+    #sidebar-act.collapsed .sidebar-label { display: none !important; }
+    #sidebar-act.collapsed .nav-item { justify-content: center; padding: 8px; margin: 1px 4px; }
+    #maincontent-act { transition: margin-left 0.2s ease; }
+  </style>
+</head>
+<body style="display:flex;min-height:100vh;">
+
+  <!-- HORIZONTAL TOPNAV (hidden by default) -->
+  <div id="topnav-act" style="display:none;position:fixed;top:0;left:0;right:0;z-index:30;height:52px;background:white;border-bottom:1px solid #e2e8f0;align-items:center;padding:0 20px;gap:12px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-right:8px;flex-shrink:0;">
+      <div style="width:26px;height:26px;border-radius:7px;background:#1d4ed8;display:flex;align-items:center;justify-content:center;">
+        <i data-lucide="layers" style="width:13px;height:13px;color:white;"></i>
+      </div>
+      <span style="font-weight:700;font-size:14px;">PM Dashboard</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:7px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:7px;padding:6px 11px;width:200px;flex-shrink:0;">
+      <i data-lucide="search" style="width:12px;height:12px;color:#94a3b8;flex-shrink:0;"></i>
+      <span style="font-size:12px;color:#94a3b8;">Rechercher...</span>
+      <span style="margin-left:auto;font-size:10px;color:#cbd5e1;background:white;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px;">⌘K</span>
+    </div>
+    <nav style="display:flex;align-items:center;gap:1px;flex:1;overflow-x:auto;">
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'"><i data-lucide="layout-dashboard" style="width:13px;height:13px;"></i> Dashboard</a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'"><i data-lucide="users" style="width:13px;height:13px;"></i> Consultants</a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'"><i data-lucide="folder-open" style="width:13px;height:13px;"></i> Projets</a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:600;color:#1d4ed8;background:rgba(29,78,216,0.08);white-space:nowrap;text-decoration:none;"><i data-lucide="clock" style="width:13px;height:13px;"></i> Activités</a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'"><i data-lucide="calendar-days" style="width:13px;height:13px;"></i> Calendrier</a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'"><i data-lucide="file-text" style="width:13px;height:13px;"></i> Documents</a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'"><i data-lucide="settings" style="width:13px;height:13px;"></i> Paramètres</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <button style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Thème"><i data-lucide="sun" style="width:14px;height:14px;"></i></button>
+      <button onclick="switchToSidebarAct()" style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Passer en sidebar"><i data-lucide="arrow-right-left" style="width:14px;height:14px;"></i></button>
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;cursor:pointer;">JB</div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar-act" style="width:250px;min-height:100vh;background:white;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:30;transition:width 0.2s ease;">
+    <div style="height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:#1d4ed8;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i data-lucide="layers" style="width:15px;height:15px;color:white;"></i>
+        </div>
+        <span class="nav-text" style="font-weight:700;font-size:15px;color:#0f172a;">PM Dashboard</span>
+      </div>
+      <button onclick="switchToHorizontalAct()" title="Passer en barre horizontale"
+        style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;"
+        onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="arrow-right-left" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <nav style="flex:1;padding:8px 0;overflow-y:auto;">
+      <div class="sidebar-label">Navigation</div>
+      <div class="nav-item"><i data-lucide="layout-dashboard" style="width:17px;height:17px;flex-shrink:0;"></i><span class="nav-text">Dashboard</span></div>
+      <div class="nav-item"><i data-lucide="users" style="width:17px;height:17px;flex-shrink:0;"></i><span class="nav-text">Consultants</span></div>
+      <div class="nav-item"><i data-lucide="folder-open" style="width:17px;height:17px;flex-shrink:0;"></i><span class="nav-text">Projets</span></div>
+      <div class="nav-item active"><i data-lucide="clock" style="width:17px;height:17px;flex-shrink:0;"></i><span class="nav-text">Activités</span></div>
+      <div class="nav-item"><i data-lucide="calendar-days" style="width:17px;height:17px;flex-shrink:0;"></i><span class="nav-text">Calendrier</span></div>
+      <div class="nav-item"><i data-lucide="file-text" style="width:17px;height:17px;flex-shrink:0;"></i><span class="nav-text">Documents</span></div>
+      <div class="sidebar-label" style="margin-top:20px;">Compte</div>
+      <div class="nav-item"><i data-lucide="settings" style="width:17px;height:17px;flex-shrink:0;"></i><span class="nav-text">Paramètres</span></div>
+    </nav>
+
+    <!-- Search -->
+    <div class="nav-text" style="display:flex;align-items:center;gap:8px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin:8px 10px 4px;cursor:text;">
+      <i data-lucide="search" style="width:13px;height:13px;color:#94a3b8;flex-shrink:0;"></i>
+      <span style="font-size:13px;color:#94a3b8;flex:1;">Rechercher...</span>
+      <span style="font-size:11px;color:#cbd5e1;background:white;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;">⌘K</span>
+    </div>
+
+    <!-- Controls -->
+    <div style="padding:6px 12px 0;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:2px;">
+      <button style="padding:6px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Thème" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="sun" style="width:14px;height:14px;"></i>
+      </button>
+      <button onclick="toggleCollapseAct()" style="padding:6px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Réduire" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="panel-left-close" style="width:14px;height:14px;"></i>
+      </button>
+      <span class="nav-text" style="margin-left:auto;font-size:11px;color:#e2e8f0;">v1.0</span>
+    </div>
+
+    <div style="border-top:1px solid #e2e8f0;padding:12px 14px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:#f8fafc;">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;">Jonathan Braun</div>
+          <div style="font-size:11px;color:#5a6a7a;">Admin · PM</div>
+        </div>
+        <i data-lucide="log-out" style="width:15px;height:15px;color:#94a3b8;"></i>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div id="maincontent-act" style="margin-left:250px;margin-right:380px;flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left 0.2s ease,margin-top 0.2s ease;">
+
+    <!-- Header -->
+    <header style="height:64px;background:white;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:20;">
+      <nav style="font-size:13px;color:#5a6a7a;display:flex;gap:6px;align-items:center;">
+        <span style="color:#1d4ed8;cursor:pointer;">Dashboard</span>
+        <span style="color:#cbd5e1;">/</span>
+        <span style="font-weight:500;color:#0f172a;">Activités</span>
+      </nav>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;width:240px;cursor:text;">
+          <i data-lucide="search" style="width:14px;height:14px;color:#94a3b8;flex-shrink:0;"></i>
+          <span style="font-size:13px;color:#94a3b8;">Rechercher...</span>
+          <span style="margin-left:auto;font-size:11px;color:#cbd5e1;background:white;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;">⌘K</span>
+        </div>
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;">JB</div>
+      </div>
+    </header>
+
+    <!-- Page title -->
+    <div style="padding:24px 32px 0;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <h1 style="font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.3px;display:flex;align-items:center;gap:10px;">
+          <i data-lucide="clock" style="width:20px;height:20px;color:#1d4ed8;"></i>
+          Activités
+        </h1>
+        <p style="font-size:13px;color:#5a6a7a;margin-top:3px;">142 activités · 1 284 h ce mois</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- Filter/sort bar -->
+        <div style="display:flex;align-items:center;gap:8px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;font-size:13px;color:#5a6a7a;cursor:pointer;">
+          <i data-lucide="filter" style="width:13px;height:13px;"></i> Filtres
+          <span style="background:#1d4ed8;color:white;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;">2</span>
+        </div>
+        <select style="border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:13px;color:#5a6a7a;background:white;cursor:pointer;outline:none;">
+          <option>Tous les consultants</option>
+        </select>
+        <button style="display:flex;align-items:center;gap:6px;background:#1d4ed8;color:white;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i>
+          Saisir
+        </button>
+      </div>
+    </div>
+
+    <!-- Bulk action bar (shown when rows selected) -->
+    <div style="margin:16px 32px 0;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+      <i data-lucide="check-square" style="width:15px;height:15px;color:#1d4ed8;"></i>
+      <span style="font-size:13px;font-weight:600;color:#1d4ed8;">3 sélectionnées</span>
+      <div style="margin-left:12px;display:flex;gap:8px;">
+        <button style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1px solid #bfdbfe;background:white;font-size:12px;color:#1d4ed8;font-weight:600;cursor:pointer;">
+          <i data-lucide="download" style="width:12px;height:12px;"></i> Exporter
+        </button>
+        <button style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1px solid #fecaca;background:white;font-size:12px;color:#b91c1c;font-weight:600;cursor:pointer;">
+          <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Supprimer
+        </button>
+      </div>
+      <button style="margin-left:auto;background:transparent;border:none;cursor:pointer;color:#94a3b8;">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+
+    <!-- Activity list -->
+    <div style="margin:16px 32px;background:white;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+
+      <!-- Table header -->
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">
+        <div style="width:16px;flex-shrink:0;"><input type="checkbox" style="cursor:pointer;" /></div>
+        <div style="width:10px;flex-shrink:0;"></div>
+        <div style="flex:2;">Projet / Étape</div>
+        <div style="flex:1.5;">Consultant</div>
+        <div style="flex:1;text-align:right;">Heures</div>
+        <div style="flex:1;text-align:right;">CA</div>
+        <div style="flex:1;text-align:center;">Statut</div>
+        <div style="width:60px;"></div>
+      </div>
+
+      <!-- DATE GROUP: Aujourd'hui -->
+      <div class="date-group">Aujourd'hui — 7 mars 2026</div>
+
+      <!-- Row 1 (selected) -->
+      <div class="activity-row selected">
+        <div style="width:16px;flex-shrink:0;"><input type="checkbox" checked style="cursor:pointer;" /></div>
+        <div class="color-dot" style="background:#3b82f6;"></div>
+        <div style="flex:2;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:600;">Projet Alpha</span><span style="color:#cbd5e1;"> · </span><span style="color:#5a6a7a;">Développement — Sprint 4</span></div>
+        <div style="flex:1.5;font-size:13px;color:#0f172a;">Jean Dupont</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;">8 h</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#0f172a;">1 200 €</div>
+        <div style="flex:1;text-align:center;"><span class="tag" style="background:#dcfce7;color:#15803d;">Validée</span></div>
+        <div style="width:60px;display:flex;gap:4px;">
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+            <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+          </button>
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'">
+            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="activity-row">
+        <div style="width:16px;flex-shrink:0;"><input type="checkbox" style="cursor:pointer;" /></div>
+        <div class="color-dot" style="background:#8b5cf6;"></div>
+        <div style="flex:2;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:600;">Projet Beta</span><span style="color:#cbd5e1;"> · </span><span style="color:#5a6a7a;">Audit — Phase initiale</span></div>
+        <div style="flex:1.5;font-size:13px;color:#0f172a;">Sophie Martin</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;">6 h</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#0f172a;">960 €</div>
+        <div style="flex:1;text-align:center;"><span class="tag" style="background:#fef3c7;color:#92400e;">En cours</span></div>
+        <div style="width:60px;display:flex;gap:4px;">
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;">
+            <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+          </button>
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;">
+            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 3 (selected) -->
+      <div class="activity-row selected">
+        <div style="width:16px;flex-shrink:0;"><input type="checkbox" checked style="cursor:pointer;" /></div>
+        <div class="color-dot" style="background:#10b981;"></div>
+        <div style="flex:2;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:600;">Projet Gamma</span><span style="color:#cbd5e1;"> · </span><span style="color:#5a6a7a;">Conseil stratégique</span></div>
+        <div style="flex:1.5;font-size:13px;color:#0f172a;">Luc Bernard</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;">4 h</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#0f172a;">700 €</div>
+        <div style="flex:1;text-align:center;"><span class="tag" style="background:#dcfce7;color:#15803d;">Validée</span></div>
+        <div style="width:60px;display:flex;gap:4px;">
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;">
+            <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+          </button>
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;">
+            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- DATE GROUP: Hier -->
+      <div class="date-group">Hier — 6 mars 2026</div>
+
+      <!-- Row 4 -->
+      <div class="activity-row">
+        <div style="width:16px;flex-shrink:0;"><input type="checkbox" style="cursor:pointer;" /></div>
+        <div class="color-dot" style="background:#f59e0b;"></div>
+        <div style="flex:2;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:600;">Projet Delta</span><span style="color:#cbd5e1;"> · </span><span style="color:#5a6a7a;">Implémentation</span></div>
+        <div style="flex:1.5;font-size:13px;color:#0f172a;">Alice Roux</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;">7 h</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#0f172a;">1 050 €</div>
+        <div style="flex:1;text-align:center;"><span class="tag" style="background:#dcfce7;color:#15803d;">Validée</span></div>
+        <div style="width:60px;display:flex;gap:4px;">
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;">
+            <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+          </button>
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;">
+            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 5 -->
+      <div class="activity-row">
+        <div style="width:16px;flex-shrink:0;"><input type="checkbox" style="cursor:pointer;" /></div>
+        <div class="color-dot" style="background:#ec4899;"></div>
+        <div style="flex:2;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:600;">Projet Alpha</span><span style="color:#cbd5e1;"> · </span><span style="color:#5a6a7a;">Design UX — Wireframes</span></div>
+        <div style="flex:1.5;font-size:13px;color:#0f172a;">Clara Morin</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;">5 h</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#0f172a;">825 €</div>
+        <div style="flex:1;text-align:center;"><span class="tag" style="background:#f1f5f9;color:#475569;">Planifié</span></div>
+        <div style="width:60px;display:flex;gap:4px;">
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;">
+            <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+          </button>
+          <button style="padding:5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:#94a3b8;">
+            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- DATE GROUP: Cette semaine -->
+      <div class="date-group">5 mars 2026</div>
+
+      <!-- Row 6 (faded/dimmed) -->
+      <div class="activity-row" style="opacity:0.6;">
+        <div style="width:16px;flex-shrink:0;"><input type="checkbox" style="cursor:pointer;" /></div>
+        <div class="color-dot" style="background:#1d4ed8;"></div>
+        <div style="flex:2;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:600;">Projet Alpha</span><span style="color:#cbd5e1;"> · </span><span style="color:#5a6a7a;">Réunion client</span></div>
+        <div style="flex:1.5;font-size:13px;color:#0f172a;">Jean Dupont</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;">2 h</div>
+        <div style="flex:1;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#0f172a;">300 €</div>
+        <div style="flex:1;text-align:center;"><span class="tag" style="background:#dcfce7;color:#15803d;">Validée</span></div>
+        <div style="width:60px;"></div>
+      </div>
+
+      <!-- Totals row -->
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;background:#f8fafc;border-top:2px solid #e2e8f0;font-size:13px;font-weight:700;">
+        <div style="width:16px;flex-shrink:0;"></div>
+        <div style="width:10px;flex-shrink:0;"></div>
+        <div style="flex:2;color:#5a6a7a;">142 activités au total</div>
+        <div style="flex:1.5;"></div>
+        <div style="flex:1;text-align:right;color:#0f172a;">1 284 h</div>
+        <div style="flex:1;text-align:right;color:#15803d;">128 500 €</div>
+        <div style="flex:1;"></div>
+        <div style="width:60px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT DETAIL PANEL -->
+  <div class="detail-panel">
+    <!-- Panel header -->
+    <div style="padding:20px 24px 16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:10px;height:10px;border-radius:3px;background:#3b82f6;flex-shrink:0;"></div>
+        <span style="font-size:15px;font-weight:700;color:#0f172a;">Détail de l'activité</span>
+      </div>
+      <button style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Fermer">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      </button>
+    </div>
+
+    <!-- Panel content -->
+    <div style="flex:1;overflow-y:auto;padding:20px 24px;">
+
+      <!-- Status badge -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <span style="background:#dcfce7;color:#15803d;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">✓ Validée</span>
+        <span style="background:#eff6ff;color:#1d4ed8;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">7 mars 2026</span>
+      </div>
+
+      <!-- Fields -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Projet</div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+            <div style="width:10px;height:10px;border-radius:3px;background:#3b82f6;"></div>
+            <span style="font-size:13.5px;font-weight:600;color:#0f172a;">Projet Alpha</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Étape</div>
+          <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:13.5px;color:#0f172a;">Développement — Sprint 4</div>
+        </div>
+
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Consultant</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1e40af;">JD</div>
+            <div>
+              <div style="font-size:13.5px;font-weight:600;color:#0f172a;">Jean Dupont</div>
+              <div style="font-size:11px;color:#5a6a7a;">TJM 600 €/j · Sénior</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Heures</div>
+            <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:20px;font-weight:800;color:#0f172a;font-variant-numeric:tabular-nums;">8 h</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">CA généré</div>
+            <div style="padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:20px;font-weight:800;color:#15803d;font-variant-numeric:tabular-nums;">1 200 €</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Description</div>
+          <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;min-height:70px;line-height:1.5;">Travail sur les user stories du sprint 4. Revue de code avec l'équipe technique.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel actions -->
+    <div style="padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;gap:10px;flex-shrink:0;">
+      <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:8px;border:1px solid #e2e8f0;background:white;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer;">
+        <i data-lucide="pencil" style="width:13px;height:13px;"></i> Modifier
+      </button>
+      <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;font-size:13px;font-weight:600;color:#b91c1c;cursor:pointer;">
+        <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Supprimer
+      </button>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    let collapsedAct = false;
+
+    function switchToHorizontalAct() {
+      document.getElementById('sidebar-act').style.display = 'none';
+      document.getElementById('topnav-act').style.display = 'flex';
+      const main = document.getElementById('maincontent-act');
+      main.style.marginLeft = '0';
+      main.style.marginTop = '52px';
+      lucide.createIcons();
+    }
+
+    function switchToSidebarAct() {
+      collapsedAct = false;
+      document.getElementById('sidebar-act').classList.remove('collapsed');
+      document.getElementById('sidebar-act').style.display = 'flex';
+      document.getElementById('topnav-act').style.display = 'none';
+      const main = document.getElementById('maincontent-act');
+      main.style.marginLeft = '250px';
+      main.style.marginTop = '0';
+      lucide.createIcons();
+    }
+
+    function toggleCollapseAct() {
+      collapsedAct = !collapsedAct;
+      const sidebar = document.getElementById('sidebar-act');
+      const main    = document.getElementById('maincontent-act');
+      sidebar.classList.toggle('collapsed', collapsedAct);
+      main.style.marginLeft = collapsedAct ? '64px' : '250px';
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

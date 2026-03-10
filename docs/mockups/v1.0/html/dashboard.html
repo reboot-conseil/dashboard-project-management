@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #F5F7FA; color: #0f172a; margin: 0; overflow-x: hidden; }
+
+    /* ── Splash screen ───────────────────────────────────────── */
+    #splash {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    #splash.fade-out { opacity: 0; pointer-events: none; }
+    #splash .splash-greeting {
+      font-size: 52px; font-weight: 800; color: white; letter-spacing: -1.5px;
+      opacity: 0; transform: translateY(16px);
+      transition: opacity 0.5s ease 0.2s, transform 0.5s ease 0.2s;
+    }
+    #splash .splash-greeting.show { opacity: 1; transform: translateY(0); }
+    #splash .splash-date {
+      font-size: 17px; color: rgba(255,255,255,0.55); margin-top: 10px; font-weight: 400;
+      opacity: 0; transition: opacity 0.5s ease 0.45s;
+    }
+    #splash .splash-date.show { opacity: 1; }
+    #splash .splash-logo {
+      position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 10px;
+      opacity: 0; transition: opacity 0.4s ease 0.1s;
+    }
+    #splash .splash-logo.show { opacity: 1; }
+    #splash .progress {
+      position: absolute; bottom: 0; left: 0; height: 3px;
+      background: rgba(255,255,255,0.25); width: 100%;
+    }
+    #splash .progress-bar {
+      height: 100%; background: white; width: 0%;
+      transition: width 2s linear;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .sidebar-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+      color: #94a3b8; text-transform: uppercase; padding: 0 14px; margin: 18px 0 4px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: 8px;
+      font-size: 13.5px; font-weight: 500; color: #5a6a7a;
+      cursor: pointer; transition: all 0.12s; margin: 1px 6px;
+    }
+    .nav-item:hover { background: #f1f5f9; color: #0f172a; }
+    .nav-item.active {
+      background: rgba(29,78,216,0.08); color: #1d4ed8;
+      border-left: 3px solid #1d4ed8; margin-left: 6px; padding-left: 9px;
+    }
+
+    /* ── KPI cards ───────────────────────────────────────────── */
+    .kpi-hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 70%, #3b82f6 100%);
+      color: white; border-radius: 14px; padding: 22px 24px;
+      display: flex; flex-direction: column;
+      box-shadow: 0 4px 16px rgba(29,78,216,0.25);
+    }
+    .kpi-card {
+      background: white; border: 1px solid #e4e8ef;
+      border-radius: 14px; padding: 20px 22px;
+      display: flex; flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    .kpi-card:hover {
+      box-shadow: 0 4px 14px rgba(0,0,0,0.09);
+      transform: translateY(-1px);
+    }
+
+    /* ── Period tabs ─────────────────────────────────────────── */
+    .period-tab {
+      padding: 5px 13px; border-radius: 6px;
+      font-size: 12.5px; font-weight: 500; color: #5a6a7a;
+      cursor: pointer; transition: all 0.12s; white-space: nowrap;
+    }
+    .period-tab.active {
+      background: white; color: #0f172a;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px #e2e8f0;
+    }
+
+    /* ── Tag/badge ───────────────────────────────────────────── */
+    .badge-up { display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#15803d;background:#dcfce7;padding:2px 7px;border-radius:20px; }
+    .badge-down { display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#b91c1c;background:#fee2e2;padding:2px 7px;border-radius:20px; }
+    .badge-warn { display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 7px;border-radius:20px; }
+
+    /* ── Search in sidebar ───────────────────────────────────── */
+    .sidebar-search {
+      display: flex; align-items: center; gap: 8px;
+      background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 8px 12px; margin: 10px 10px 4px; cursor: text;
+    }
+    .sidebar-search:hover { border-color: #cbd5e1; }
+    /* ── Skeleton loading ────────────────────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .skeleton-block {
+      background: linear-gradient(90deg, #e8edf3 25%, #f1f5f9 50%, #e8edf3 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    .skeleton-mode .kpi-value    { visibility: hidden; }
+    .skeleton-mode .kpi-sparkline,
+    .skeleton-mode .kpi-trend    { visibility: hidden; }
+
+    /* ── Collapsed sidebar ───────────────────────────────────── */
+    #sidebar { transition: width 0.2s ease; }
+    #sidebar.collapsed { width: 64px !important; }
+    #sidebar.collapsed .sidebar-label,
+    #sidebar.collapsed .nav-text,
+    #sidebar.collapsed .sidebar-search,
+    #sidebar.collapsed .user-fullname,
+    #sidebar.collapsed .version-label { display: none !important; }
+    #sidebar.collapsed .nav-item { justify-content: center; padding: 8px; margin: 1px 4px; }
+    #sidebar.collapsed .nav-item .badge-alert { position: absolute; top: 2px; right: 2px; }
+    #sidebar.collapsed .user-card { padding: 8px; justify-content: center; }
+    #sidebar.collapsed .user-card .user-meta { display: none; }
+    #sidebar.collapsed .user-card .logout-btn { display: none; }
+    #sidebar.collapsed .controls-row { flex-direction: column; gap: 4px; }
+    #maincontent { transition: margin-left 0.2s ease; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SPLASH SCREEN                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="splash">
+  <div class="splash-logo" id="splashLogo">
+    <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;">
+      <i data-lucide="layers" style="width:18px;height:18px;color:white;"></i>
+    </div>
+    <span style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.85);">PM Dashboard</span>
+  </div>
+
+  <div class="splash-greeting" id="splashGreeting">Bonjour, Jonathan&nbsp;👋</div>
+  <div class="splash-date" id="splashDate">Samedi 7 mars 2026</div>
+
+  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- APP SHELL                                                  -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="app" style="display:flex;min-height:100vh;opacity:0;transition:opacity 0.5s ease;">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────── -->
+  <aside id="sidebar" style="width:256px;min-height:100vh;background:white;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:30;">
+
+    <!-- Logo row + toggle -->
+    <div style="height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:#1d4ed8;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i data-lucide="layers" style="width:15px;height:15px;color:white;"></i>
+        </div>
+        <span class="nav-text" style="font-weight:700;font-size:15px;color:#0f172a;">PM Dashboard</span>
+      </div>
+      <!-- Switch to horizontal mode -->
+      <button onclick="switchToHorizontal()" title="Passer en barre horizontale"
+        style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;"
+        onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="arrow-right-left" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+
+    <!-- Nav -->
+    <nav style="flex:1;padding:4px 0;overflow-y:auto;">
+      <div class="sidebar-label">Navigation</div>
+      <div class="nav-item active" style="position:relative;">
+        <i data-lucide="layout-dashboard" style="width:16px;height:16px;flex-shrink:0;"></i>
+        <span class="nav-text" style="flex:1;">Dashboard</span>
+        <span class="badge-alert nav-text" style="font-size:10px;font-weight:700;background:#ef4444;color:white;padding:1px 6px;border-radius:10px;">3</span>
+      </div>
+      <div class="nav-item">
+        <i data-lucide="users" style="width:16px;height:16px;flex-shrink:0;"></i>
+        <span class="nav-text">Consultants</span>
+      </div>
+      <div class="nav-item">
+        <i data-lucide="folder-open" style="width:16px;height:16px;flex-shrink:0;"></i>
+        <span class="nav-text">Projets</span>
+      </div>
+      <div class="nav-item">
+        <i data-lucide="clock" style="width:16px;height:16px;flex-shrink:0;"></i>
+        <span class="nav-text">Activités</span>
+      </div>
+      <div class="nav-item">
+        <i data-lucide="calendar-days" style="width:16px;height:16px;flex-shrink:0;"></i>
+        <span class="nav-text">Calendrier</span>
+      </div>
+      <div class="nav-item">
+        <i data-lucide="file-text" style="width:16px;height:16px;flex-shrink:0;"></i>
+        <span class="nav-text">Documents</span>
+      </div>
+
+      <div class="sidebar-label" style="margin-top:8px;">Compte</div>
+      <div class="nav-item">
+        <i data-lucide="settings" style="width:16px;height:16px;flex-shrink:0;"></i>
+        <span class="nav-text">Paramètres</span>
+      </div>
+
+      <div class="sidebar-label" style="margin-top:4px;">Admin</div>
+      <div class="nav-item">
+        <i data-lucide="users-2" style="width:16px;height:16px;flex-shrink:0;"></i>
+        <span class="nav-text">Utilisateurs</span>
+      </div>
+    </nav>
+
+    <!-- Search -->
+    <div class="sidebar-search">
+      <i data-lucide="search" style="width:13px;height:13px;color:#94a3b8;flex-shrink:0;"></i>
+      <span style="font-size:13px;color:#94a3b8;flex:1;">Rechercher...</span>
+      <span style="font-size:11px;color:#cbd5e1;background:white;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;">⌘K</span>
+    </div>
+
+    <!-- Controls row: theme + collapse -->
+    <div class="controls-row" style="padding:8px 12px 0;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:2px;">
+      <button style="padding:6px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Thème"
+        onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="sun" style="width:14px;height:14px;"></i>
+      </button>
+      <button id="collapseBtn" onclick="toggleCollapse()" style="padding:6px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Réduire"
+        onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="panel-left-close" style="width:14px;height:14px;"></i>
+      </button>
+      <span class="version-label" style="margin-left:auto;font-size:11px;color:#e2e8f0;">v1.0</span>
+    </div>
+
+    <!-- User card -->
+    <div style="padding:10px 12px 14px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:#f8fafc;cursor:pointer;"
+        onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+        <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+        <div class="user-meta" style="flex:1;min-width:0;">
+          <div class="user-fullname" style="font-size:12.5px;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Jonathan Braun</div>
+          <div style="font-size:11px;color:#5a6a7a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Admin · Reboot Conseil</div>
+        </div>
+        <button class="logout-btn" style="padding:4px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Déconnexion">
+          <i data-lucide="log-out" style="width:14px;height:14px;"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── HORIZONTAL NAVBAR (hidden by default) ───────────────── -->
+  <div id="topnav" style="display:none;position:fixed;top:0;left:0;right:0;z-index:30;height:52px;background:white;border-bottom:1px solid #e2e8f0;align-items:center;padding:0 20px;gap:12px;">
+    <!-- Logo -->
+    <div style="display:flex;align-items:center;gap:8px;margin-right:8px;flex-shrink:0;">
+      <div style="width:26px;height:26px;border-radius:7px;background:#1d4ed8;display:flex;align-items:center;justify-content:center;">
+        <i data-lucide="layers" style="width:13px;height:13px;color:white;"></i>
+      </div>
+      <span style="font-weight:700;font-size:14px;">PM Dashboard</span>
+    </div>
+    <!-- Search -->
+    <div style="display:flex;align-items:center;gap:7px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:7px;padding:6px 11px;width:200px;">
+      <i data-lucide="search" style="width:12px;height:12px;color:#94a3b8;flex-shrink:0;"></i>
+      <span style="font-size:12px;color:#94a3b8;">Rechercher...</span>
+      <span style="margin-left:auto;font-size:10px;color:#cbd5e1;background:white;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px;">⌘K</span>
+    </div>
+    <!-- Nav links -->
+    <nav style="display:flex;align-items:center;gap:1px;flex:1;overflow-x:auto;" class="scrollbar-none">
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:600;color:#1d4ed8;background:rgba(29,78,216,0.08);white-space:nowrap;text-decoration:none;">
+        <i data-lucide="layout-dashboard" style="width:13px;height:13px;"></i> Dashboard
+        <span style="font-size:9px;font-weight:700;background:#ef4444;color:white;padding:1px 5px;border-radius:8px;">3</span>
+      </a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="users" style="width:13px;height:13px;"></i> Consultants
+      </a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="folder-open" style="width:13px;height:13px;"></i> Projets
+      </a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="clock" style="width:13px;height:13px;"></i> Activités
+      </a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="calendar-days" style="width:13px;height:13px;"></i> Calendrier
+      </a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="file-text" style="width:13px;height:13px;"></i> Documents
+      </a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="settings" style="width:13px;height:13px;"></i> Paramètres
+      </a>
+      <a style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:12.5px;font-weight:500;color:#5a6a7a;white-space:nowrap;text-decoration:none;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="users-2" style="width:13px;height:13px;"></i> Utilisateurs
+      </a>
+    </nav>
+    <!-- Right: theme + switch + user -->
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <button style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Thème">
+        <i data-lucide="sun" style="width:14px;height:14px;"></i>
+      </button>
+      <button onclick="switchToSidebar()" style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:#94a3b8;" title="Passer en sidebar">
+        <i data-lucide="arrow-right-left" style="width:14px;height:14px;"></i>
+      </button>
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;cursor:pointer;">JB</div>
+    </div>
+  </div>
+
+  <!-- ── MAIN CONTENT ─────────────────────────────────────────── -->
+  <main id="maincontent" style="margin-left:256px;flex:1;padding:28px 36px;max-width:1440px;width:100%;transition:margin-left 0.2s ease;">
+
+    <!-- Period + CTA -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:22px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- Skeleton demo toggle -->
+        <button id="skeletonToggle" onclick="toggleSkeleton()" title="Démo : état de chargement"
+          style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;border:1px dashed #cbd5e1;background:transparent;color:#94a3b8;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;">
+          <i data-lucide="loader" style="width:11px;height:11px;"></i> Skeleton
+        </button>
+        <div style="display:flex;gap:2px;background:#f1f5f9;border-radius:8px;padding:3px;">
+          <div class="period-tab active">Ce mois</div>
+          <div class="period-tab">Mois dernier</div>
+          <div class="period-tab">Trimestre</div>
+        </div>
+        <button style="display:flex;align-items:center;gap:6px;background:#1d4ed8;color:white;border:none;border-radius:8px;padding:8px 15px;font-size:13px;font-weight:600;cursor:pointer;">
+          <i data-lucide="plus" style="width:13px;height:13px;"></i> Nouveau projet
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard view tabs -->
+    <div style="display:flex;gap:0;margin-bottom:22px;border-bottom:1px solid #e2e8f0;">
+      <button style="display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:13px;font-weight:600;color:#1d4ed8;border:none;border-bottom:2px solid #1d4ed8;background:transparent;cursor:pointer;margin-bottom:-1px;">
+        <i data-lucide="bar-chart-3" style="width:14px;height:14px;"></i> Opérationnel
+      </button>
+      <button style="display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:13px;font-weight:500;color:#5a6a7a;border:none;background:transparent;cursor:pointer;">
+        <i data-lucide="users" style="width:14px;height:14px;"></i> Consultants
+      </button>
+      <button style="display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:13px;font-weight:500;color:#5a6a7a;border:none;background:transparent;cursor:pointer;">
+        <i data-lucide="trending-up" style="width:14px;height:14px;"></i> Stratégique
+      </button>
+    </div>
+
+    <!-- ── KPI ROW ─────────────────────────────────────────── -->
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
+
+      <!-- HERO card: Chiffre d'affaires -->
+      <div class="kpi-hero">
+        <!-- Top: label -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.5);"></div>
+            <span style="font-size:12px;font-weight:500;opacity:0.8;">Chiffre d'affaires</span>
+          </div>
+          <div style="width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <i data-lucide="arrow-up-right" style="width:13px;height:13px;color:white;opacity:0.7;"></i>
+          </div>
+        </div>
+        <!-- Big value -->
+        <div class="kpi-value" style="font-size:44px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;flex:1;">128 500 €</div>
+        <!-- Bottom row: sparkline + trend -->
+        <div class="kpi-sparkline" style="display:flex;align-items:flex-end;gap:14px;margin-top:14px;">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:36px;max-width:140px;flex:1;">
+            <div style="flex:1;border-radius:3px 3px 0 0;background:rgba(255,255,255,0.2);height:50%;"></div>
+            <div style="flex:1;border-radius:3px 3px 0 0;background:rgba(255,255,255,0.25);height:62%;"></div>
+            <div style="flex:1;border-radius:3px 3px 0 0;background:rgba(255,255,255,0.2);height:44%;"></div>
+            <div style="flex:1;border-radius:3px 3px 0 0;background:rgba(255,255,255,0.3);height:72%;"></div>
+            <div style="flex:1;border-radius:3px 3px 0 0;background:rgba(255,255,255,0.25);height:58%;"></div>
+            <div style="flex:1;border-radius:3px 3px 0 0;background:rgba(255,255,255,0.35);height:80%;"></div>
+            <div style="flex:1;border-radius:3px 3px 0 0;background:rgba(255,255,255,0.4);height:88%;"></div>
+            <div style="flex:1;border-radius:3px 3px 0 0;background:rgba(255,255,255,0.55);height:100%;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;padding-bottom:2px;margin-left:auto;margin-left:auto;">
+            <span style="background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:20px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);">↑ 12%</span>
+            <div style="font-size:11px;opacity:0.55;white-space:nowrap;">vs. 114 800 € (M-1)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI: Marge nette -->
+      <div class="kpi-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#15803d;"></div>
+            <span style="font-size:12px;font-weight:500;color:#5a6a7a;">Marge nette</span>
+          </div>
+          <i data-lucide="arrow-up-right" style="width:13px;height:13px;color:#cbd5e1;cursor:pointer;"></i>
+        </div>
+        <div class="kpi-value" style="font-size:38px;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a;letter-spacing:-0.5px;flex:1;">42%</div>
+        <div class="kpi-sparkline" style="display:flex;align-items:flex-end;gap:10px;margin-top:12px;">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:30px;max-width:90px;flex:1;">
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#bbf7d0;height:60%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#86efac;height:75%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#86efac;height:55%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#4ade80;height:80%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#22c55e;height:65%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#16a34a;height:90%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#15803d;height:100%;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;padding-bottom:2px;margin-left:auto;">
+            <span class="badge-up">↑ 3.2%</span>
+            <span style="font-size:11px;color:#94a3b8;">vs M-1</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI: Heures facturées -->
+      <div class="kpi-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#7c3aed;"></div>
+            <span style="font-size:12px;font-weight:500;color:#5a6a7a;">Heures facturées</span>
+          </div>
+          <i data-lucide="arrow-up-right" style="width:13px;height:13px;color:#cbd5e1;cursor:pointer;"></i>
+        </div>
+        <div class="kpi-value" style="font-size:38px;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a;letter-spacing:-0.5px;flex:1;">1 284 h</div>
+        <div class="kpi-sparkline" style="display:flex;align-items:flex-end;gap:10px;margin-top:12px;">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:30px;max-width:90px;flex:1;">
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#ede9fe;height:80%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#ddd6fe;height:90%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#c4b5fd;height:70%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#a78bfa;height:85%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#8b5cf6;height:60%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#7c3aed;height:75%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#6d28d9;height:65%;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;padding-bottom:2px;margin-left:auto;">
+            <span class="badge-down">↓ 1.8%</span>
+            <span style="font-size:11px;color:#94a3b8;">vs M-1</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI: Projets actifs -->
+      <div class="kpi-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#ea580c;"></div>
+            <span style="font-size:12px;font-weight:500;color:#5a6a7a;">Projets actifs</span>
+          </div>
+          <i data-lucide="arrow-up-right" style="width:13px;height:13px;color:#cbd5e1;cursor:pointer;"></i>
+        </div>
+        <div class="kpi-value" style="font-size:38px;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a;letter-spacing:-0.5px;flex:1;">12</div>
+        <div class="kpi-sparkline" style="display:flex;align-items:flex-end;gap:10px;margin-top:12px;">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:30px;max-width:90px;flex:1;">
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#fed7aa;height:60%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#fdba74;height:70%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#fb923c;height:80%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#f97316;height:65%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#ea580c;height:90%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#c2410c;height:75%;"></div>
+            <div style="flex:1;border-radius:2px 2px 0 0;background:#9a3412;height:100%;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;padding-bottom:2px;margin-left:auto;">
+            <span class="badge-warn">2 retards</span>
+            <span style="font-size:11px;color:#94a3b8;">ce mois</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BOTTOM BENTO ROW ─────────────────────────────────── -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;">
+
+      <!-- Chart -->
+      <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#0f172a;">Évolution CA & Marge</div>
+            <div style="font-size:12px;color:#5a6a7a;margin-top:1px;">8 dernières semaines</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="display:flex;align-items:center;gap:4px;"><div style="width:9px;height:9px;border-radius:2px;background:#1d4ed8;"></div><span style="font-size:11px;color:#5a6a7a;">CA</span></div>
+            <div style="display:flex;align-items:center;gap:4px;"><div style="width:9px;height:9px;border-radius:2px;background:#10b981;"></div><span style="font-size:11px;color:#5a6a7a;">Marge</span></div>
+            <i data-lucide="arrow-up-right" style="width:13px;height:13px;color:#cbd5e1;cursor:pointer;"></i>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;height:90px;padding:0 2px;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;background:#bfdbfe;border-radius:4px 4px 0 0;height:55%;"></div>
+            <div style="font-size:10px;color:#94a3b8;">S1</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;background:#93c5fd;border-radius:4px 4px 0 0;height:65%;"></div>
+            <div style="font-size:10px;color:#94a3b8;">S2</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;background:#60a5fa;border-radius:4px 4px 0 0;height:50%;"></div>
+            <div style="font-size:10px;color:#94a3b8;">S3</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;background:#3b82f6;border-radius:4px 4px 0 0;height:75%;"></div>
+            <div style="font-size:10px;color:#94a3b8;">S4</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;background:#2563eb;border-radius:4px 4px 0 0;height:70%;"></div>
+            <div style="font-size:10px;color:#94a3b8;">S5</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;background:#1d4ed8;border-radius:4px 4px 0 0;height:85%;"></div>
+            <div style="font-size:10px;color:#94a3b8;">S6</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;background:#1e40af;border-radius:4px 4px 0 0;height:80%;"></div>
+            <div style="font-size:10px;color:#94a3b8;">S7</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="width:100%;background:#1e3a8a;border-radius:4px 4px 0 0;height:100%;"></div>
+            <div style="font-size:10px;color:#94a3b8;">S8</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alertes -->
+      <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:700;color:#0f172a;">Alertes</div>
+          <span style="font-size:10px;font-weight:700;background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;">3</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;flex:1;">
+          <div style="display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:#fef2f2;border-radius:8px;border-left:3px solid #ef4444;">
+            <i data-lucide="alert-triangle" style="width:14px;height:14px;color:#b91c1c;flex-shrink:0;margin-top:1px;"></i>
+            <div>
+              <div style="font-size:12.5px;font-weight:600;color:#0f172a;">Projet Alpha — budget dépassé</div>
+              <div style="font-size:11px;color:#5a6a7a;margin-top:1px;">+12% au-dessus du budget</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:#fff7ed;border-radius:8px;border-left:3px solid #f97316;">
+            <i data-lucide="clock" style="width:14px;height:14px;color:#ea580c;flex-shrink:0;margin-top:1px;"></i>
+            <div>
+              <div style="font-size:12.5px;font-weight:600;color:#0f172a;">Martin D. — occupation faible</div>
+              <div style="font-size:11px;color:#5a6a7a;margin-top:1px;">62% · seuil min. 75%</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:#fff7ed;border-radius:8px;border-left:3px solid #f97316;">
+            <i data-lucide="trending-down" style="width:14px;height:14px;color:#ea580c;flex-shrink:0;margin-top:1px;"></i>
+            <div>
+              <div style="font-size:12.5px;font-weight:600;color:#0f172a;">Projet Beta — délai dépassé</div>
+              <div style="font-size:11px;color:#5a6a7a;margin-top:1px;">Fin estimée : +3 jours</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS                                                    -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<script>
+  lucide.createIcons();
+
+  // ── Splash sequence ───────────────────────────────────────
+  window.addEventListener('load', () => {
+    const splash = document.getElementById('splash');
+    const greeting = document.getElementById('splashGreeting');
+    const date = document.getElementById('splashDate');
+    const logo = document.getElementById('splashLogo');
+    const bar = document.getElementById('progressBar');
+    const app = document.getElementById('app');
+
+    // Animate in
+    requestAnimationFrame(() => {
+      logo.classList.add('show');
+      setTimeout(() => greeting.classList.add('show'), 150);
+      setTimeout(() => date.classList.add('show'), 350);
+      setTimeout(() => { bar.style.width = '100%'; }, 100);
+    });
+
+    // Fade out splash, reveal app
+    setTimeout(() => {
+      splash.classList.add('fade-out');
+      app.style.opacity = '1';
+      setTimeout(() => { splash.style.display = 'none'; }, 650);
+    }, 2200);
+  });
+
+  // ── Layout mode toggle ────────────────────────────────────
+  let mode = 'sidebar';
+  let collapsed = false;
+
+  function switchToHorizontal() {
+    mode = 'horizontal';
+    document.getElementById('sidebar').style.display = 'none';
+    const topnav = document.getElementById('topnav');
+    topnav.style.display = 'flex';
+    document.getElementById('maincontent').style.marginLeft = '0';
+    document.getElementById('maincontent').style.marginTop = '52px';
+    lucide.createIcons();
+  }
+
+  function switchToSidebar() {
+    mode = 'sidebar';
+    collapsed = false;
+    document.getElementById('sidebar').classList.remove('collapsed');
+    document.getElementById('sidebar').style.display = 'flex';
+    const topnav = document.getElementById('topnav');
+    topnav.style.display = 'none';
+    document.getElementById('maincontent').style.marginLeft = '256px';
+    document.getElementById('maincontent').style.marginTop = '0';
+    lucide.createIcons();
+  }
+
+  // ── Collapse sidebar ──────────────────────────────────────
+  function toggleCollapse() {
+    collapsed = !collapsed;
+    const sidebar = document.getElementById('sidebar');
+    const main    = document.getElementById('maincontent');
+    const btn     = document.getElementById('collapseBtn');
+    sidebar.classList.toggle('collapsed', collapsed);
+    main.style.marginLeft = collapsed ? '64px' : '256px';
+    btn.innerHTML = collapsed
+      ? '<i data-lucide="panel-left-open"  style="width:14px;height:14px;"></i>'
+      : '<i data-lucide="panel-left-close" style="width:14px;height:14px;"></i>';
+    lucide.createIcons();
+  }
+
+  // ── Skeleton loading demo ─────────────────────────────────
+  let skeletonOn = false;
+  const SKELETON_TARGETS = ['.kpi-hero', '.kpi-card'];
+
+  function toggleSkeleton() {
+    skeletonOn = !skeletonOn;
+    const btn = document.getElementById('skeletonToggle');
+
+    if (skeletonOn) {
+      btn.style.background = '#f1f5f9';
+      btn.style.color = '#1d4ed8';
+      btn.style.borderColor = '#1d4ed8';
+      // Replace card content with skeleton blocks
+      document.querySelectorAll('.kpi-value').forEach(el => {
+        el.dataset.real = el.textContent;
+        el.innerHTML = '<div class="skeleton-block" style="height:42px;width:70%;margin:4px 0;"></div>';
+      });
+      document.querySelectorAll('.kpi-sparkline').forEach(el => {
+        el.dataset.realHtml = el.innerHTML;
+        el.innerHTML = '<div class="skeleton-block" style="height:28px;width:100%;margin-top:4px;border-radius:4px;"></div>';
+      });
+      // Chart area skeleton
+      document.querySelectorAll('#chartArea').forEach(el => {
+        el.dataset.realHtml = el.innerHTML;
+        el.innerHTML = '<div class="skeleton-block" style="height:90px;width:100%;border-radius:6px;"></div>';
+      });
+      // Alertes skeleton
+      document.querySelectorAll('.alert-item').forEach(el => {
+        el.style.background = '#f1f5f9';
+        el.style.borderColor = '#e2e8f0';
+        el.querySelectorAll('div[style*="font-size"]').forEach(t => t.style.visibility = 'hidden');
+      });
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = '#94a3b8';
+      btn.style.borderColor = '#cbd5e1';
+      location.reload();
+    }
+  }
+</script>
+</body>
+</html>

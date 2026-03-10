@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PM Dashboard — Calendrier v2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#F5F7FA;--surface:#FFFFFF;--surface-raised:#F0F3F8;
+      --primary:#2563EB;--primary-10:rgba(37,99,235,.10);
+      --border:#E4E8EF;--border-muted:#EFF2F6;
+      --text:#0F172A;--text-muted:#5a6a7a;--text-secondary:#94A3B8;
+      --success:#15803d;--success-bg:#dcfce7;
+      --warning:#b45309;--warning-bg:#fef3c7;
+      --danger:#b91c1c;--danger-bg:#fee2e2;
+      --r-sm:6px;--r-md:10px;--r-lg:14px;
+    }
+    html.dark{
+      --bg:#0C0E14;--surface:#161920;--surface-raised:#1E2130;
+      --primary-10:rgba(37,99,235,.15);
+      --border:#252A3A;--border-muted:#1E2130;
+      --text:#F1F5F9;--text-muted:#94A3B8;--text-secondary:#475569;
+      --success-bg:rgba(21,128,61,.18);--warning-bg:rgba(180,83,9,.18);--danger-bg:rgba(185,28,28,.18);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;margin:0;display:flex;height:100vh;overflow:hidden;}
+
+    /* SIDEBAR */
+    .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);font-size:13.5px;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .12s;}
+    .nav-item:hover{background:var(--surface-raised);color:var(--text);}
+    .nav-item.active{background:var(--primary-10);color:var(--primary);border-left:2px solid var(--primary);padding-left:8px;}
+    .nav-item svg{width:17px;height:17px;flex-shrink:0;}
+    .nav-sep{height:1px;background:var(--border-muted);margin:5px 0;}
+
+    /* CONTENT LAYOUT */
+    .content-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+    .cal-body{flex:1;display:flex;overflow:hidden;}
+
+    /* TOP BAR */
+    .topbar{padding:13px 18px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--surface);}
+    .view-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-md);font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .12s;border:none;background:none;font-family:inherit;}
+    .view-btn.active{background:var(--primary-10);color:var(--primary);}
+    .view-btn:hover:not(.active){background:var(--surface-raised);color:var(--text);}
+    .nav-btn{padding:5px 8px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text-muted);display:flex;align-items:center;transition:all .12s;}
+    .nav-btn:hover{background:var(--surface-raised);}
+    .today-btn{padding:5px 14px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;font-weight:500;color:var(--text-muted);font-family:inherit;transition:all .12s;}
+    .today-btn:hover{background:var(--surface-raised);color:var(--text);}
+
+    /* FILTER BAR */
+    .filterbar{padding:8px 18px;border-bottom:1px solid var(--border-muted);display:flex;align-items:center;gap:8px;flex-shrink:0;background:var(--surface);}
+    .filter-pill{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;border:1px solid var(--border);background:var(--surface);font-family:inherit;transition:all .12s;}
+    .filter-pill:hover{background:var(--surface-raised);color:var(--text);}
+    .filter-pill.active{background:var(--primary-10);border-color:rgba(37,99,235,.2);color:var(--primary);}
+
+    /* LEFT PANEL */
+    .left-panel{width:190px;min-width:190px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:width .2s,min-width .2s;}
+    .left-panel.collapsed{width:0;min-width:0;overflow:hidden;}
+    .panel-section{padding:12px 12px 6px;}
+    .panel-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:8px;}
+    .panel-item{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:var(--r-sm);cursor:pointer;font-size:12.5px;font-weight:500;color:var(--text-muted);transition:background .1s;}
+    .panel-item:hover{background:var(--surface-raised);color:var(--text);}
+    .panel-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;}
+
+    /* RIGHT PANEL */
+    .right-panel{width:260px;min-width:260px;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:width .2s,min-width .2s;}
+    .right-panel.collapsed{width:0;min-width:0;overflow:hidden;}
+
+    /* MAIN VIEW AREA */
+    .main-view{flex:1;overflow:auto;position:relative;}
+
+    /* TIMELINE VIEW */
+    .tl-container{min-width:800px;}
+    .tl-header{display:flex;position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);}
+    .tl-label-col{width:200px;min-width:200px;padding:8px 16px;font-size:11px;font-weight:600;color:var(--text-secondary);border-right:1px solid var(--border);flex-shrink:0;}
+    .tl-days{flex:1;display:flex;}
+    .tl-day{flex:1;padding:6px 4px;text-align:center;font-size:10.5px;color:var(--text-secondary);border-right:1px solid var(--border-muted);position:relative;}
+    .tl-day.today-col{background:rgba(37,99,235,.04);}
+    .tl-day.today-col .tl-day-num{background:var(--primary);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 1px;}
+    .tl-day-num{font-size:13px;font-weight:600;color:var(--text);margin-bottom:1px;}
+    .tl-day-name{font-size:9.5px;color:var(--text-secondary);}
+    /* Project group header */
+    .tl-proj-hdr{display:flex;align-items:center;border-bottom:1px solid var(--border-muted);}
+    .tl-proj-label{width:200px;min-width:200px;padding:8px 16px;font-size:12px;font-weight:700;color:var(--text);border-right:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:7px;background:var(--surface-raised);}
+    .tl-proj-area{flex:1;background:var(--surface-raised);height:36px;}
+    /* Stage row */
+    .tl-stage-row{display:flex;align-items:center;border-bottom:1px solid var(--border-muted);}
+    .tl-stage-label{width:200px;min-width:200px;padding:7px 16px 7px 24px;font-size:11.5px;font-weight:500;color:var(--text-muted);border-right:1px solid var(--border);flex-shrink:0;}
+    .tl-stage-area{flex:1;position:relative;height:38px;}
+    /* Gantt bar */
+    .gantt-bar{position:absolute;top:7px;height:24px;border-radius:5px;display:flex;align-items:center;overflow:hidden;cursor:pointer;transition:opacity .12s;}
+    .gantt-bar:hover{opacity:.85;}
+    .gantt-done{height:100%;border-radius:5px;}
+    .gantt-todo{height:100%;opacity:.35;background-repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,.3) 4px,rgba(255,255,255,.3) 8px);}
+    .gantt-label{position:absolute;left:8px;font-size:10.5px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:calc(100% - 40px);}
+    .gantt-avatars{position:absolute;right:5px;display:flex;}
+    .g-av{width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,.4);margin-left:-4px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:white;flex-shrink:0;}
+    /* Milestone diamond */
+    .milestone{position:absolute;top:11px;width:14px;height:14px;transform:rotate(45deg);border-radius:2px;cursor:pointer;z-index:2;}
+    /* Today line */
+    .today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--danger);z-index:5;pointer-events:none;}
+    .today-line::before{content:'Auj.';position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;color:var(--danger);white-space:nowrap;}
+    /* Grid vertical lines */
+    .tl-grid-line{position:absolute;top:0;bottom:0;width:1px;background:var(--border-muted);}
+
+    /* MONTH VIEW */
+    .month-grid{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--border);border-left:1px solid var(--border);}
+    .month-day-hdr{padding:7px 0;text-align:center;font-size:11px;font-weight:600;color:var(--text-secondary);border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface);}
+    .month-cell{min-height:100px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 5px 4px;position:relative;background:var(--surface);overflow:visible;}
+    .month-cell.other-month{background:var(--surface-raised);}
+    .month-cell.today-cell{background:rgba(37,99,235,.03);}
+    .month-day-num{font-size:12.5px;font-weight:600;color:var(--text-muted);margin-bottom:4px;}
+    .month-cell.today-cell .month-day-num{background:var(--primary);color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;}
+    .month-event{border-radius:4px;padding:2px 7px;font-size:10.5px;font-weight:600;color:white;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity .12s;height:20px;line-height:16px;position:relative;z-index:1;}
+    .month-event:hover{opacity:.85;}
+    /* -6px = 5px cell padding + 1px border — rend les barres continues entre cellules */
+    .month-event.continues-left{border-radius:0 4px 4px 0;margin-left:-6px;padding-left:4px;}
+    .month-event.continues-right{border-radius:4px 0 0 4px;margin-right:-6px;padding-right:4px;}
+    .month-event.continues-both{border-radius:0;margin-left:-6px;margin-right:-6px;padding-left:4px;padding-right:4px;}
+    /* Activity dots */
+    .activity-dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;}
+    .act-dot{width:5px;height:5px;border-radius:50%;}
+
+    /* ÉQUIPE VIEW */
+    .equipe-container{min-width:700px;}
+    .eq-header{display:flex;position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);}
+    .eq-name-col{width:180px;min-width:180px;padding:8px 16px;font-size:11px;font-weight:600;color:var(--text-secondary);border-right:1px solid var(--border);flex-shrink:0;}
+    .eq-days{flex:1;display:flex;}
+    .eq-day{flex:1;padding:6px 4px;text-align:center;font-size:10.5px;border-right:1px solid var(--border-muted);}
+    .eq-row{display:flex;align-items:stretch;border-bottom:1px solid var(--border-muted);}
+    .eq-consultant{width:180px;min-width:180px;padding:10px 16px;border-right:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px;}
+    .eq-cells{flex:1;display:flex;}
+    .eq-cell{flex:1;border-right:1px solid var(--border-muted);padding:6px 4px;display:flex;flex-direction:column;gap:2px;min-height:60px;}
+    .eq-bar{border-radius:4px;padding:2px 5px;font-size:9.5px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+    .eq-hours{font-size:10px;font-weight:700;color:var(--text-muted);text-align:center;margin-top:3px;}
+
+    /* Right panel event detail */
+    .rp-section{padding:14px 16px;border-bottom:1px solid var(--border-muted);}
+    .rp-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .rp-event{padding:10px 12px;border-radius:var(--r-md);background:var(--surface-raised);margin-bottom:7px;cursor:pointer;transition:background .12s;}
+    .rp-event:hover{background:var(--border-muted);}
+    .rp-event:last-child{margin-bottom:0;}
+
+    /* cav */
+    .cav{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:white;flex-shrink:0;}
+
+    ::-webkit-scrollbar{width:5px;height:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div style="padding:13px 14px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div style="width:30px;height:30px;border-radius:8px;background:#2563EB;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>
+      <span style="font-size:13.5px;font-weight:600;color:var(--text);">PM Dashboard</span>
+    </div>
+    <button onclick="toggleTheme()" style="padding:5px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <svg id="theme-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+  <nav style="flex:1;padding:10px 10px 0;display:flex;flex-direction:column;gap:2px;overflow-y:auto;">
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Consultants</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Projets</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Activités</a>
+    <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendrier</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documents</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Paramètres</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Utilisateurs</a>
+    <div class="nav-sep" style="margin-top:auto;"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-md);background:var(--surface-raised);border:1px solid var(--border-muted);cursor:text;margin-bottom:2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span style="font-size:12px;flex:1;color:var(--text-muted);">Rechercher...</span><span style="font-size:10px;color:var(--text-secondary);">⌘K</span></div>
+  </nav>
+  <div style="padding:8px 10px 10px;border-top:1px solid var(--border-muted);flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--r-md);cursor:pointer;" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+      <div style="flex:1;min-width:0;"><p style="font-size:12.5px;font-weight:600;color:var(--text);margin:0;">Jonathan Braun</p><p style="font-size:11px;color:var(--text-muted);margin:0;">Admin · Reboot Conseil</p></div>
+    </div>
+  </div>
+</aside>
+
+<!-- CONTENT AREA -->
+<div class="content-area">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <!-- View toggle -->
+    <div style="display:flex;align-items:center;gap:2px;">
+      <button class="view-btn active" id="btn-tl" onclick="showView('timeline')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Timeline
+      </button>
+      <button class="view-btn" id="btn-mo" onclick="showView('mois')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Mois
+      </button>
+      <button class="view-btn" id="btn-eq" onclick="showView('equipe')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Équipe
+      </button>
+    </div>
+    <!-- Nav période -->
+    <div style="display:flex;align-items:center;gap:6px;margin-left:16px;">
+      <button class="nav-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span style="font-size:14px;font-weight:700;color:var(--text);min-width:130px;text-align:center;">Mars 2026</span>
+      <button class="nav-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <button class="today-btn">Aujourd'hui</button>
+    </div>
+    <!-- Right controls -->
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <!-- Détail toggle — s'active quand une étape est cliquée -->
+      <button onclick="toggleRight()" id="btn-right-panel" title="Panneau détail" style="padding:6px 10px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text-muted);display:flex;align-items:center;gap:5px;font-size:12px;font-family:inherit;font-weight:500;transition:all .12s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="14" y="3" width="7" height="18" rx="1"/><line x1="3" y1="9" x2="10" y2="9"/><line x1="3" y1="15" x2="10" y2="15"/></svg>
+        Détail
+      </button>
+      <!-- New event -->
+      <button style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-md);background:var(--primary);color:white;border:none;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nouvelle étape</button>
+    </div>
+  </div>
+
+  <!-- FILTER BAR — 3 dropdowns -->
+  <div class="filterbar">
+    <!-- Dropdown Projets -->
+    <div style="position:relative;">
+      <select style="appearance:none;-webkit-appearance:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:5px 28px 5px 10px;font-size:12.5px;font-weight:500;color:var(--text-muted);font-family:inherit;outline:none;cursor:pointer;">
+        <option>Tous les projets</option>
+        <option>Dashboard RH Analytics</option>
+        <option>Migration Cloud</option>
+        <option>Refonte Site Web</option>
+      </select>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <!-- Dropdown Consultants -->
+    <div style="position:relative;">
+      <select style="appearance:none;-webkit-appearance:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:5px 28px 5px 10px;font-size:12.5px;font-weight:500;color:var(--text-muted);font-family:inherit;outline:none;cursor:pointer;">
+        <option>Tous les consultants</option>
+        <option>Sophie Leroux</option>
+        <option>Marc Dubois</option>
+        <option>Julie Chen</option>
+        <option>Jonathan Braun</option>
+      </select>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <!-- Dropdown Statut -->
+    <div style="position:relative;">
+      <select style="appearance:none;-webkit-appearance:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:5px 28px 5px 10px;font-size:12.5px;font-weight:500;color:var(--text-muted);font-family:inherit;outline:none;cursor:pointer;">
+        <option>Tous les statuts</option>
+        <option>On track</option>
+        <option>Attention</option>
+        <option>Dérive</option>
+      </select>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <!-- Legend -->
+    <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <span style="font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:5px;"><span style="width:24px;height:7px;border-radius:3px;background:var(--primary);display:inline-block;opacity:.9;"></span>Réalisé</span>
+      <span style="font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:5px;"><span style="width:24px;height:7px;border-radius:3px;background:var(--border);background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(100,100,100,.3) 3px,rgba(100,100,100,.3) 6px);display:inline-block;"></span>Planifié</span>
+      <span style="font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;transform:rotate(45deg);background:var(--danger);display:inline-block;border-radius:2px;"></span>Deadline</span>
+    </div>
+  </div>
+
+  <!-- CAL BODY -->
+  <div class="cal-body">
+
+    <!-- No left panel -->
+
+    <!-- ═══════ MAIN VIEW ═══════ -->
+
+    <!-- TIMELINE VIEW -->
+    <div class="main-view" id="view-timeline">
+      <div class="tl-container">
+        <!-- Header: label + 14 days (Mar 2-15) -->
+        <div class="tl-header">
+          <div class="tl-label-col">Projet / Étape</div>
+          <div class="tl-days" id="tl-days-header">
+            <!-- Days generated by JS -->
+          </div>
+        </div>
+
+        <!-- ═ Project 1: Dashboard RH Analytics ═ -->
+        <div class="tl-proj-hdr">
+          <div class="tl-proj-label"><div style="width:12px;height:12px;border-radius:3px;background:#3b82f6;flex-shrink:0;"></div>Dashboard RH Analytics<span style="font-size:10.5px;font-weight:400;color:var(--text-muted);margin-left:4px;">· Optima Group</span></div>
+          <div class="tl-proj-area"></div>
+        </div>
+        <!-- Stage: Développement Frontend (Mar 1–7, 75% done) -->
+        <div class="tl-stage-row">
+          <div class="tl-stage-label">Développement Frontend</div>
+          <div class="tl-stage-area" id="area-rh-1">
+            <div class="gantt-bar" style="left:0%;width:38.5%;background:#3b82f6;" onclick="showDetail('dev-frontend')">
+              <div class="gantt-done" style="width:75%;background:#3b82f6;"></div>
+              <div class="gantt-todo" style="flex:1;background:#3b82f6;"></div>
+              <span class="gantt-label">Dév. Frontend · 75%</span>
+              <div class="gantt-avatars"><div class="g-av" style="background:#8B5CF6;">SL</div></div>
+            </div>
+            <div class="milestone" style="left:calc(38.5% - 7px);background:var(--danger);border:2px solid white;" title="Deadline 7 mars"></div>
+          </div>
+        </div>
+        <!-- Stage: Tests unitaires (Mar 8–12, 0%) -->
+        <div class="tl-stage-row">
+          <div class="tl-stage-label">Tests unitaires</div>
+          <div class="tl-stage-area">
+            <div class="gantt-bar" style="left:46.2%;width:30.8%;background:#60a5fa;opacity:.8;" onclick="showDetail('tests-unitaires')">
+              <span class="gantt-label" style="color:rgba(255,255,255,.9);">Tests · 0%</span>
+              <div class="gantt-avatars"><div class="g-av" style="background:#8B5CF6;">SL</div></div>
+            </div>
+          </div>
+        </div>
+        <!-- Stage: Design UI (Mar 3–10) -->
+        <div class="tl-stage-row">
+          <div class="tl-stage-label">Design UI</div>
+          <div class="tl-stage-area">
+            <div class="gantt-bar" style="left:7.7%;width:53.8%;background:#93c5fd;opacity:.85;" onclick="showDetail('design-ui')">
+              <div class="gantt-done" style="width:50%;background:#60a5fa;"></div>
+              <div class="gantt-todo" style="flex:1;background:#93c5fd;"></div>
+              <span class="gantt-label">Design UI · 50%</span>
+              <div class="gantt-avatars"><div class="g-av" style="background:#F59E0B;">MD</div></div>
+            </div>
+            <div class="milestone" style="left:calc(61.5% - 7px);background:var(--warning);border:2px solid white;" title="Deadline 10 mars"></div>
+          </div>
+        </div>
+
+        <!-- Spacer row -->
+        <div style="height:8px;border-bottom:1px solid var(--border);"></div>
+
+        <!-- ═ Project 2: Migration Cloud ═ -->
+        <div class="tl-proj-hdr">
+          <div class="tl-proj-label"><div style="width:12px;height:12px;border-radius:50%;background:#6366f1;flex-shrink:0;"></div>Migration Cloud<span style="font-size:10.5px;font-weight:400;color:var(--text-muted);margin-left:4px;">· TechFlow Industries</span></div>
+          <div class="tl-proj-area"></div>
+        </div>
+        <!-- Stage: Migration Données (Mar 1–15, 60%) -->
+        <div class="tl-stage-row">
+          <div class="tl-stage-label">Migration Données</div>
+          <div class="tl-stage-area">
+            <div class="gantt-bar" style="left:0%;width:100%;background:#6366f1;" onclick="showDetail('migration-donnees')">
+              <div class="gantt-done" style="width:60%;background:#6366f1;"></div>
+              <div class="gantt-todo" style="flex:1;background:#6366f1;"></div>
+              <span class="gantt-label">Migration Données · 60%</span>
+              <div class="gantt-avatars">
+                <div class="g-av" style="background:#10B981;">JC</div>
+                <div class="g-av" style="background:#F59E0B;">MD</div>
+              </div>
+            </div>
+            <div class="milestone" style="right:0px;background:var(--success);border:2px solid white;" title="Deadline 15 mars"></div>
+          </div>
+        </div>
+
+        <!-- Spacer row -->
+        <div style="height:8px;border-bottom:1px solid var(--border);"></div>
+
+        <!-- ═ Project 3: Refonte Site Web ═ -->
+        <div class="tl-proj-hdr">
+          <div class="tl-proj-label"><div style="width:12px;height:12px;border-radius:50%;background:#14b8a6;flex-shrink:0;"></div>Refonte Site Web<span style="font-size:10.5px;font-weight:400;color:var(--text-muted);margin-left:4px;">· Eco Green Solutions</span></div>
+          <div class="tl-proj-area"></div>
+        </div>
+        <!-- Stage: Design Maquettes (Mar 1–14, 50%) -->
+        <div class="tl-stage-row">
+          <div class="tl-stage-label">Design Maquettes</div>
+          <div class="tl-stage-area">
+            <div class="gantt-bar" style="left:0%;width:92.3%;background:#14b8a6;" onclick="showDetail('design-maquettes')">
+              <div class="gantt-done" style="width:50%;background:#14b8a6;"></div>
+              <div class="gantt-todo" style="flex:1;background:#14b8a6;"></div>
+              <span class="gantt-label">Design Maquettes · 50%</span>
+              <div class="gantt-avatars"><div class="g-av" style="background:#F59E0B;">MD</div></div>
+            </div>
+            <div class="milestone" style="left:calc(92.3% - 7px);background:var(--warning);border:2px solid white;" title="Deadline 14 mars"></div>
+          </div>
+        </div>
+        <!-- Stage: Intégration React (Mar 8–21, 0%) -->
+        <div class="tl-stage-row">
+          <div class="tl-stage-label">Intégration React</div>
+          <div class="tl-stage-area">
+            <div class="gantt-bar" style="left:46.2%;width:53.8%;background:#5eead4;opacity:.85;" onclick="showDetail('integration-react')">
+              <span class="gantt-label" style="color:rgba(0,0,0,.55);">Intégration React · 0%</span>
+              <div class="gantt-avatars"><div class="g-av" style="background:#8B5CF6;">SL</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TODAY line overlay -->
+        <div id="today-line" style="position:absolute;top:40px;bottom:0;pointer-events:none;z-index:8;">
+          <!-- Positioned at Mar 9 = day 7 from Mar 2 = 7/13 = 53.8% of bar area width -->
+        </div>
+      </div>
+    </div>
+
+    <!-- MONTH VIEW -->
+    <div class="main-view" id="view-mois" style="display:none;">
+      <div style="min-width:700px;height:100%;display:flex;flex-direction:column;">
+        <!-- Day headers — semaine commence Lundi -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);">
+          <div class="month-day-hdr">Lun</div>
+          <div class="month-day-hdr">Mar</div>
+          <div class="month-day-hdr">Mer</div>
+          <div class="month-day-hdr">Jeu</div>
+          <div class="month-day-hdr">Ven</div>
+          <div class="month-day-hdr" style="color:var(--text-secondary);">Sam</div>
+          <div class="month-day-hdr" style="color:var(--text-secondary);">Dim</div>
+        </div>
+        <!--
+          Mars 2026 — semaine Lun→Dim — 6 rows × 7 cols
+          Mar 1 = Dim → row 0 : Lun 23fév…Sam 28fév (padding) + Dim 1 mars
+          Aujourd'hui = Lun 9 mars
+          Sam/Dim = vides d'activité (surface-raised)
+          Milestones tombant Sam/Dim reportés au Ven précédent
+        -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);flex:1;border-left:1px solid var(--border);">
+
+
+          <!-- ═══ Row 0 : padding Lun 23fév → Dim 1 mars ═══ -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">23 fév</div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">24</div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">25</div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">26</div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">27</div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">28</div></div>
+          <!-- Dim 1 mars — vide (weekend) -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">1</div></div>
+
+          <!-- ═══ Row 1 : Lun 2 → Dim 8 mars ═══ -->
+          <!-- Lun 2 — Dév.Frontend(→) · Design Maquettes(→) · Migration(→) -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">2</div>
+            <div class="month-event continues-right" style="background:#3b82f6;" onclick="showDetail('dev-frontend')">Dév. Frontend</div>
+            <div class="month-event continues-right" style="background:#14b8a6;" onclick="showDetail('design-maquettes')">Design Maquettes</div>
+            <div class="month-event continues-right" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migration Données</div>
+            <div class="activity-dots"><div class="act-dot" style="background:#8B5CF6;"></div><div class="act-dot" style="background:#F59E0B;"></div><div class="act-dot" style="background:#10B981;"></div></div>
+          </div>
+          <!-- Mar 3 — +Design UI(→) -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">3</div>
+            <div class="month-event continues-both" style="background:#3b82f6;"> </div>
+            <div class="month-event continues-both" style="background:#14b8a6;"> </div>
+            <div class="month-event continues-right" style="background:#60a5fa;" onclick="showDetail('design-ui')">Design UI</div>
+            <div class="month-event continues-both" style="background:#6366f1;"> </div>
+            <div class="activity-dots"><div class="act-dot" style="background:#8B5CF6;"></div><div class="act-dot" style="background:#F59E0B;"></div><div class="act-dot" style="background:#10B981;"></div></div>
+          </div>
+          <!-- Mer 4 -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">4</div>
+            <div class="month-event continues-both" style="background:#3b82f6;"> </div>
+            <div class="month-event continues-both" style="background:#14b8a6;"> </div>
+            <div class="month-event continues-both" style="background:#60a5fa;"> </div>
+            <div class="month-event continues-both" style="background:#6366f1;"> </div>
+            <div class="activity-dots"><div class="act-dot" style="background:#8B5CF6;"></div><div class="act-dot" style="background:#F59E0B;"></div><div class="act-dot" style="background:#10B981;"></div></div>
+          </div>
+          <!-- Jeu 5 -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">5</div>
+            <div class="month-event continues-both" style="background:#3b82f6;"> </div>
+            <div class="month-event continues-both" style="background:#14b8a6;"> </div>
+            <div class="month-event continues-both" style="background:#60a5fa;"> </div>
+            <div class="month-event continues-both" style="background:#6366f1;"> </div>
+            <div class="activity-dots"><div class="act-dot" style="background:#8B5CF6;"></div><div class="act-dot" style="background:#F59E0B;"></div><div class="act-dot" style="background:#10B981;"></div></div>
+          </div>
+          <!-- Ven 6 — Dév.Frontend se termine (deadline Sam 7 → reporté ici) -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">6</div>
+            <div class="month-event continues-left" style="background:#3b82f6;" onclick="showDetail('dev-frontend')"> </div>
+            <div class="month-event continues-both" style="background:#14b8a6;"> </div>
+            <div class="month-event continues-both" style="background:#60a5fa;"> </div>
+            <div class="month-event continues-both" style="background:#6366f1;"> </div>
+            <div style="display:flex;align-items:center;gap:3px;padding:2px 5px;border-radius:3px;background:var(--danger-bg);margin-top:3px;cursor:pointer;" onclick="showDetail('dev-frontend')">
+              <div style="width:6px;height:6px;transform:rotate(45deg);background:var(--danger);border-radius:1px;flex-shrink:0;"></div>
+              <span style="font-size:9px;font-weight:600;color:var(--danger);">Dév. Frontend · 7 mars</span>
+            </div>
+            <div class="activity-dots"><div class="act-dot" style="background:#8B5CF6;"></div><div class="act-dot" style="background:#F59E0B;"></div><div class="act-dot" style="background:#10B981;"></div></div>
+          </div>
+          <!-- Sam 7 — VIDE -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">7</div></div>
+          <!-- Dim 8 — VIDE -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">8</div></div>
+
+          <!-- ═══ Row 2 : Lun 9 (AUJOURD'HUI) → Dim 15 mars ═══ -->
+          <!-- Lun 9 = Aujourd'hui -->
+          <div class="month-cell today-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num"><span style="background:var(--primary);color:white;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">9</span></div>
+            <div class="month-event continues-both" style="background:#14b8a6;"> </div>
+            <div class="month-event continues-right" style="background:#60a5fa;" onclick="showDetail('design-ui')"> </div>
+            <div class="month-event continues-right" style="background:#5eead4;color:rgba(0,0,0,.55);" onclick="showDetail('integration-react')">Intégr. React</div>
+            <div class="month-event continues-both" style="background:#6366f1;"> </div>
+          </div>
+          <!-- Mar 10 — Design UI se termine ici + milestone -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">10</div>
+            <div class="month-event continues-both" style="background:#14b8a6;"> </div>
+            <div class="month-event continues-left" style="background:#60a5fa;" onclick="showDetail('design-ui')"> </div>
+            <div class="month-event continues-both" style="background:#5eead4;color:rgba(0,0,0,.55);"> </div>
+            <div class="month-event continues-both" style="background:#6366f1;"> </div>
+            <div style="display:flex;align-items:center;gap:3px;padding:2px 5px;border-radius:3px;background:var(--warning-bg);margin-top:3px;cursor:pointer;" onclick="showDetail('design-ui')">
+              <div style="width:6px;height:6px;transform:rotate(45deg);background:var(--warning);border-radius:1px;flex-shrink:0;"></div>
+              <span style="font-size:9px;font-weight:600;color:var(--warning);">Design UI</span>
+            </div>
+          </div>
+          <!-- Mer 11 -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">11</div>
+            <div class="month-event continues-both" style="background:#14b8a6;"> </div>
+            <div class="month-event continues-both" style="background:#5eead4;color:rgba(0,0,0,.55);"> </div>
+            <div class="month-event continues-both" style="background:#6366f1;"> </div>
+          </div>
+          <!-- Jeu 12 — Tests unitaires se terminent (Mar 8-12) -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">12</div>
+            <div class="month-event continues-both" style="background:#14b8a6;"> </div>
+            <div class="month-event continues-both" style="background:#5eead4;color:rgba(0,0,0,.55);"> </div>
+            <div class="month-event continues-both" style="background:#6366f1;"> </div>
+          </div>
+          <!-- Ven 13 — Design Maquettes et Migration se terminent (deadlines Sam 14 + Dim 15 → ici) -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">13</div>
+            <div class="month-event continues-left" style="background:#14b8a6;" onclick="showDetail('design-maquettes')"> </div>
+            <div class="month-event continues-both" style="background:#5eead4;color:rgba(0,0,0,.55);"> </div>
+            <div class="month-event continues-left" style="background:#6366f1;" onclick="showDetail('migration-donnees')"> </div>
+            <div style="display:flex;align-items:center;gap:3px;padding:2px 5px;border-radius:3px;background:var(--warning-bg);margin-top:3px;cursor:pointer;" onclick="showDetail('design-maquettes')">
+              <div style="width:6px;height:6px;transform:rotate(45deg);background:var(--warning);border-radius:1px;flex-shrink:0;"></div>
+              <span style="font-size:9px;font-weight:600;color:var(--warning);">Maquettes · 14 mars</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:3px;padding:2px 5px;border-radius:3px;background:var(--success-bg);margin-top:2px;cursor:pointer;" onclick="showDetail('migration-donnees')">
+              <div style="width:6px;height:6px;transform:rotate(45deg);background:var(--success);border-radius:1px;flex-shrink:0;"></div>
+              <span style="font-size:9px;font-weight:600;color:var(--success);">Migration · 15 mars</span>
+            </div>
+          </div>
+          <!-- Sam 14 — VIDE -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">14</div></div>
+          <!-- Dim 15 — VIDE -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">15</div></div>
+
+          <!-- ═══ Row 3 : Lun 16 → Dim 22 mars ═══ -->
+          <!-- Lun 16 — Intégration React continue -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">16</div>
+            <div class="month-event continues-right" style="background:#5eead4;color:rgba(0,0,0,.55);" onclick="showDetail('integration-react')">Intégr. React</div>
+          </div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);"><div class="month-day-num">17</div><div class="month-event continues-both" style="background:#5eead4;color:rgba(0,0,0,.55);"> </div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);"><div class="month-day-num">18</div><div class="month-event continues-both" style="background:#5eead4;color:rgba(0,0,0,.55);"> </div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);"><div class="month-day-num">19</div><div class="month-event continues-both" style="background:#5eead4;color:rgba(0,0,0,.55);"> </div></div>
+          <!-- Ven 20 — Intégration React se termine (deadline Sam 21 → ici) -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">20</div>
+            <div class="month-event continues-left" style="background:#5eead4;color:rgba(0,0,0,.55);" onclick="showDetail('integration-react')"> </div>
+            <div style="display:flex;align-items:center;gap:3px;padding:2px 5px;border-radius:3px;background:var(--success-bg);margin-top:3px;">
+              <div style="width:6px;height:6px;transform:rotate(45deg);background:var(--success);border-radius:1px;flex-shrink:0;"></div>
+              <span style="font-size:9px;font-weight:600;color:var(--success);">Intégr. React · 21 mars</span>
+            </div>
+          </div>
+          <!-- Sam 21 — VIDE -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">21</div></div>
+          <!-- Dim 22 — VIDE -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">22</div></div>
+
+          <!-- ═══ Row 4 : Lun 23 → Dim 29 mars ═══ -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);"><div class="month-day-num">23</div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);"><div class="month-day-num">24</div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);"><div class="month-day-num">25</div></div>
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);"><div class="month-day-num">26</div></div>
+          <!-- Ven 27 — milestone Tests API (deadline Sam 28 → ici) -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);">
+            <div class="month-day-num">27</div>
+            <div style="display:flex;align-items:center;gap:3px;padding:2px 5px;border-radius:3px;background:var(--warning-bg);margin-top:2px;">
+              <div style="width:6px;height:6px;transform:rotate(45deg);background:var(--warning);border-radius:1px;flex-shrink:0;"></div>
+              <span style="font-size:9px;font-weight:600;color:var(--warning);">Tests API · 28 mars</span>
+            </div>
+          </div>
+          <!-- Sam 28 — VIDE -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">28</div></div>
+          <!-- Dim 29 — VIDE -->
+          <div class="month-cell" style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="color:var(--text-secondary);">29</div></div>
+
+          <!-- ═══ Row 5 : Lun 30 → Dim 5 avr ═══ -->
+          <div class="month-cell" style="border-right:1px solid var(--border);"><div class="month-day-num">30</div></div>
+          <div class="month-cell" style="border-right:1px solid var(--border);"><div class="month-day-num">31</div></div>
+          <div class="month-cell" style="border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">1 avr.</div></div>
+          <div class="month-cell" style="border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">2</div></div>
+          <div class="month-cell" style="border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">3</div></div>
+          <div class="month-cell" style="border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">4</div></div>
+          <div class="month-cell" style="border-right:1px solid var(--border);background:var(--surface-raised);"><div class="month-day-num" style="font-size:10px;color:var(--text-secondary);">5</div></div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ÉQUIPE VIEW -->
+    <div class="main-view" id="view-equipe" style="display:none;">
+      <div style="min-width:700px;">
+
+        <!-- Sticky header -->
+        <div style="display:flex;position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:2px solid var(--border);">
+          <!-- Name col -->
+          <div style="width:170px;min-width:170px;padding:8px 14px;font-size:11px;font-weight:600;color:var(--text-secondary);border-right:1px solid var(--border);flex-shrink:0;">Consultant</div>
+          <!-- Day columns Mar 2–15 -->
+          <div style="flex:1;display:flex;">
+            <!-- Helper macro via inline styles per day -->
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">2</div><div style="font-size:9.5px;color:var(--text-secondary);">Lun</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">3</div><div style="font-size:9.5px;color:var(--text-secondary);">Mar</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">4</div><div style="font-size:9.5px;color:var(--text-secondary);">Mer</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">5</div><div style="font-size:9.5px;color:var(--text-secondary);">Jeu</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">6</div><div style="font-size:9.5px;color:var(--text-secondary);">Ven</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);background:var(--surface-raised);opacity:.5;"><div style="font-size:12px;font-weight:600;color:var(--text-secondary);">7</div><div style="font-size:9.5px;color:var(--text-secondary);">Sam</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);background:rgba(37,99,235,.06);"><div style="font-size:12px;font-weight:700;color:var(--primary);">8</div><div style="font-size:9px;font-weight:600;color:var(--primary);">Auj.</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">9</div><div style="font-size:9.5px;color:var(--text-secondary);">Lun</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">10</div><div style="font-size:9.5px;color:var(--text-secondary);">Mar</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">11</div><div style="font-size:9.5px;color:var(--text-secondary);">Mer</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">12</div><div style="font-size:9.5px;color:var(--text-secondary);">Jeu</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);"><div style="font-size:12px;font-weight:600;color:var(--text);">13</div><div style="font-size:9.5px;color:var(--text-secondary);">Ven</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-muted);background:var(--surface-raised);opacity:.5;"><div style="font-size:12px;font-weight:600;color:var(--text-secondary);">14</div><div style="font-size:9.5px;color:var(--text-secondary);">Sam</div></div>
+            <div style="flex:1;padding:6px 4px;text-align:center;background:var(--surface-raised);opacity:.5;"><div style="font-size:12px;font-weight:600;color:var(--text-secondary);">15</div><div style="font-size:9.5px;color:var(--text-secondary);">Dim</div></div>
+          </div>
+        </div>
+
+        <!-- Helper CSS for eq cells inline -->
+        <style>
+          .ec{flex:1;border-right:1px solid var(--border-muted);padding:5px 3px;min-height:68px;display:flex;flex-direction:column;gap:2px;}
+          .ec.we{background:var(--surface-raised);opacity:.4;}
+          .ec.td{background:rgba(37,99,235,.04);}
+          .eb{border-radius:3px;padding:2px 5px;font-size:9.5px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+          .eh{font-size:10px;font-weight:700;color:var(--text-secondary);text-align:center;margin-top:2px;}
+          .erow{display:flex;align-items:stretch;border-bottom:1px solid var(--border-muted);}
+          .ename{width:170px;min-width:170px;padding:12px 14px;border-right:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px;}
+        </style>
+
+        <!-- ── Sophie Leroux ── -->
+        <div class="erow">
+          <div class="ename">
+            <div style="width:30px;height:30px;border-radius:50%;background:#8B5CF6;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">SL</div>
+            <div><div style="font-size:12.5px;font-weight:600;color:var(--text);">Sophie L.</div><div style="font-size:10.5px;color:var(--text-muted);">Senior Dev</div></div>
+          </div>
+          <div style="flex:1;display:flex;">
+            <div class="ec"><div class="eb" style="background:#3b82f6;" onclick="showDetail('dev-frontend')">Dév. Frontend</div><div class="eh">7h</div></div>
+            <div class="ec"><div class="eb" style="background:#3b82f6;" onclick="showDetail('dev-frontend')">Dév. Frontend</div><div class="eh">7h</div></div>
+            <div class="ec"><div class="eb" style="background:#3b82f6;" onclick="showDetail('dev-frontend')">Dév. Frontend</div><div class="eh">6h</div></div>
+            <div class="ec"><div class="eb" style="background:#3b82f6;" onclick="showDetail('dev-frontend')">Dév. Frontend</div><div class="eh">7h</div></div>
+            <div class="ec"><div class="eb" style="background:#3b82f6;" onclick="showDetail('dev-frontend')">Dév. Frontend</div><div class="eh">7h</div></div>
+            <div class="ec we"></div>
+            <div class="ec td"><div class="eh" style="color:var(--primary);font-size:11px;margin-top:8px;">À saisir</div></div>
+            <div class="ec"><div class="eb" style="background:#5eead4;color:rgba(0,0,0,.55);" onclick="showDetail('integration-react')">Intégr. React</div></div>
+            <div class="ec"><div class="eb" style="background:#5eead4;color:rgba(0,0,0,.55);" onclick="showDetail('integration-react')">Intégr. React</div></div>
+            <div class="ec"><div class="eb" style="background:#5eead4;color:rgba(0,0,0,.55);" onclick="showDetail('integration-react')">Intégr. React</div></div>
+            <div class="ec"><div class="eb" style="background:#5eead4;color:rgba(0,0,0,.55);" onclick="showDetail('integration-react')">Intégr. React</div></div>
+            <div class="ec"><div class="eb" style="background:#5eead4;color:rgba(0,0,0,.55);" onclick="showDetail('integration-react')">Intégr. React</div></div>
+            <div class="ec we"></div>
+            <div class="ec we" style="border-right:none;"></div>
+          </div>
+        </div>
+
+        <!-- ── Marc Dubois ── -->
+        <div class="erow">
+          <div class="ename">
+            <div style="width:30px;height:30px;border-radius:50%;background:#F59E0B;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">MD</div>
+            <div><div style="font-size:12.5px;font-weight:600;color:var(--text);">Marc D.</div><div style="font-size:10.5px;color:var(--text-muted);">Consultant</div></div>
+          </div>
+          <div style="flex:1;display:flex;">
+            <div class="ec"><div class="eb" style="background:#14b8a6;" onclick="showDetail('design-maquettes')">Design Maq.</div><div class="eh">6h</div></div>
+            <div class="ec"><div class="eb" style="background:#14b8a6;" onclick="showDetail('design-maquettes')">Design Maq.</div><div class="eh">6h</div></div>
+            <div class="ec"><div class="eb" style="background:#14b8a6;" onclick="showDetail('design-maquettes')">Design Maq.</div><div class="eh">8h</div></div>
+            <div class="ec"><div class="eb" style="background:#14b8a6;" onclick="showDetail('design-maquettes')">Design Maq.</div><div class="eh">6h</div></div>
+            <div class="ec"><div class="eb" style="background:#14b8a6;" onclick="showDetail('design-maquettes')">Design Maq.</div><div class="eh">6h</div></div>
+            <div class="ec we"></div>
+            <div class="ec td"><div class="eh" style="color:var(--primary);font-size:11px;margin-top:8px;">À saisir</div></div>
+            <div class="ec"><div class="eb" style="background:#14b8a6;" onclick="showDetail('design-maquettes')">Design Maq.</div></div>
+            <div class="ec"><div class="eb" style="background:#14b8a6;" onclick="showDetail('design-maquettes')">Design Maq.</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div></div>
+            <div class="ec we"></div>
+            <div class="ec we" style="border-right:none;"></div>
+          </div>
+        </div>
+
+        <!-- ── Julie Chen ── -->
+        <div class="erow">
+          <div class="ename">
+            <div style="width:30px;height:30px;border-radius:50%;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">JC</div>
+            <div><div style="font-size:12.5px;font-weight:600;color:var(--text);">Julie C.</div><div style="font-size:10.5px;color:var(--text-muted);">Data Consultant</div></div>
+          </div>
+          <div style="flex:1;display:flex;">
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div><div class="eh">8h</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div><div class="eh">8h</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div><div class="eh">7h</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div><div class="eh">7h</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div><div class="eh">6h</div></div>
+            <div class="ec we"></div>
+            <div class="ec td"><div class="eh" style="color:var(--primary);font-size:11px;margin-top:8px;">À saisir</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div></div>
+            <div class="ec"><div class="eb" style="background:#6366f1;" onclick="showDetail('migration-donnees')">Migr. Données</div></div>
+            <div class="ec we"></div>
+            <div class="ec we" style="border-right:none;"></div>
+          </div>
+        </div>
+
+        <!-- ── Jonathan Braun ── -->
+        <div class="erow" style="border-bottom:none;">
+          <div class="ename">
+            <div style="width:30px;height:30px;border-radius:50%;background:#2563EB;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+            <div><div style="font-size:12.5px;font-weight:600;color:var(--text);">Jonathan B.</div><div style="font-size:10.5px;color:var(--text-muted);">PM / Senior</div></div>
+          </div>
+          <div style="flex:1;display:flex;">
+            <div class="ec" style="opacity:.25;background:var(--surface-raised);"><div class="eh">0h</div></div>
+            <div class="ec"><div class="eb" style="background:#60a5fa;" onclick="showDetail('design-ui')">Design UI</div><div class="eh">4h</div></div>
+            <div class="ec"><div class="eb" style="background:#60a5fa;" onclick="showDetail('design-ui')">Design UI</div><div class="eh">4h</div></div>
+            <div class="ec"><div class="eb" style="background:#60a5fa;" onclick="showDetail('design-ui')">Design UI</div><div class="eh">4h</div></div>
+            <div class="ec"><div class="eb" style="background:#60a5fa;" onclick="showDetail('design-ui')">Design UI</div><div class="eh">4h</div></div>
+            <div class="ec we"></div>
+            <div class="ec td"><div class="eh" style="color:var(--primary);font-size:11px;margin-top:8px;">À saisir</div></div>
+            <div class="ec" style="opacity:.2;background:var(--surface-raised);"></div>
+            <div class="ec" style="opacity:.2;background:var(--surface-raised);"></div>
+            <div class="ec" style="opacity:.2;background:var(--surface-raised);"></div>
+            <div class="ec" style="opacity:.2;background:var(--surface-raised);"></div>
+            <div class="ec" style="opacity:.2;background:var(--surface-raised);"></div>
+            <div class="ec we"></div>
+            <div class="ec we" style="border-right:none;"></div>
+          </div>
+        </div>
+
+        <!-- ── Footer: totaux par jour ── -->
+        <div style="display:flex;border-top:2px solid var(--border);background:var(--surface-raised);position:sticky;bottom:0;">
+          <div style="width:170px;min-width:170px;padding:8px 14px;font-size:11px;font-weight:700;color:var(--text-muted);border-right:1px solid var(--border);flex-shrink:0;">Total équipe</div>
+          <div style="flex:1;display:flex;">
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text);">25h</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text);">25h</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text);">25h</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text);">24h</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text);">23h</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);background:var(--surface-raised);opacity:.5;">—</div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);background:rgba(37,99,235,.06);"><span style="font-size:12px;font-weight:700;color:var(--primary);">?</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text-muted);">—</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text-muted);">—</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text-muted);">—</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text-muted);">—</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);"><span style="font-size:12px;font-weight:700;color:var(--text-muted);">—</span></div>
+            <div style="flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--border-muted);background:var(--surface-raised);opacity:.5;">—</div>
+            <div style="flex:1;padding:7px 3px;text-align:center;background:var(--surface-raised);opacity:.5;">—</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL — détail étape au clic -->
+    <div class="right-panel collapsed" id="right-panel">
+      <!-- Default state: hint -->
+      <div id="rp-hint" class="rp-section" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 20px;text-align:center;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary);"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="14" y1="8" x2="19" y2="8"/><line x1="14" y1="12" x2="19" y2="12"/><line x1="14" y1="16" x2="19" y2="16"/></svg>
+        <p style="font-size:12.5px;color:var(--text-muted);margin:0;">Cliquer sur une étape<br/>pour voir son détail</p>
+      </div>
+      <!-- Detail content (populated by JS) -->
+      <div id="rp-detail" style="display:none;">
+        <div class="rp-section" style="padding-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <span id="rp-project-badge" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1d4ed8;"></span>
+            <button onclick="closeDetail()" style="padding:4px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <!-- Stage header -->
+          <div id="rp-color-bar" style="width:4px;height:48px;border-radius:2px;float:left;margin-right:12px;"></div>
+          <div style="overflow:hidden;">
+            <div id="rp-stage-name" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;"></div>
+            <div id="rp-project-name" style="font-size:12px;color:var(--text-muted);"></div>
+          </div>
+          <div style="clear:both;margin-top:12px;">
+            <!-- Dates + consultant -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+              <div style="background:var(--surface-raised);border-radius:var(--r-sm);padding:8px 10px;">
+                <div style="font-size:10px;color:var(--text-secondary);text-transform:uppercase;font-weight:600;margin-bottom:2px;">Début</div>
+                <div id="rp-start" style="font-size:12.5px;font-weight:600;color:var(--text);"></div>
+              </div>
+              <div style="background:var(--surface-raised);border-radius:var(--r-sm);padding:8px 10px;">
+                <div style="font-size:10px;color:var(--text-secondary);text-transform:uppercase;font-weight:600;margin-bottom:2px;">Deadline</div>
+                <div id="rp-end" style="font-size:12.5px;font-weight:600;"></div>
+              </div>
+            </div>
+            <!-- Progress -->
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;color:var(--text-muted);">Progression</span><span id="rp-pct" style="font-size:12px;font-weight:700;color:var(--text);"></span></div>
+              <div style="height:7px;border-radius:9999px;background:var(--border);overflow:hidden;"><div id="rp-progress-fill" style="height:100%;border-radius:9999px;transition:width .3s;"></div></div>
+              <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text-muted);"><span id="rp-hours-done"></span><span id="rp-hours-total"></span></div>
+            </div>
+            <!-- Consultant -->
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-raised);border-radius:var(--r-md);">
+              <div id="rp-av" style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;"></div>
+              <div><div id="rp-consultant" style="font-size:12.5px;font-weight:600;color:var(--text);"></div><div style="font-size:11px;color:var(--text-muted);">Consultant assigné</div></div>
+            </div>
+          </div>
+        </div>
+        <!-- Activités de cette étape -->
+        <div class="rp-section">
+          <div class="rp-title">Activités loguées</div>
+          <div id="rp-activities"></div>
+        </div>
+        <!-- Actions -->
+        <div class="rp-section" style="border-bottom:none;display:flex;flex-direction:column;gap:8px;">
+          <a href="#" style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--primary);font-weight:500;text-decoration:none;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>Voir le projet complet
+          </a>
+          <a href="#" style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--primary);font-weight:500;text-decoration:none;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Saisir une activité
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end cal-body -->
+</div><!-- end content-area -->
+
+<script>
+  // ── Stage data ──────────────────────────────────────────────────
+  const STAGES = {
+    'dev-frontend': {
+      name:'Développement Frontend', project:'Dashboard RH Analytics', color:'#3b82f6',
+      start:'1 mars', end:'7 mars', endColor:'var(--danger)',
+      pct:75, hoursDone:42, hoursTotal:56,
+      consultant:'Sophie Leroux', avBg:'#8B5CF6', avInitials:'SL',
+      activities:[
+        {date:'ven. 6/03', desc:'Intégration React / composants UI', hours:'7h'},
+        {date:'jeu. 5/03', desc:'Développement composants Dashboard', hours:'6h'},
+        {date:'mer. 4/03', desc:'UI composants dashboard', hours:'6h'},
+        {date:'mar. 3/03', desc:'Setup architecture front', hours:'7h'},
+        {date:'lun. 2/03', desc:'Kickoff + environnement', hours:'7h'},
+      ]
+    },
+    'tests-unitaires': {
+      name:'Tests unitaires', project:'Dashboard RH Analytics', color:'#60a5fa',
+      start:'8 mars', end:'12 mars', endColor:'var(--text-muted)',
+      pct:0, hoursDone:0, hoursTotal:24,
+      consultant:'Sophie Leroux', avBg:'#8B5CF6', avInitials:'SL',
+      activities:[]
+    },
+    'design-ui': {
+      name:'Design UI', project:'Dashboard RH Analytics', color:'#93c5fd',
+      start:'3 mars', end:'10 mars', endColor:'var(--warning)',
+      pct:50, hoursDone:12, hoursTotal:24,
+      consultant:'Marc Dubois', avBg:'#F59E0B', avInitials:'MD',
+      activities:[
+        {date:'ven. 6/03', desc:'Maquettes composants dashboard', hours:'4h'},
+        {date:'jeu. 5/03', desc:'Wireframes + validation client', hours:'4h'},
+        {date:'mer. 4/03', desc:'Système de design', hours:'4h'},
+      ]
+    },
+    'migration-donnees': {
+      name:'Migration Données', project:'Migration Cloud', color:'#6366f1',
+      start:'1 mars', end:'15 mars', endColor:'var(--success)',
+      pct:60, hoursDone:84, hoursTotal:140,
+      consultant:'Julie Chen + Marc Dubois', avBg:'#10B981', avInitials:'JC',
+      activities:[
+        {date:'ven. 6/03', desc:'Validation intégrité données', hours:'7h'},
+        {date:'jeu. 5/03', desc:'Scripts migration ETL', hours:'7h'},
+        {date:'mer. 4/03', desc:'Scripts migration ETL', hours:'8h'},
+        {date:'mar. 3/03', desc:'Mapping sources', hours:'7h'},
+        {date:'lun. 2/03', desc:'Audit base existante', hours:'8h'},
+      ]
+    },
+    'design-maquettes': {
+      name:'Design Maquettes', project:'Refonte Site Web', color:'#14b8a6',
+      start:'1 mars', end:'14 mars', endColor:'var(--warning)',
+      pct:50, hoursDone:28, hoursTotal:56,
+      consultant:'Marc Dubois', avBg:'#F59E0B', avInitials:'MD',
+      activities:[
+        {date:'ven. 6/03', desc:'Maquettes pages produit', hours:'6h'},
+        {date:'mer. 4/03', desc:'Design système graphique', hours:'6h'},
+        {date:'lun. 2/03', desc:'Analyse brief client', hours:'6h'},
+      ]
+    },
+    'integration-react': {
+      name:'Intégration React', project:'Refonte Site Web', color:'#14b8a6',
+      start:'8 mars', end:'21 mars', endColor:'var(--text-muted)',
+      pct:0, hoursDone:0, hoursTotal:80,
+      consultant:'Sophie Leroux', avBg:'#8B5CF6', avInitials:'SL',
+      activities:[]
+    }
+  };
+
+  // ── Show stage detail in right panel ────────────────────────────
+  function showDetail(id) {
+    const s = STAGES[id]; if(!s) return;
+    // Highlight active Détail button
+    const btn = document.getElementById('btn-right-panel');
+    btn.style.background = 'var(--primary-10)';
+    btn.style.color = 'var(--primary)';
+    btn.style.borderColor = 'rgba(37,99,235,.25)';
+    // Open panel
+    document.getElementById('right-panel').classList.remove('collapsed');
+    document.getElementById('rp-hint').style.display = 'none';
+    document.getElementById('rp-detail').style.display = 'block';
+    // Populate
+    document.getElementById('rp-project-badge').textContent = s.project;
+    document.getElementById('rp-color-bar').style.background = s.color;
+    document.getElementById('rp-stage-name').textContent = s.name;
+    document.getElementById('rp-project-name').textContent = s.project;
+    document.getElementById('rp-start').textContent = s.start;
+    document.getElementById('rp-end').textContent = s.end;
+    document.getElementById('rp-end').style.color = s.endColor;
+    document.getElementById('rp-pct').textContent = s.pct + '%';
+    document.getElementById('rp-progress-fill').style.width = s.pct + '%';
+    document.getElementById('rp-progress-fill').style.background = s.color;
+    document.getElementById('rp-hours-done').textContent = s.hoursDone + 'h loguées';
+    document.getElementById('rp-hours-total').textContent = s.hoursTotal + 'h prévues';
+    document.getElementById('rp-av').style.background = s.avBg;
+    document.getElementById('rp-av').textContent = s.avInitials;
+    document.getElementById('rp-consultant').textContent = s.consultant;
+    // Activities
+    const acts = document.getElementById('rp-activities');
+    if(s.activities.length === 0){
+      acts.innerHTML = '<p style="font-size:12px;color:var(--text-muted);font-style:italic;">Aucune activité loguée</p>';
+    } else {
+      acts.innerHTML = s.activities.map(a=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-muted);">
+          <div style="font-size:11px;color:var(--text-muted);width:56px;flex-shrink:0;">${a.date}</div>
+          <div style="flex:1;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.desc}</div>
+          <span style="font-size:12.5px;font-weight:700;color:var(--text);flex-shrink:0;">${a.hours}</span>
+        </div>`).join('');
+    }
+  }
+
+  function closeDetail() {
+    document.getElementById('rp-hint').style.display = 'flex';
+    document.getElementById('rp-detail').style.display = 'none';
+    const btn = document.getElementById('btn-right-panel');
+    btn.style.background = 'var(--surface)'; btn.style.color = 'var(--text-muted)'; btn.style.borderColor = 'var(--border)';
+  }
+
+  // ── View switching ───────────────────────────────────────────────
+  function showView(v){
+    document.getElementById('view-timeline').style.display = v==='timeline' ? 'block' : 'none';
+    document.getElementById('view-mois').style.display = v==='mois' ? 'block' : 'none';
+    document.getElementById('view-equipe').style.display = v==='equipe' ? 'block' : 'none';
+    document.getElementById('btn-tl').classList.toggle('active', v==='timeline');
+    document.getElementById('btn-mo').classList.toggle('active', v==='mois');
+    document.getElementById('btn-eq').classList.toggle('active', v==='equipe');
+  }
+
+  function toggleRight(){
+    const p = document.getElementById('right-panel');
+    const isOpen = !p.classList.contains('collapsed');
+    if(isOpen){ p.classList.add('collapsed'); closeDetail(); }
+    else { p.classList.remove('collapsed'); }
+  }
+
+  // ── Timeline day headers ─────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim','Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+    const nums = [2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+    const h = document.getElementById('tl-days-header');
+    if(h) nums.forEach((n,i)=>{
+      const isToday = n===9, isWeekend = days[i]==='Sam'||days[i]==='Dim';
+      const d = document.createElement('div');
+      d.className = 'tl-day'+(isToday?' today-col':'');
+      d.style.opacity = isWeekend&&!isToday ? '.4' : '1';
+      d.innerHTML = `<div class="tl-day-num">${n}</div><div class="tl-day-name">${days[i]}</div>`;
+      h.appendChild(d);
+    });
+  });
+
+  function toggleTheme(){
+    document.documentElement.classList.toggle('dark');
+    const i=document.getElementById('theme-icon');
+    if(document.documentElement.classList.contains('dark')){i.innerHTML='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';}
+    else{i.innerHTML='<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';}
+  }
+</script>
+</body>
+</html>

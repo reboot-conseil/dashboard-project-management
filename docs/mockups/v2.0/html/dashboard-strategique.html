@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PM Dashboard — Vue Stratégique</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#F5F7FA;--surface:#FFFFFF;--surface-raised:#F0F3F8;
+      --primary:#2563EB;--primary-10:rgba(37,99,235,.10);
+      --border:#E4E8EF;--border-muted:#EFF2F6;
+      --text:#0F172A;--text-muted:#5a6a7a;--text-secondary:#94A3B8;
+      --success:#15803d;--success-bg:#dcfce7;
+      --warning:#b45309;--warning-bg:#fef3c7;
+      --danger:#b91c1c;--danger-bg:#fee2e2;
+      --r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;
+    }
+    html.dark{
+      --bg:#0C0E14;--surface:#161920;--surface-raised:#1E2130;
+      --primary-10:rgba(37,99,235,.15);
+      --border:#252A3A;--border-muted:#1E2130;
+      --text:#F1F5F9;--text-muted:#94A3B8;--text-secondary:#475569;
+      --success-bg:rgba(21,128,61,.18);--warning-bg:rgba(180,83,9,.18);--danger-bg:rgba(185,28,28,.18);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;margin:0;display:flex;height:100vh;overflow:hidden;}
+
+    .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);font-size:13.5px;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .12s;}
+    .nav-item:hover{background:var(--surface-raised);color:var(--text);}
+    .nav-item.active{background:var(--primary-10);color:var(--primary);border-left:2px solid var(--primary);padding-left:8px;}
+    .nav-item svg{width:17px;height:17px;flex-shrink:0;}
+    .nav-sep{height:1px;background:var(--border-muted);margin:5px 0;}
+
+    .main{flex:1;overflow-y:auto;padding:18px 22px 24px;display:flex;flex-direction:column;gap:14px;}
+
+    .view-tab{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-md);font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .12s;border:none;background:none;font-family:inherit;}
+    .view-tab.active{background:var(--primary-10);color:var(--primary);}
+    .view-tab:hover:not(.active){background:var(--surface-raised);color:var(--text);}
+
+    .ppill{padding:5px 13px;border-radius:20px;font-size:12.5px;font-weight:500;color:var(--text-muted);cursor:pointer;border:1px solid transparent;transition:all .12s;background:none;font-family:inherit;}
+    .ppill.active{background:var(--primary-10);color:var(--primary);border-color:rgba(37,99,235,.2);font-weight:600;}
+    .ppill:hover:not(.active){background:var(--surface-raised);color:var(--text);}
+
+    /* KPI */
+    .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px 20px 16px;position:relative;transition:box-shadow .15s,transform .15s;}
+    .kpi:hover{box-shadow:0 6px 20px rgba(0,0,0,.08);transform:translateY(-1px);}
+    .kpi-hero{background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 70%,#1e40af 100%);border:none;}
+    .kpi-hero:hover{box-shadow:0 6px 24px rgba(37,99,235,.35)!important;}
+    .kpi-expand{position:absolute;top:14px;right:14px;opacity:0;transition:opacity .15s;}
+    .kpi:hover .kpi-expand{opacity:.5;}
+
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--r-sm);font-size:11.5px;font-weight:600;}
+    .badge-success{background:var(--success-bg);color:var(--success);}
+    .badge-warning{background:var(--warning-bg);color:var(--warning);}
+    .badge-danger{background:var(--danger-bg);color:var(--danger);}
+
+    .section-hdr{font-size:12.5px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:12px;}
+    .section-hdr .cnt{font-size:11px;font-weight:500;background:var(--surface-raised);color:var(--text-muted);padding:1px 7px;border-radius:20px;}
+
+    /* Portfolio health tiles */
+    .health-tile{border-radius:var(--r-lg);padding:14px 16px;position:relative;overflow:hidden;cursor:default;transition:transform .15s,box-shadow .15s;}
+    .health-tile:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1);}
+    .health-bar{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;}
+
+    /* Progress bars */
+    .pbar{height:6px;border-radius:9999px;background:var(--border);overflow:hidden;}
+    .pfill{height:100%;border-radius:9999px;}
+
+    /* Monthly bars — CSS only */
+    .month-bars{display:flex;align-items:flex-end;gap:5px;height:100px;}
+    .mbar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+    .mbar{width:100%;border-radius:4px 4px 0 0;transition:opacity .15s;}
+    .mbar:hover{opacity:.85 !important;}
+
+    /* Donut — CSS conic-gradient */
+    .donut{width:120px;height:120px;border-radius:50%;flex-shrink:0;}
+
+    /* Risk table */
+    .risk-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-muted);}
+    .risk-row:last-child{border-bottom:none;}
+
+    /* Occupation bars per consultant */
+    .occ-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+    .occ-row:last-child{margin-bottom:0;}
+
+    /* Deadline grid (same as PM v4) */
+    .dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+    .dl-cell{background:var(--surface-raised);border-radius:var(--r-md);padding:9px 11px;}
+    .dl-row{display:flex;align-items:baseline;justify-content:space-between;gap:6px;}
+
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
+    .chart-hdr{padding:16px 20px 14px;display:flex;align-items:center;justify-content:space-between;}
+    .legend-item{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text-muted);}
+    .ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+    ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div style="padding:13px 14px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div style="width:30px;height:30px;border-radius:8px;background:#2563EB;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <span style="font-size:13.5px;font-weight:600;color:var(--text);">PM Dashboard</span>
+    </div>
+    <button title="Passer en barre horizontale" style="padding:5px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3M12 8l4 4-4 4"/></svg>
+    </button>
+  </div>
+  <nav style="flex:1;padding:10px 10px 0;display:flex;flex-direction:column;gap:2px;overflow-y:auto;">
+    <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Consultants</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Projets</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Activités</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendrier</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documents</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Paramètres</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Utilisateurs</a>
+    <div class="nav-sep" style="margin-top:auto;"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-md);background:var(--surface-raised);border:1px solid var(--border-muted);cursor:text;margin-bottom:2px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span style="font-size:12px;flex:1;color:var(--text-muted);">Rechercher...</span>
+      <span style="font-size:10px;color:var(--text-secondary);">⌘K</span>
+    </div>
+  </nav>
+  <div style="padding:8px 10px 10px;border-top:1px solid var(--border-muted);flex-shrink:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 6px;">
+      <span style="font-size:11px;color:var(--text-secondary);">v1.0</span>
+      <div style="display:flex;gap:2px;">
+        <button onclick="toggleTheme()" style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);"><svg id="theme-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+        <button style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7M18 19l-7-7 7-7"/></svg></button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--r-md);cursor:pointer;transition:background .12s;" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+      <div style="flex:1;min-width:0;"><p style="font-size:12.5px;font-weight:600;color:var(--text);margin:0;">Jonathan Braun</p><p style="font-size:11px;color:var(--text-muted);margin:0;">Admin · Reboot Conseil</p></div>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- VIEW TABS + PERIOD FILTER -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:3px;">
+      <button class="view-tab" onclick="switchView(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Opérationnel</button>
+      <button class="view-tab" onclick="switchView(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Consultants</button>
+      <button class="view-tab active" onclick="switchView(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Stratégique</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:3px 4px;">
+      <button class="ppill" onclick="setPeriod(this)">Mois</button>
+      <button class="ppill" onclick="setPeriod(this)">Trimestre</button>
+      <button class="ppill active" onclick="setPeriod(this)">Année</button>
+      <button class="ppill" onclick="setPeriod(this)">Personnalisé</button>
+    </div>
+  </div>
+
+  <!-- HERO HEADLINE — CA Annuel (Ledgerix style) -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px 28px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);margin-bottom:6px;">Chiffre d'affaires — 2026</div>
+        <div style="font-size:3.2rem;font-weight:800;color:var(--text);line-height:1;letter-spacing:-2px;">248.4k€</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+          <span style="font-size:13px;font-weight:600;color:var(--success);">↑ +18.3%</span>
+          <span style="font-size:12.5px;color:var(--text-muted);">vs 2025 (209.9k€)</span>
+          <span style="padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--success-bg);color:var(--success);">Objectif atteint</span>
+        </div>
+      </div>
+      <!-- 3 micro stats à droite -->
+      <div style="display:flex;gap:24px;flex-shrink:0;">
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Marge nette</div>
+          <div style="font-size:1.6rem;font-weight:800;color:var(--success);">38.2%</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Heures facturées</div>
+          <div style="font-size:1.6rem;font-weight:800;color:var(--text);">3 248h</div>
+        </div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Taux utilisation</div>
+          <div style="font-size:1.6rem;font-weight:800;color:var(--primary);">78%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:13px;">
+    <div class="kpi kpi-hero" style="min-height:130px;">
+      <div class="kpi-expand"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.7);"></div><span style="font-size:12px;font-weight:500;color:rgba(255,255,255,.85);">CA ce mois</span><div style="position:absolute;top:16px;right:16px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>
+      <div style="font-size:2.2rem;font-weight:800;color:white;line-height:1;letter-spacing:-1px;">42.3k€</div>
+      <div style="font-size:11.5px;color:rgba(255,255,255,.6);margin-top:5px;">Mars 2026</div>
+      <div style="margin-top:12px;text-align:right;"><div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.9);">↑ +12%</div><div style="font-size:11px;color:rgba(255,255,255,.5);">vs mars 2025</div></div>
+    </div>
+    <div class="kpi" style="min-height:130px;">
+      <div class="kpi-expand" style="color:var(--text-muted);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+      <div style="position:absolute;top:16px;right:16px;color:var(--text-secondary);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div><span style="font-size:12px;font-weight:500;color:var(--text-muted);">Marge moyenne</span></div>
+      <div style="font-size:2.2rem;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px;">38.2%</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-top:5px;">Objectif 35%</div>
+      <div style="margin-top:12px;text-align:right;"><div style="font-size:13px;font-weight:600;color:var(--success);">✓ +3.2pts</div><div style="font-size:11px;color:var(--text-secondary);">au-dessus objectif</div></div>
+    </div>
+    <div class="kpi" style="min-height:130px;">
+      <div class="kpi-expand" style="color:var(--text-muted);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+      <div style="position:absolute;top:16px;right:16px;color:var(--text-secondary);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#6366f1;"></div><span style="font-size:12px;font-weight:500;color:var(--text-muted);">Heures facturées</span></div>
+      <div style="font-size:2.2rem;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px;">3 248h</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-top:5px;">Taux fact. 94%</div>
+      <div style="margin-top:12px;text-align:right;"><div style="font-size:13px;font-weight:600;color:var(--success);">↑ +342h</div><div style="font-size:11px;color:var(--text-secondary);">vs 2025</div></div>
+    </div>
+    <div class="kpi" style="min-height:130px;">
+      <div class="kpi-expand" style="color:var(--text-muted);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+      <div style="position:absolute;top:16px;right:16px;color:var(--text-secondary);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></div><span style="font-size:12px;font-weight:500;color:var(--text-muted);">Taux utilisation</span></div>
+      <div style="font-size:2.2rem;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px;">78%</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-top:5px;">4 consultants actifs</div>
+      <div style="margin-top:12px;">
+        <div style="height:6px;border-radius:9999px;background:var(--border);overflow:hidden;"><div style="height:100%;border-radius:9999px;width:78%;background:#f59e0b;"></div></div>
+        <div style="font-size:10.5px;color:var(--text-secondary);text-align:right;margin-top:3px;">Objectif 80%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PORTFOLIO HEALTH MATRIX + CA PAR CLIENT -->
+  <div style="display:grid;grid-template-columns:3fr 2fr;gap:14px;">
+
+    <!-- Portfolio health -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;">
+      <div class="section-hdr">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        Portfolio — Santé des projets
+        <span class="cnt">3 projets</span>
+        <div style="display:flex;align-items:center;gap:12px;margin-left:auto;font-size:11px;color:var(--text-secondary);">
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--success-bg);border:1px solid var(--success);display:inline-block;"></span>Sain</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--warning-bg);border:1px solid var(--warning);display:inline-block;"></span>Attention</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--danger-bg);border:1px solid var(--danger);display:inline-block;"></span>Dérive</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+
+        <!-- Dashboard RH — Dérive (rouge) -->
+        <div class="health-tile" style="background:var(--danger-bg);border:1px solid rgba(185,28,28,.2);">
+          <div class="health-bar" style="background:var(--danger);"></div>
+          <div style="padding-left:8px;">
+            <div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:2px;">Dashboard RH</div>
+            <div style="font-size:10.5px;color:var(--danger);opacity:.75;margin-bottom:8px;">Optima Group</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span style="color:var(--danger);">Budget</span><span style="font-weight:700;color:var(--danger);">97.5%</span></div>
+            <div style="height:5px;border-radius:9999px;background:rgba(185,28,28,.2);overflow:hidden;margin-bottom:6px;"><div style="height:100%;border-radius:9999px;width:97.5%;background:var(--danger);"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge badge-danger" style="font-size:10px;padding:1px 6px;">Dérive</span>
+              <span style="font-size:11px;font-weight:700;color:var(--danger);">Marge −22.8%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Migration Cloud — OK (vert) -->
+        <div class="health-tile" style="background:var(--success-bg);border:1px solid rgba(21,128,61,.2);">
+          <div class="health-bar" style="background:var(--success);"></div>
+          <div style="padding-left:8px;">
+            <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:2px;">Migration Cloud</div>
+            <div style="font-size:10.5px;color:var(--success);opacity:.75;margin-bottom:8px;">TechFlow Industries</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span style="color:var(--success);">Budget</span><span style="font-weight:700;color:var(--success);">74%</span></div>
+            <div style="height:5px;border-radius:9999px;background:rgba(21,128,61,.2);overflow:hidden;margin-bottom:6px;"><div style="height:100%;border-radius:9999px;width:74%;background:var(--success);"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge badge-success" style="font-size:10px;padding:1px 6px;">On track</span>
+              <span style="font-size:11px;font-weight:700;color:var(--success);">Marge 38.4%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Refonte Site Web — Attention (orange) -->
+        <div class="health-tile" style="background:var(--warning-bg);border:1px solid rgba(180,83,9,.2);">
+          <div class="health-bar" style="background:var(--warning);"></div>
+          <div style="padding-left:8px;">
+            <div style="font-size:12px;font-weight:700;color:var(--warning);margin-bottom:2px;">Refonte Site Web</div>
+            <div style="font-size:10.5px;color:var(--warning);opacity:.75;margin-bottom:8px;">Eco Green Solutions</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span style="color:var(--warning);">Budget</span><span style="font-weight:700;color:var(--warning);">76.5%</span></div>
+            <div style="height:5px;border-radius:9999px;background:rgba(180,83,9,.2);overflow:hidden;margin-bottom:6px;"><div style="height:100%;border-radius:9999px;width:76.5%;background:var(--warning);"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge badge-warning" style="font-size:10px;padding:1px 6px;">Attention</span>
+              <span style="font-size:11px;font-weight:700;color:var(--warning);">Marge 41.2%</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CA par client (donut CSS) -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;">
+      <div class="section-hdr">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        CA par client — 2026
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;">
+        <!-- Donut via conic-gradient -->
+        <div style="position:relative;width:110px;height:110px;flex-shrink:0;">
+          <div style="width:110px;height:110px;border-radius:50%;background:conic-gradient(#3b82f6 0% 42%, #14b8a6 42% 72%, #6366f1 72% 100%);"></div>
+          <div style="position:absolute;inset:18px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:var(--text);">3 clients</span>
+          </div>
+        </div>
+        <!-- Legend -->
+        <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+              <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:3px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:12px;font-weight:500;color:var(--text);">Optima Group</span></div>
+              <span style="font-size:12.5px;font-weight:700;color:var(--text);">104.3k€</span>
+            </div>
+            <div style="height:5px;border-radius:9999px;background:var(--border);overflow:hidden;"><div style="height:100%;border-radius:9999px;width:42%;background:#3b82f6;"></div></div>
+            <div style="font-size:10.5px;color:var(--text-secondary);text-align:right;margin-top:1px;">42%</div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+              <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:3px;background:#14b8a6;flex-shrink:0;"></div><span style="font-size:12px;font-weight:500;color:var(--text);">Eco Green</span></div>
+              <span style="font-size:12.5px;font-weight:700;color:var(--text);">74.5k€</span>
+            </div>
+            <div style="height:5px;border-radius:9999px;background:var(--border);overflow:hidden;"><div style="height:100%;border-radius:9999px;width:30%;background:#14b8a6;"></div></div>
+            <div style="font-size:10.5px;color:var(--text-secondary);text-align:right;margin-top:1px;">30%</div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+              <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:3px;background:#6366f1;flex-shrink:0;"></div><span style="font-size:12px;font-weight:500;color:var(--text);">TechFlow</span></div>
+              <span style="font-size:12.5px;font-weight:700;color:var(--text);">69.6k€</span>
+            </div>
+            <div style="height:5px;border-radius:9999px;background:var(--border);overflow:hidden;"><div style="height:100%;border-radius:9999px;width:28%;background:#6366f1;"></div></div>
+            <div style="font-size:10.5px;color:var(--text-secondary);text-align:right;margin-top:1px;">28%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TENDANCES + OCCUPATION ÉQUIPE -->
+  <div style="display:grid;grid-template-columns:3fr 2fr;gap:14px;">
+
+    <!-- Tendances CA 12 mois (CSS bars) -->
+    <div class="chart-card">
+      <div class="chart-hdr">
+        <div style="font-size:12.5px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>Tendances CA & Marge — 12 mois</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="legend-item"><div class="ldot" style="background:#2563EB;"></div>CA</div>
+          <div class="legend-item"><div class="ldot" style="background:#10B981;"></div>Marge</div>
+        </div>
+      </div>
+      <div style="padding:0 20px 16px;">
+        <div style="display:flex;align-items:flex-end;gap:4px;height:110px;position:relative;">
+          <!-- Horizontal reference line -->
+          <div style="position:absolute;left:0;right:0;top:18px;border-top:1px dashed var(--border-muted);"><span style="position:absolute;right:0;top:-12px;font-size:9px;color:var(--text-secondary);">obj. 25k€</span></div>
+          <!-- 12 months: each month has 2 bars (CA + Marge), grouped -->
+          <!-- Data: CA (k€): 16,18,14,20,22,19,24,26,28,30,42,14 Marge%→bars at 35% of CA -->
+          <!-- Bar heights: CA max=42→100px. Heights: 38,43,33,48,52,45,57,62,67,71,100,33 -->
+          <!-- Marge = ~38% of CA height -->
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:38px;background:#2563EB;opacity:.7;"></div><div class="mbar" style="flex:2;height:15px;background:#10B981;opacity:.7;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">avr.</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:43px;background:#2563EB;opacity:.72;"></div><div class="mbar" style="flex:2;height:17px;background:#10B981;opacity:.72;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">mai</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:33px;background:#2563EB;opacity:.68;"></div><div class="mbar" style="flex:2;height:13px;background:#10B981;opacity:.68;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">juin</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:48px;background:#2563EB;opacity:.74;"></div><div class="mbar" style="flex:2;height:19px;background:#10B981;opacity:.74;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">juil.</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:52px;background:#2563EB;opacity:.76;"></div><div class="mbar" style="flex:2;height:20px;background:#10B981;opacity:.76;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">août</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:45px;background:#2563EB;opacity:.73;"></div><div class="mbar" style="flex:2;height:17px;background:#10B981;opacity:.73;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">sept.</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:57px;background:#2563EB;opacity:.79;"></div><div class="mbar" style="flex:2;height:22px;background:#10B981;opacity:.79;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">oct.</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:62px;background:#2563EB;opacity:.81;"></div><div class="mbar" style="flex:2;height:24px;background:#10B981;opacity:.81;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">nov.</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:67px;background:#2563EB;opacity:.83;"></div><div class="mbar" style="flex:2;height:26px;background:#10B981;opacity:.83;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">déc.</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:71px;background:#2563EB;opacity:.85;"></div><div class="mbar" style="flex:2;height:27px;background:#10B981;opacity:.85;"></div></div><span style="font-size:8.5px;color:var(--text-secondary);white-space:nowrap;">janv.</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:100px;background:#2563EB;opacity:.92;"></div><div class="mbar" style="flex:2;height:38px;background:#10B981;opacity:.92;"></div></div><span style="font-size:8.5px;font-weight:700;color:var(--primary);white-space:nowrap;">févr.</span></div>
+          <div class="mbar-wrap"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;"><div class="mbar" style="flex:3;height:33px;background:#2563EB;border:2px solid #1D4ED8;opacity:1;"></div><div class="mbar" style="flex:2;height:13px;background:#10B981;border:2px solid #059669;opacity:1;"></div></div><span style="font-size:8.5px;font-weight:700;color:var(--primary);white-space:nowrap;">mars</span></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-muted);">
+          <div style="text-align:center;"><div style="font-size:10.5px;color:var(--text-muted);">Moy. mensuelle CA</div><div style="font-size:14px;font-weight:700;color:var(--text);">20.7k€</div></div>
+          <div style="text-align:center;"><div style="font-size:10.5px;color:var(--text-muted);">Mois record</div><div style="font-size:14px;font-weight:700;color:var(--primary);">Février 42.3k€</div></div>
+          <div style="text-align:center;"><div style="font-size:10.5px;color:var(--text-muted);">Croissance annuelle</div><div style="font-size:14px;font-weight:700;color:var(--success);">+18.3%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Occupation équipe par consultant -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;">
+      <div class="section-hdr">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Occupation équipe — 2026
+      </div>
+      <div>
+        <!-- Objective line label -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:6px;"><span style="font-size:10.5px;color:var(--text-secondary);">Objectif 80%</span></div>
+
+        <div class="occ-row">
+          <div style="width:26px;height:26px;border-radius:50%;background:#8B5CF6;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">SL</div>
+          <div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;font-weight:600;color:var(--text);">Sophie Leroux</span><span style="font-size:12px;font-weight:700;color:var(--text);">88%</span></div>
+          <div style="height:7px;border-radius:9999px;background:var(--border);overflow:hidden;position:relative;"><div style="height:100%;border-radius:9999px;width:88%;background:#8B5CF6;"></div><div style="position:absolute;top:0;bottom:0;left:80%;width:1px;background:var(--text-secondary);"></div></div></div>
+        </div>
+
+        <div class="occ-row">
+          <div style="width:26px;height:26px;border-radius:50%;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">JC</div>
+          <div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;font-weight:600;color:var(--text);">Julie Chen</span><span style="font-size:12px;font-weight:700;color:var(--text);">82%</span></div>
+          <div style="height:7px;border-radius:9999px;background:var(--border);overflow:hidden;position:relative;"><div style="height:100%;border-radius:9999px;width:82%;background:#10B981;"></div><div style="position:absolute;top:0;bottom:0;left:80%;width:1px;background:var(--text-secondary);"></div></div></div>
+        </div>
+
+        <div class="occ-row">
+          <div style="width:26px;height:26px;border-radius:50%;background:#F59E0B;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">MD</div>
+          <div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;font-weight:600;color:var(--text);">Marc Dubois</span><span style="font-size:12px;font-weight:700;color:var(--warning);">68%</span></div>
+          <div style="height:7px;border-radius:9999px;background:var(--border);overflow:hidden;position:relative;"><div style="height:100%;border-radius:9999px;width:68%;background:#F59E0B;"></div><div style="position:absolute;top:0;bottom:0;left:80%;width:1px;background:var(--text-secondary);"></div></div></div>
+        </div>
+
+        <div class="occ-row">
+          <div style="width:26px;height:26px;border-radius:50%;background:#2563EB;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+          <div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;font-weight:600;color:var(--text);">Jonathan Braun</span><span style="font-size:12px;font-weight:700;color:var(--text);">74%</span></div>
+          <div style="height:7px;border-radius:9999px;background:var(--border);overflow:hidden;position:relative;"><div style="height:100%;border-radius:9999px;width:74%;background:#2563EB;"></div><div style="position:absolute;top:0;bottom:0;left:80%;width:1px;background:var(--text-secondary);"></div></div></div>
+        </div>
+
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-muted);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;color:var(--text-muted);">Moyenne équipe</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:15px;font-weight:800;color:var(--text);">78%</span>
+            <span style="font-size:11px;color:var(--warning);">↓ −2pts vs objectif</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJETS À RISQUE (table compacte) -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;margin-bottom:4px;">
+    <div class="section-hdr">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Projets nécessitant attention
+      <span class="cnt">2</span>
+      <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);font-weight:400;">Marge &lt; 40% ou budget &gt; 85%</span>
+    </div>
+    <!-- Table header -->
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:12px;padding:6px 0;border-bottom:1px solid var(--border-muted);margin-bottom:4px;">
+      <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Projet</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Client</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;text-align:right;">Marge</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;text-align:right;">Budget</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;text-align:center;">Statut</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;text-align:center;">Action</span>
+    </div>
+    <div class="risk-row">
+      <div style="display:flex;align-items:center;gap:7px;"><div style="width:10px;height:10px;border-radius:3px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:13px;font-weight:600;color:var(--text);">Dashboard RH Analytics</span></div>
+      <span style="font-size:12.5px;color:var(--text-muted);">Optima Group</span>
+      <span style="font-size:13px;font-weight:700;color:var(--danger);text-align:right;display:block;">−22.8%</span>
+      <span style="font-size:13px;font-weight:700;color:var(--warning);text-align:right;display:block;">97.5%</span>
+      <div style="text-align:center;"><span class="badge badge-danger">Dérive</span></div>
+      <div style="text-align:center;"><a href="#" style="font-size:12px;color:var(--primary);font-weight:500;text-decoration:none;">Voir ↗</a></div>
+    </div>
+    <div class="risk-row">
+      <div style="display:flex;align-items:center;gap:7px;"><div style="width:10px;height:10px;border-radius:3px;background:#14b8a6;flex-shrink:0;"></div><span style="font-size:13px;font-weight:600;color:var(--text);">Refonte Site Web</span></div>
+      <span style="font-size:12.5px;color:var(--text-muted);">Eco Green Solutions</span>
+      <span style="font-size:13px;font-weight:700;color:var(--warning);text-align:right;display:block;">41.2%</span>
+      <span style="font-size:13px;font-weight:600;color:var(--text-muted);text-align:right;display:block;">76.5%</span>
+      <div style="text-align:center;"><span class="badge badge-warning">Attention</span></div>
+      <div style="text-align:center;"><a href="#" style="font-size:12px;color:var(--primary);font-weight:500;text-decoration:none;">Voir ↗</a></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  function switchView(btn){document.querySelectorAll('.view-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');}
+  function setPeriod(btn){document.querySelectorAll('.ppill').forEach(t=>t.classList.remove('active'));btn.classList.add('active');}
+  function toggleTheme(){
+    document.documentElement.classList.toggle('dark');
+    const i=document.getElementById('theme-icon');
+    if(document.documentElement.classList.contains('dark')){i.innerHTML='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';}
+    else{i.innerHTML='<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';}
+  }
+</script>
+</body>
+</html>

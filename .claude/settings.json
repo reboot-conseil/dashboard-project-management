@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/jonathanbraun/dashboard-chef-projet && npx tsc --noEmit 2>&1 | grep -v use-local-storage | grep -E 'error TS' | head -10"
+          }
+        ]
+      }
+    ]
+  }
+}

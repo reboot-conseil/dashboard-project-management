@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PM Dashboard — Vue PM v4</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#F5F7FA;--surface:#FFFFFF;--surface-raised:#F0F3F8;
+      --primary:#2563EB;--primary-10:rgba(37,99,235,.10);
+      --border:#E4E8EF;--border-muted:#EFF2F6;
+      --text:#0F172A;--text-muted:#5a6a7a;--text-secondary:#94A3B8;
+      --success:#15803d;--success-bg:#dcfce7;
+      --warning:#b45309;--warning-bg:#fef3c7;
+      --danger:#b91c1c;--danger-bg:#fee2e2;
+      --bar-budget:#2563EB;--bar-realise:#10b981;
+      --r-sm:6px;--r-md:10px;--r-lg:14px;
+    }
+    html.dark{
+      --bg:#0C0E14;--surface:#161920;--surface-raised:#1E2130;
+      --primary-10:rgba(37,99,235,.15);
+      --border:#252A3A;--border-muted:#1E2130;
+      --text:#F1F5F9;--text-muted:#94A3B8;--text-secondary:#475569;
+      --success-bg:rgba(21,128,61,.18);--warning-bg:rgba(180,83,9,.18);--danger-bg:rgba(185,28,28,.18);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;margin:0;display:flex;height:100vh;overflow:hidden;}
+
+    .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);font-size:13.5px;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .12s;}
+    .nav-item:hover{background:var(--surface-raised);color:var(--text);}
+    .nav-item.active{background:var(--primary-10);color:var(--primary);border-left:2px solid var(--primary);padding-left:8px;}
+    .nav-item svg{width:17px;height:17px;flex-shrink:0;}
+    .nav-sep{height:1px;background:var(--border-muted);margin:5px 0;}
+
+    .main{flex:1;overflow-y:auto;padding:18px 22px 24px;display:flex;flex-direction:column;gap:13px;}
+
+    .view-tab{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-md);font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .12s;border:none;background:none;font-family:inherit;}
+    .view-tab.active{background:var(--primary-10);color:var(--primary);}
+    .view-tab:hover:not(.active){background:var(--surface-raised);color:var(--text);}
+
+    .ppill{padding:5px 13px;border-radius:20px;font-size:12.5px;font-weight:500;color:var(--text-muted);cursor:pointer;border:1px solid transparent;transition:all .12s;background:none;font-family:inherit;}
+    .ppill.active{background:var(--primary-10);color:var(--primary);border-color:rgba(37,99,235,.2);font-weight:600;}
+    .ppill:hover:not(.active){background:var(--surface-raised);color:var(--text);}
+
+    .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px 20px 16px;position:relative;transition:box-shadow .15s,transform .15s;}
+    .kpi:hover{box-shadow:0 6px 20px rgba(0,0,0,.08);transform:translateY(-1px);}
+    .kpi-hero{background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 70%,#1e40af 100%);border:none;}
+    .kpi-hero:hover{box-shadow:0 6px 24px rgba(37,99,235,.35)!important;}
+    .kpi-expand{position:absolute;top:14px;right:14px;opacity:0;transition:opacity .15s;}
+    .kpi:hover .kpi-expand{opacity:.5;}
+
+    .pbar{height:7px;border-radius:9999px;background:var(--border);overflow:hidden;}
+    .pfill-budget{height:100%;border-radius:9999px;background:var(--bar-budget);}
+    .pfill-budget.warn{background:#f97316;}
+    .pfill-realise{height:100%;border-radius:9999px;background:var(--bar-realise);}
+
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--r-sm);font-size:11.5px;font-weight:600;}
+    .badge-success{background:var(--success-bg);color:var(--success);}
+    .badge-warning{background:var(--warning-bg);color:var(--warning);}
+    .badge-danger{background:var(--danger-bg);color:var(--danger);}
+
+    .section-hdr{font-size:12.5px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:12px;}
+    .section-hdr .cnt{font-size:11px;font-weight:500;background:var(--surface-raised);color:var(--text-muted);padding:1px 7px;border-radius:20px;}
+
+    .proj-card{border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;transition:box-shadow .15s,transform .12s;position:relative;overflow:hidden;margin-bottom:10px;}
+    .proj-card:last-child{margin-bottom:0;}
+    .proj-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.07);transform:translateY(-1px);}
+    .proj-accent{position:absolute;left:0;top:0;bottom:0;width:4px;}
+
+    /* Deadline grid — 2 col, compact rows */
+    .dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+    .dl-cell{background:var(--surface-raised);border-radius:var(--r-md);padding:9px 11px;}
+    .dl-row{display:flex;align-items:baseline;justify-content:space-between;gap:6px;}
+
+    .legend-item{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text-muted);}
+    .ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+    /* Chart cards — header + full-bleed SVG */
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
+    .chart-hdr{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;}
+
+    ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+    .date-pop{display:none;position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50;}
+    .date-pop.open{display:flex;align-items:center;gap:10px;}
+    .date-input{background:var(--surface-raised);border:1px solid var(--border);border-radius:var(--r-md);padding:5px 10px;font-size:12.5px;color:var(--text);outline:none;font-family:inherit;}
+    .proj-sel{background:var(--surface-raised);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12.5px;color:var(--text-muted);font-family:inherit;outline:none;cursor:pointer;}
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div style="padding:13px 14px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div style="width:30px;height:30px;border-radius:8px;background:#2563EB;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <span style="font-size:13.5px;font-weight:600;color:var(--text);">PM Dashboard</span>
+    </div>
+    <button title="Passer en barre horizontale" style="padding:5px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3M12 8l4 4-4 4"/></svg>
+    </button>
+  </div>
+  <nav style="flex:1;padding:10px 10px 0;display:flex;flex-direction:column;gap:2px;overflow-y:auto;">
+    <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard<span style="margin-left:auto;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:1px 5px;border-radius:20px;">3</span></a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Consultants</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Projets</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Activités</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendrier</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documents</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Paramètres</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Utilisateurs</a>
+    <div class="nav-sep" style="margin-top:auto;"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-md);background:var(--surface-raised);border:1px solid var(--border-muted);cursor:text;margin-bottom:2px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span style="font-size:12px;flex:1;color:var(--text-muted);">Rechercher...</span>
+      <span style="font-size:10px;color:var(--text-secondary);">⌘K</span>
+    </div>
+  </nav>
+  <div style="padding:8px 10px 10px;border-top:1px solid var(--border-muted);flex-shrink:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 6px;">
+      <span style="font-size:11px;color:var(--text-secondary);">v1.0</span>
+      <div style="display:flex;gap:2px;">
+        <button onclick="toggleTheme()" style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);"><svg id="theme-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+        <button style="padding:5px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7M18 19l-7-7 7-7"/></svg></button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--r-md);cursor:pointer;transition:background .12s;" onmouseover="this.style.background='var(--surface-raised)'" onmouseout="this.style.background='transparent'">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">JB</div>
+      <div style="flex:1;min-width:0;"><p style="font-size:12.5px;font-weight:600;color:var(--text);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Jonathan Braun</p><p style="font-size:11px;color:var(--text-muted);margin:0;">Admin · Reboot Conseil</p></div>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- TOP BAR : view tabs gauche · période droite -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    <div style="display:flex;align-items:center;gap:3px;">
+      <button class="view-tab active" onclick="switchView(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Opérationnel</button>
+      <button class="view-tab" onclick="switchView(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Consultants</button>
+      <button class="view-tab" onclick="switchView(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Stratégique</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:3px 4px;">
+      <button class="ppill" onclick="setPeriod(this,'Aujourd\'hui')">Jour</button>
+      <button class="ppill active" onclick="setPeriod(this,'Semaine 2–8 mars 2026')">Semaine</button>
+      <button class="ppill" onclick="setPeriod(this,'Mars 2026')">Mois</button>
+      <button class="ppill" onclick="setPeriod(this,'T1 2026')">Trimestre</button>
+      <button class="ppill" onclick="setPeriod(this,'2026')">Année</button>
+      <button class="ppill" id="custom-pill" onclick="toggleCustom()">Personnalisé</button>
+    </div>
+  </div>
+
+  <!-- FILTER BAR : projet + refresh -->
+  <div style="position:relative;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <select class="proj-sel"><option>Tous les projets</option><option>Dashboard RH Analytics</option><option>Migration Cloud</option><option>Refonte Site Web</option></select>
+      <button onclick="animateRefresh(this)" style="padding:7px;border-radius:50%;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text-muted);display:flex;align-items:center;justify-content:center;transition:transform .4s;" title="Rafraîchir"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg></button>
+    </div>
+    <div class="date-pop" id="date-pop">
+      <input type="date" value="2026-03-02" class="date-input"/><span style="color:var(--text-muted);">→</span><input type="date" value="2026-03-08" class="date-input"/>
+      <button onclick="toggleCustom()" style="padding:5px 12px;border-radius:var(--r-md);background:var(--primary);color:white;border:none;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;">Appliquer</button>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:13px;">
+    <div class="kpi kpi-hero" style="min-height:148px;">
+      <div class="kpi-expand"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;"><div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.7);"></div><span style="font-size:12px;font-weight:500;color:rgba(255,255,255,.85);">CA généré</span></div>
+      <div style="font-size:2.6rem;font-weight:800;color:white;line-height:1;letter-spacing:-1px;">42.3k€</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px;">TJM moyen : 680€/j</div>
+      <div style="margin-top:16px;text-align:right;"><div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.9);">↑ +8.2%</div><div style="font-size:11px;color:rgba(255,255,255,.5);">vs sem. précédente</div></div>
+    </div>
+    <div class="kpi" style="min-height:148px;">
+      <div class="kpi-expand" style="color:var(--text-muted);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+      <div style="position:absolute;top:16px;right:16px;color:var(--text-secondary);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#3b82f6;"></div><span style="font-size:12px;font-weight:500;color:var(--text-muted);">Heures équipe</span></div>
+      <div style="font-size:2.6rem;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px;">126h</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">65.6% taux d'occupation</div>
+      <div style="margin-top:16px;text-align:right;"><div style="font-size:13px;font-weight:600;color:var(--success);">↑ +14h</div><div style="font-size:11px;color:var(--text-secondary);">vs sem. précédente</div></div>
+    </div>
+    <div class="kpi" style="min-height:148px;">
+      <div class="kpi-expand" style="color:var(--text-muted);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+      <div style="position:absolute;top:16px;right:16px;color:var(--text-secondary);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div><span style="font-size:12px;font-weight:500;color:var(--text-muted);">Marge globale</span></div>
+      <div style="font-size:2.6rem;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px;">41.5%</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">4 275 €</div>
+      <div style="margin-top:16px;text-align:right;"><div style="font-size:13px;font-weight:600;color:var(--success);">✓ Objectif atteint</div><div style="font-size:11px;color:var(--text-secondary);">Seuil à 40%</div></div>
+    </div>
+    <div class="kpi" style="min-height:148px;">
+      <div class="kpi-expand" style="color:var(--text-muted);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+      <div style="position:absolute;top:16px;right:16px;color:var(--text-secondary);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#6366f1;"></div><span style="font-size:12px;font-weight:500;color:var(--text-muted);">Projets gérés</span></div>
+      <div style="font-size:2.6rem;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px;">3</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">projets actifs sur la période</div>
+      <div style="display:flex;align-items:center;gap:5px;margin-top:16px;">
+        <div style="width:10px;height:10px;border-radius:3px;background:#3b82f6;"></div>
+        <div style="width:10px;height:10px;border-radius:3px;background:#6366f1;"></div>
+        <div style="width:10px;height:10px;border-radius:3px;background:#14b8a6;"></div>
+        <span style="font-size:11px;color:var(--text-secondary);margin-left:3px;">2 nécessitent attention</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TWO COLUMNS -->
+  <div style="display:grid;grid-template-columns:3fr 2fr;gap:13px;">
+
+    <!-- Projets actifs -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;">
+      <div class="section-hdr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Projets actifs<span class="cnt">3</span><a href="#" style="margin-left:auto;font-size:12px;color:var(--primary);text-decoration:none;font-weight:500;">Tous →</a></div>
+
+      <div class="proj-card"><div class="proj-accent" style="background:#3b82f6;border-radius:4px 0 0 4px;"></div>
+        <div style="padding-left:10px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px;">
+            <div><div style="font-size:14.5px;font-weight:700;color:var(--text);">Dashboard RH Analytics</div><div style="font-size:12px;color:var(--text-muted);margin-top:1px;">Optima Group</div></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;"><span class="badge badge-danger">Marge −22.8%</span><a href="#" style="color:var(--text-muted);display:flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;"><span style="font-size:11px;color:var(--text-muted);width:50px;flex-shrink:0;">Budget</span><div class="pbar" style="flex:1;"><div class="pfill-budget warn" style="width:97.5%;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--warning);width:38px;text-align:right;">97.5%</span></div>
+          <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:11px;color:var(--text-muted);width:50px;flex-shrink:0;">Réalisé</span><div class="pbar" style="flex:1;"><div class="pfill-realise" style="width:74.7%;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:38px;text-align:right;">74.7%</span></div>
+        </div>
+      </div>
+
+      <div class="proj-card"><div class="proj-accent" style="background:#6366f1;border-radius:4px 0 0 4px;"></div>
+        <div style="padding-left:10px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px;">
+            <div><div style="font-size:14.5px;font-weight:700;color:var(--text);">Migration Cloud</div><div style="font-size:12px;color:var(--text-muted);margin-top:1px;">TechFlow Industries</div></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;"><span class="badge badge-success">Marge 38.4%</span><a href="#" style="color:var(--text-muted);display:flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;"><span style="font-size:11px;color:var(--text-muted);width:50px;flex-shrink:0;">Budget</span><div class="pbar" style="flex:1;"><div class="pfill-budget" style="width:74%;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:38px;text-align:right;">74%</span></div>
+          <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:11px;color:var(--text-muted);width:50px;flex-shrink:0;">Réalisé</span><div class="pbar" style="flex:1;"><div class="pfill-realise" style="width:83.6%;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:38px;text-align:right;">83.6%</span></div>
+        </div>
+      </div>
+
+      <div class="proj-card"><div class="proj-accent" style="background:#14b8a6;border-radius:4px 0 0 4px;"></div>
+        <div style="padding-left:10px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px;">
+            <div><div style="font-size:14.5px;font-weight:700;color:var(--text);">Refonte Site Web</div><div style="font-size:12px;color:var(--text-muted);margin-top:1px;">Eco Green Solutions</div></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;"><span class="badge badge-warning">Marge 41.2%</span><a href="#" style="color:var(--text-muted);display:flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;"><span style="font-size:11px;color:var(--text-muted);width:50px;flex-shrink:0;">Budget</span><div class="pbar" style="flex:1;"><div class="pfill-budget" style="width:76.5%;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:38px;text-align:right;">76.5%</span></div>
+          <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:11px;color:var(--text-muted);width:50px;flex-shrink:0;">Réalisé</span><div class="pbar" style="flex:1;"><div class="pfill-realise" style="width:73.1%;"></div></div><span style="font-size:11.5px;font-weight:700;color:var(--text-muted);width:38px;text-align:right;">73.1%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Deadlines + Synthèse -->
+    <div style="display:flex;flex-direction:column;gap:13px;">
+
+      <!-- Deadlines — 2 colonnes, 3 par colonne, date sur le côté -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;">
+        <div class="section-hdr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Deadlines à venir<span class="cnt">6</span></div>
+        <div class="dl-grid">
+          <!-- Col 1 -->
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <!-- D1 — danger (J+1) -->
+            <div class="dl-cell">
+              <div class="dl-row">
+                <span style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Dév. Dashboard</span>
+                <span style="font-size:11.5px;font-weight:700;color:var(--danger);flex-shrink:0;margin-left:6px;white-space:nowrap;">7 mars</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:4px;"><div style="width:7px;height:7px;border-radius:2px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:10.5px;color:var(--text-muted);">Dashboard RH</span></div>
+            </div>
+            <!-- D2 — warning (J+8) -->
+            <div class="dl-cell">
+              <div class="dl-row">
+                <span style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Design UI</span>
+                <span style="font-size:11.5px;font-weight:700;color:var(--warning);flex-shrink:0;margin-left:6px;white-space:nowrap;">10 mars</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:4px;"><div style="width:7px;height:7px;border-radius:2px;background:#3b82f6;flex-shrink:0;"></div><span style="font-size:10.5px;color:var(--text-muted);">Dashboard RH</span></div>
+            </div>
+            <!-- D3 — neutral (J+8) -->
+            <div class="dl-cell">
+              <div class="dl-row">
+                <span style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Design Maquettes</span>
+                <span style="font-size:11.5px;font-weight:700;color:var(--warning);flex-shrink:0;margin-left:6px;white-space:nowrap;">14 mars</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:4px;"><div style="width:7px;height:7px;border-radius:2px;background:#14b8a6;flex-shrink:0;"></div><span style="font-size:10.5px;color:var(--text-muted);">Refonte Site Web</span></div>
+            </div>
+          </div>
+          <!-- Col 2 -->
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <!-- D4 -->
+            <div class="dl-cell">
+              <div class="dl-row">
+                <span style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Tests API</span>
+                <span style="font-size:11.5px;font-weight:700;color:var(--text-muted);flex-shrink:0;margin-left:6px;white-space:nowrap;">20 mars</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:4px;"><div style="width:7px;height:7px;border-radius:2px;background:#6366f1;flex-shrink:0;"></div><span style="font-size:10.5px;color:var(--text-muted);">Migration Cloud</span></div>
+            </div>
+            <!-- D5 -->
+            <div class="dl-cell">
+              <div class="dl-row">
+                <span style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Tests Migration</span>
+                <span style="font-size:11.5px;font-weight:700;color:var(--text-muted);flex-shrink:0;margin-left:6px;white-space:nowrap;">28 mars</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:4px;"><div style="width:7px;height:7px;border-radius:2px;background:#6366f1;flex-shrink:0;"></div><span style="font-size:10.5px;color:var(--text-muted);">Migration Cloud</span></div>
+            </div>
+            <!-- D6 -->
+            <div class="dl-cell">
+              <div class="dl-row">
+                <span style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Recette client</span>
+                <span style="font-size:11.5px;font-weight:700;color:var(--text-muted);flex-shrink:0;margin-left:6px;white-space:nowrap;">31 mars</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:4px;"><div style="width:7px;height:7px;border-radius:2px;background:#6366f1;flex-shrink:0;"></div><span style="font-size:10.5px;color:var(--text-muted);">Migration Cloud</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Synthèse équipe -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;flex:1;">
+        <div class="section-hdr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Synthèse équipe<span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);font-weight:400;">128h total</span></div>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><div style="width:26px;height:26px;border-radius:50%;background:#8B5CF6;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">SL</div><span style="font-size:12.5px;font-weight:600;color:var(--text);flex:1;">Sophie Leroux</span><span style="font-size:13px;font-weight:700;color:var(--text);">42h</span><span style="font-size:11px;color:var(--text-muted);width:28px;text-align:right;">33%</span></div><div class="pbar"><div class="pfill-realise" style="width:33%;opacity:.7;"></div></div></div>
+          <div><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><div style="width:26px;height:26px;border-radius:50%;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">JC</div><span style="font-size:12.5px;font-weight:600;color:var(--text);flex:1;">Julie Chen</span><span style="font-size:13px;font-weight:700;color:var(--text);">40h</span><span style="font-size:11px;color:var(--text-muted);width:28px;text-align:right;">31%</span></div><div class="pbar"><div class="pfill-realise" style="width:31%;opacity:.7;"></div></div></div>
+          <div><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><div style="width:26px;height:26px;border-radius:50%;background:#F59E0B;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">MD</div><span style="font-size:12.5px;font-weight:600;color:var(--text);flex:1;">Marc Dubois</span><span style="font-size:13px;font-weight:700;color:var(--text);">38h</span><span style="font-size:11px;color:var(--text-muted);width:28px;text-align:right;">30%</span></div><div class="pbar"><div class="pfill-realise" style="width:30%;opacity:.7;"></div></div></div>
+          <div><div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><div style="width:26px;height:26px;border-radius:50%;background:#2563EB;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">JB</div><span style="font-size:12.5px;font-weight:600;color:var(--text);flex:1;">Jonathan Braun</span><span style="font-size:13px;font-weight:700;color:var(--text);">8h</span><span style="font-size:11px;color:var(--text-muted);width:28px;text-align:right;">6%</span></div><div class="pbar"><div class="pfill-realise" style="width:6%;opacity:.7;"></div></div></div>
+        </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-muted);display:flex;justify-content:space-between;"><span style="font-size:11.5px;color:var(--text-muted);">100% facturables</span><span style="font-size:12.5px;font-weight:700;color:var(--text);">128h</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART 1 — Activité Équipe -->
+  <div class="chart-card">
+    <div class="chart-hdr">
+      <div style="font-size:12.5px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activité Équipe — <span id="lbl1" style="color:var(--text);">Semaine 2–8 mars 2026</span></div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="legend-item"><div class="ldot" style="background:#8B5CF6;"></div>Sophie</div>
+        <div class="legend-item"><div class="ldot" style="background:#F59E0B;"></div>Marc</div>
+        <div class="legend-item"><div class="ldot" style="background:#10B981;"></div>Julie</div>
+        <div class="legend-item"><div class="ldot" style="background:#2563EB;"></div>Jonathan</div>
+      </div>
+    </div>
+    <!-- SVG: unique IDs, no preserveAspectRatio, full-width -->
+    <div style="width:100%;overflow:hidden;">
+      <svg id="chart1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 190" style="width:100%;height:190px;display:block;">
+        <defs>
+          <linearGradient id="c1gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8B5CF6" stop-opacity=".2"/><stop offset="100%" stop-color="#8B5CF6" stop-opacity=".01"/></linearGradient>
+          <linearGradient id="c1gm" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F59E0B" stop-opacity=".2"/><stop offset="100%" stop-color="#F59E0B" stop-opacity=".01"/></linearGradient>
+          <linearGradient id="c1gj" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10B981" stop-opacity=".2"/><stop offset="100%" stop-color="#10B981" stop-opacity=".01"/></linearGradient>
+          <linearGradient id="c1gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563EB" stop-opacity=".15"/><stop offset="100%" stop-color="#2563EB" stop-opacity=".01"/></linearGradient>
+        </defs>
+        <!-- Grid -->
+        <line x1="52" y1="20" x2="888" y2="20" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="57" x2="888" y2="57" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="95" x2="888" y2="95" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="132" x2="888" y2="132" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="162" x2="888" y2="162" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="95" x2="888" y2="95" stroke="#2563EB" stroke-width="1" stroke-dasharray="5,5" opacity=".18"/>
+        <!-- Y labels -->
+        <text x="46" y="23" text-anchor="end" font-size="10" fill="#94A3B8">16h</text>
+        <text x="46" y="60" text-anchor="end" font-size="10" fill="#94A3B8">12h</text>
+        <text x="46" y="98" text-anchor="end" font-size="10" fill="#94A3B8">8h</text>
+        <text x="46" y="135" text-anchor="end" font-size="10" fill="#94A3B8">4h</text>
+        <text x="46" y="165" text-anchor="end" font-size="10" fill="#94A3B8">0h</text>
+        <!-- Sophie (7,7,6,7,7,3,0) → scale: 0h=162, 8h=95, 16h=20 → 1h=9px -->
+        <!-- y: 162-63=99, 99, 162-54=108, 99, 99, 162-27=135, 162 -->
+        <path d="M52,99 C143,99 183,99 220,99 C330,99 370,108 420,108 C470,108 510,99 560,99 C610,99 660,99 720,99 C770,99 810,135 840,135 C870,135 884,162 888,162 L888,162 L52,162 Z" fill="url(#c1gs)"/>
+        <path d="M52,99 C143,99 183,99 220,99 C330,99 370,108 420,108 C470,108 510,99 560,99 C610,99 660,99 720,99 C770,99 810,135 840,135 C870,135 884,162 888,162" fill="none" stroke="#8B5CF6" stroke-width="2.2" stroke-linejoin="round"/>
+        <!-- Marc (6,6,8,8,6,3,0) → y:108,108,90,90,108,135,162 -->
+        <path d="M52,108 C143,108 183,108 220,108 C330,108 370,90 420,90 C470,90 510,90 560,90 C610,90 660,108 720,108 C770,108 810,135 840,135 C870,135 884,162 888,162 L888,162 L52,162 Z" fill="url(#c1gm)"/>
+        <path d="M52,108 C143,108 183,108 220,108 C330,108 370,90 420,90 C470,90 510,90 560,90 C610,90 660,108 720,108 C770,108 810,135 840,135 C870,135 884,162 888,162" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linejoin="round"/>
+        <!-- Julie (8,8,7,7,6,0,0) → y:90,90,99,99,108,162,162 -->
+        <path d="M52,90 C143,90 183,90 220,90 C330,90 370,99 420,99 C470,99 510,99 560,99 C610,99 660,108 720,108 C770,108 810,162 840,162 C870,162 884,162 888,162 L888,162 L52,162 Z" fill="url(#c1gj)"/>
+        <path d="M52,90 C143,90 183,90 220,90 C330,90 370,99 420,99 C470,99 510,99 560,99 C610,99 660,108 720,108 C770,108 810,162 840,162 C870,162 884,162 888,162" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linejoin="round"/>
+        <!-- Jonathan (0,4,4,4,4,0,0) → y:162,126,126,126,126,162,162 -->
+        <path d="M52,162 C143,162 183,126 220,126 C330,126 370,126 420,126 C470,126 510,126 560,126 C610,126 660,126 720,126 C770,126 810,162 840,162 C870,162 884,162 888,162 L888,162 L52,162 Z" fill="url(#c1gb)"/>
+        <path d="M52,162 C143,162 183,126 220,126 C330,126 370,126 420,126 C470,126 510,126 560,126 C610,126 660,126 720,126 C770,126 810,162 840,162 C870,162 884,162 888,162" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linejoin="round"/>
+        <!-- X labels -->
+        <text id="xl0" x="80" y="182" text-anchor="middle" font-size="10" fill="#94A3B8">lun. 02/03</text>
+        <text id="xl1" x="222" y="182" text-anchor="middle" font-size="10" fill="#94A3B8">mar. 03/03</text>
+        <text id="xl2" x="364" y="182" text-anchor="middle" font-size="10" fill="#94A3B8">mer. 04/03</text>
+        <text id="xl3" x="510" y="182" text-anchor="middle" font-size="10" fill="#94A3B8">jeu. 05/03</text>
+        <text id="xl4" x="660" y="182" text-anchor="middle" font-size="10" fill="#94A3B8">ven. 06/03</text>
+        <text id="xl5" x="810" y="182" text-anchor="middle" font-size="10" fill="#94A3B8">sam. 07/03</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- CHART 2 — Tendances CA & Marge -->
+  <div class="chart-card">
+    <div class="chart-hdr">
+      <div style="font-size:12.5px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>Tendances CA & Marge — <span id="lbl2" style="color:var(--text);">6 derniers mois</span></div>
+      <div style="display:flex;align-items:center;gap:14px;"><div class="legend-item"><div class="ldot" style="background:#2563EB;"></div>CA</div><div class="legend-item"><div class="ldot" style="background:#10B981;"></div>Marge</div></div>
+    </div>
+    <div style="width:100%;overflow:hidden;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 165" style="width:100%;height:165px;display:block;">
+        <defs>
+          <linearGradient id="c2ca" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563EB" stop-opacity=".17"/><stop offset="100%" stop-color="#2563EB" stop-opacity=".01"/></linearGradient>
+          <linearGradient id="c2mg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10B981" stop-opacity=".17"/><stop offset="100%" stop-color="#10B981" stop-opacity=".01"/></linearGradient>
+        </defs>
+        <line x1="52" y1="15" x2="888" y2="15" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="50" x2="888" y2="50" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="85" x2="888" y2="85" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="120" x2="888" y2="120" stroke="#E4E8EF" stroke-width="1"/>
+        <text x="46" y="18" text-anchor="end" font-size="10" fill="#94A3B8">47k€</text>
+        <text x="46" y="53" text-anchor="end" font-size="10" fill="#94A3B8">30k€</text>
+        <text x="46" y="88" text-anchor="end" font-size="10" fill="#94A3B8">15k€</text>
+        <text x="46" y="123" text-anchor="end" font-size="10" fill="#94A3B8">0€</text>
+        <!-- CA: oct=120,nov=105,dec=88,jan=50,fev=24,mar=105 -->
+        <path d="M52,120 C130,120 200,105 295,105 C390,105 445,88 510,88 C575,88 610,50 685,24 C760,0 820,105 888,105 L888,120 L52,120 Z" fill="url(#c2ca)"/>
+        <path d="M52,120 C130,120 200,105 295,105 C390,105 445,88 510,88 C575,88 610,50 685,24 C760,0 820,105 888,105" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linejoin="round"/>
+        <!-- Marge: oct=120,nov=112,dec=104,jan=92,fev=87,mar=111 -->
+        <path d="M52,120 C130,120 200,112 295,112 C390,112 445,104 510,104 C575,104 610,92 685,87 C760,82 820,111 888,111 L888,120 L52,120 Z" fill="url(#c2mg)"/>
+        <path d="M52,120 C130,120 200,112 295,112 C390,112 445,104 510,104 C575,104 610,92 685,87 C760,82 820,111 888,111" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linejoin="round"/>
+        <!-- Data points CA -->
+        <circle cx="52" cy="120" r="3.5" fill="#2563EB"/><circle cx="295" cy="105" r="3.5" fill="#2563EB"/>
+        <circle cx="510" cy="88" r="3.5" fill="#2563EB"/><circle cx="685" cy="24" r="3.5" fill="#2563EB"/>
+        <circle cx="888" cy="105" r="3.5" fill="#2563EB"/>
+        <!-- Tooltip -->
+        <rect x="654" y="6" width="62" height="22" rx="5" fill="#0F172A"/>
+        <text x="685" y="21" text-anchor="middle" font-size="11" fill="white" font-weight="600">46.2k€</text>
+        <polygon points="685,28 681,22 689,22" fill="#0F172A"/>
+        <!-- X labels -->
+        <text x="52" y="152" text-anchor="middle" font-size="10" fill="#94A3B8">oct. 25</text>
+        <text x="226" y="152" text-anchor="middle" font-size="10" fill="#94A3B8">nov. 25</text>
+        <text x="400" y="152" text-anchor="middle" font-size="10" fill="#94A3B8">déc. 25</text>
+        <text x="574" y="152" text-anchor="middle" font-size="10" fill="#94A3B8">janv. 26</text>
+        <text x="726" y="152" text-anchor="middle" font-size="10" fill="#94A3B8">févr. 26</text>
+        <text x="868" y="152" text-anchor="middle" font-size="10" fill="#94A3B8">mars 26</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- CHART 3 — Répartition heures -->
+  <div class="chart-card" style="margin-bottom:4px;">
+    <div class="chart-hdr">
+      <div style="font-size:12.5px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="5" width="4" height="16" rx="1"/></svg>Répartition heures par projet — <span id="lbl3" style="color:var(--text);">Semaine 2–8 mars 2026</span></div>
+    </div>
+    <div style="width:100%;overflow:hidden;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 110" style="width:100%;height:110px;display:block;">
+        <line x1="52" y1="10" x2="888" y2="10" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="43" x2="888" y2="43" stroke="#E4E8EF" stroke-width="1"/>
+        <line x1="52" y1="75" x2="888" y2="75" stroke="#E4E8EF" stroke-width="1"/>
+        <text x="46" y="13" text-anchor="end" font-size="10" fill="#94A3B8">60h</text>
+        <text x="46" y="46" text-anchor="end" font-size="10" fill="#94A3B8">30h</text>
+        <text x="46" y="78" text-anchor="end" font-size="10" fill="#94A3B8">0h</text>
+        <!-- Refonte 52h → 65px height, y=75-65=10 -->
+        <rect x="145" y="10" width="110" height="65" rx="5 5 0 0" fill="#14b8a6" opacity=".85"/>
+        <text x="200" y="7" text-anchor="middle" font-size="11" font-weight="700" fill="#5a6a7a">52h</text>
+        <!-- Migration 42h → 52.5px, y=75-52=23 -->
+        <rect x="390" y="23" width="110" height="52" rx="5 5 0 0" fill="#6366f1" opacity=".85"/>
+        <text x="445" y="19" text-anchor="middle" font-size="11" font-weight="700" fill="#5a6a7a">42h</text>
+        <!-- Dashboard RH 32h → 40px, y=75-40=35 -->
+        <rect x="635" y="35" width="110" height="40" rx="5 5 0 0" fill="#3b82f6" opacity=".85"/>
+        <text x="690" y="31" text-anchor="middle" font-size="11" font-weight="700" fill="#5a6a7a">32h</text>
+        <line x1="52" y1="75" x2="888" y2="75" stroke="#E4E8EF" stroke-width="1.5"/>
+        <!-- Labels -->
+        <rect x="153" y="86" width="10" height="10" rx="2" fill="#14b8a6"/>
+        <text x="167" y="95" font-size="10.5" fill="#94A3B8">Refonte Site Web</text>
+        <rect x="398" y="86" width="10" height="10" rx="2" fill="#6366f1"/>
+        <text x="412" y="95" font-size="10.5" fill="#94A3B8">Migration Cloud</text>
+        <rect x="643" y="86" width="10" height="10" rx="2" fill="#3b82f6"/>
+        <text x="657" y="95" font-size="10.5" fill="#94A3B8">Dashboard RH Analytics</text>
+      </svg>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const PERIODS = {
+    "Aujourd'hui":           {l:"Aujourd'hui — lun. 8 mars",  x:["8h","10h","12h","14h","16h","18h"]},
+    "Semaine 2–8 mars 2026": {l:"Semaine 2–8 mars 2026",      x:["lun. 02/03","mar. 03/03","mer. 04/03","jeu. 05/03","ven. 06/03","sam. 07/03"]},
+    "Mars 2026":             {l:"Mars 2026",                   x:["S.1","S.2","S.3","S.4","S.5",""]},
+    "T1 2026":               {l:"T1 2026 (janv–mars)",         x:["janv.","","févr.","","mars",""]},
+    "2026":                  {l:"2026",                        x:["janv.","mars","mai","juil.","sept.","nov."]},
+    "Personnalisé":          {l:"Période personnalisée",       x:["J1","J2","J3","J4","J5","J6"]},
+  };
+  let cur = "Semaine 2–8 mars 2026";
+
+  function setPeriod(btn, label) {
+    document.querySelectorAll('.ppill').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    cur = label; updateLabels();
+    document.getElementById('date-pop').classList.remove('open');
+  }
+  function toggleCustom() {
+    document.querySelectorAll('.ppill').forEach(t=>t.classList.remove('active'));
+    document.getElementById('custom-pill').classList.add('active');
+    document.getElementById('date-pop').classList.toggle('open');
+    cur = "Personnalisé"; updateLabels();
+  }
+  function updateLabels() {
+    const d = PERIODS[cur] || PERIODS["Semaine 2–8 mars 2026"];
+    ['lbl1','lbl2','lbl3'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=d.l;});
+    d.x.forEach((v,i)=>{const el=document.getElementById('xl'+i);if(el)el.textContent=v;});
+  }
+  function switchView(btn) {
+    document.querySelectorAll('.view-tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  function animateRefresh(btn) {
+    btn.style.transform='rotate(360deg)';
+    setTimeout(()=>btn.style.transform='',400);
+  }
+  function toggleTheme() {
+    document.documentElement.classList.toggle('dark');
+    const icon = document.getElementById('theme-icon');
+    if(document.documentElement.classList.contains('dark')){
+      icon.innerHTML='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    } else {
+      icon.innerHTML='<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+    }
+  }
+</script>
+</body>
+</html>
