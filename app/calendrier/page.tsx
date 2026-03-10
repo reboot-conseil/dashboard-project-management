@@ -22,10 +22,15 @@ import {
   Users,
   PanelRight,
   Plus,
+  Clock,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import type { CalData, EtapeInfo, Filtres, VueType } from "@/components/calendrier/types";
 import { buildParams } from "@/components/calendrier/types";
@@ -72,6 +77,8 @@ export default function CalendrierPage() {
 
   const [selectedEtape, setSelectedEtape] = useState<EtapeInfo | null>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [showLogHeures, setShowLogHeures] = useState(false);
+  const [showNouvelleEtape, setShowNouvelleEtape] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; etape: EtapeInfo } | null>(null);
   const [showConfirmReport, setShowConfirmReport] = useState<{ etape: EtapeInfo; newDeadline: string } | null>(null);
 
@@ -286,7 +293,10 @@ export default function CalendrierPage() {
           >
             <PanelRight className="h-3.5 w-3.5" />Détail
           </Button>
-          <Button size="sm" className="gap-1.5 text-xs" onClick={() => router.push("/projets")}>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowLogHeures(true)}>
+            <Clock className="h-3.5 w-3.5" />Logger des heures
+          </Button>
+          <Button size="sm" className="gap-1.5 text-xs" onClick={() => setShowNouvelleEtape(true)}>
             <Plus className="h-3.5 w-3.5" />Nouvelle étape
           </Button>
         </div>
@@ -436,6 +446,271 @@ export default function CalendrierPage() {
           </div>
         </div>
       )}
+      {/* ── Dialog Logger des heures ── */}
+      {showLogHeures && (
+        <LoggerHeuresDialog
+          onClose={() => setShowLogHeures(false)}
+          onSuccess={() => { setShowLogHeures(false); refresh(); }}
+          defaultDate={format(currentDate, "yyyy-MM-dd")}
+        />
+      )}
+
+      {/* ── Dialog Nouvelle étape ── */}
+      {showNouvelleEtape && (
+        <NouvelleEtapeDialog
+          onClose={() => setShowNouvelleEtape(false)}
+          onSuccess={() => { setShowNouvelleEtape(false); refresh(); }}
+          defaultDate={format(currentDate, "yyyy-MM-dd")}
+        />
+      )}
     </div>
+  );
+}
+
+// ── Self-contained dialog : Logger des heures ──────────────────────────────
+function LoggerHeuresDialog({ onClose, onSuccess, defaultDate }: {
+  onClose: () => void;
+  onSuccess: () => void;
+  defaultDate: string;
+}) {
+  const [consultants, setConsultants] = useState<{ id: number; nom: string }[]>([]);
+  const [projets, setProjets] = useState<{ id: number; nom: string }[]>([]);
+  const [etapes, setEtapes] = useState<{ id: number; nom: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    date: defaultDate,
+    consultantId: "",
+    projetId: "",
+    etapeId: "",
+    heures: "",
+    description: "",
+    facturable: true,
+  });
+
+  useEffect(() => {
+    const ac = new AbortController();
+    Promise.all([
+      fetch("/api/consultants", { signal: ac.signal }).then((r) => r.json()),
+      fetch("/api/projets", { signal: ac.signal }).then((r) => r.json()),
+    ]).then(([c, p]) => {
+      setConsultants(Array.isArray(c) ? c : []);
+      setProjets(Array.isArray(p) ? p : []);
+    }).catch(() => {});
+    return () => ac.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!form.projetId) { setEtapes([]); return; }
+    const ac = new AbortController();
+    fetch(`/api/etapes?projetId=${form.projetId}`, { signal: ac.signal })
+      .then((r) => r.json())
+      .then((d) => setEtapes(d.etapes ?? []))
+      .catch(() => {});
+    return () => ac.abort();
+  }, [form.projetId]);
+
+  async function handleSave() {
+    if (!form.consultantId || !form.projetId || !form.heures) {
+      toast.error("Consultant, projet et heures sont requis");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/activites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: form.date,
+          consultantId: parseInt(form.consultantId),
+          projetId: parseInt(form.projetId),
+          etapeId: form.etapeId ? parseInt(form.etapeId) : null,
+          heures: parseFloat(form.heures),
+          description: form.description || null,
+          facturable: form.facturable,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Activité enregistrée");
+      onSuccess();
+    } catch {
+      toast.error("Erreur lors de l'enregistrement");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md" onClose={onClose}>
+        <DialogHeader>
+          <DialogTitle>Logger des heures</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Date</Label>
+              <Input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Heures</Label>
+              <Input type="number" min={0.5} step={0.5} placeholder="ex: 4" value={form.heures}
+                onChange={(e) => setForm((f) => ({ ...f, heures: e.target.value }))} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Consultant</Label>
+            <select className="w-full h-9 px-2 text-sm rounded-md border border-border bg-background"
+              value={form.consultantId} onChange={(e) => setForm((f) => ({ ...f, consultantId: e.target.value }))}>
+              <option value="">Sélectionner...</option>
+              {consultants.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>Projet</Label>
+            <select className="w-full h-9 px-2 text-sm rounded-md border border-border bg-background"
+              value={form.projetId} onChange={(e) => setForm((f) => ({ ...f, projetId: e.target.value, etapeId: "" }))}>
+              <option value="">Sélectionner...</option>
+              {projets.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
+            </select>
+          </div>
+          {etapes.length > 0 && (
+            <div className="space-y-1">
+              <Label>Étape (optionnel)</Label>
+              <select className="w-full h-9 px-2 text-sm rounded-md border border-border bg-background"
+                value={form.etapeId} onChange={(e) => setForm((f) => ({ ...f, etapeId: e.target.value }))}>
+                <option value="">Aucune</option>
+                {etapes.map((e) => <option key={e.id} value={e.id}>{e.nom}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="space-y-1">
+            <Label>Description (optionnel)</Label>
+            <Input placeholder="Ex: Réunion client..." value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+          </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={form.facturable}
+              onChange={(e) => setForm((f) => ({ ...f, facturable: e.target.checked }))} />
+            Facturable
+          </label>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? "..." : "Enregistrer"}</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Self-contained dialog : Nouvelle étape ─────────────────────────────────
+function NouvelleEtapeDialog({ onClose, onSuccess, defaultDate }: {
+  onClose: () => void;
+  onSuccess: () => void;
+  defaultDate: string;
+}) {
+  const [projets, setProjets] = useState<{ id: number; nom: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    projetId: "",
+    nom: "",
+    dateDebut: defaultDate,
+    deadline: "",
+    statut: "A_FAIRE",
+    chargeEstimee: "",
+  });
+
+  useEffect(() => {
+    const ac = new AbortController();
+    fetch("/api/projets", { signal: ac.signal }).then((r) => r.json())
+      .then((d) => setProjets(Array.isArray(d) ? d : []))
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
+
+  async function handleSave() {
+    if (!form.projetId || !form.nom) {
+      toast.error("Projet et nom sont requis");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/etapes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projetId: parseInt(form.projetId),
+          nom: form.nom,
+          dateDebut: form.dateDebut || null,
+          deadline: form.deadline || null,
+          statut: form.statut,
+          chargeEstimee: form.chargeEstimee ? parseFloat(form.chargeEstimee) : null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Étape créée");
+      onSuccess();
+    } catch {
+      toast.error("Erreur lors de la création");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md" onClose={onClose}>
+        <DialogHeader>
+          <DialogTitle>Nouvelle étape</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="space-y-1">
+            <Label>Projet *</Label>
+            <select className="w-full h-9 px-2 text-sm rounded-md border border-border bg-background"
+              value={form.projetId} onChange={(e) => setForm((f) => ({ ...f, projetId: e.target.value }))}>
+              <option value="">Sélectionner...</option>
+              {projets.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>Nom de l&apos;étape *</Label>
+            <Input placeholder="Ex: Développement frontend" value={form.nom}
+              onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Date début</Label>
+              <Input type="date" value={form.dateDebut}
+                onChange={(e) => setForm((f) => ({ ...f, dateDebut: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Deadline</Label>
+              <Input type="date" value={form.deadline}
+                onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Statut</Label>
+              <select className="w-full h-9 px-2 text-sm rounded-md border border-border bg-background"
+                value={form.statut} onChange={(e) => setForm((f) => ({ ...f, statut: e.target.value }))}>
+                <option value="A_FAIRE">À faire</option>
+                <option value="EN_COURS">En cours</option>
+                <option value="VALIDEE">Validée</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Charge estimée (j)</Label>
+              <Input type="number" min={0} step={0.5} placeholder="ex: 5" value={form.chargeEstimee}
+                onChange={(e) => setForm((f) => ({ ...f, chargeEstimee: e.target.value }))} />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? "..." : "Créer l'étape"}</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
