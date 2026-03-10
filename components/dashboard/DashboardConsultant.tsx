@@ -18,7 +18,13 @@ import {
   Plus,
   CheckCircle,
   AlertTriangle,
+  ArrowUpRight,
+  CalendarDays,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { differenceInDays } from "date-fns";
+
+const PROJET_COLORS = ["#3b82f6", "#6366f1", "#14b8a6", "#f43f5e", "#84cc16", "#f97316"];
 import {
   Card,
   CardHeader,
@@ -46,6 +52,8 @@ interface ConsultantDashData {
     statut: string;
     heuresMois: number;
     pctBudget: number;
+    realisationPct: number;
+    prochaineDeadline: string | null;
     couleur?: string;
   }[];
   // Activités récentes
@@ -140,7 +148,9 @@ export function DashboardConsultant() {
         client: String(p.client ?? ""),
         statut: String(p.statut ?? ""),
         heuresMois: 0,
-        pctBudget: Number(p.pctBudget ?? 0),
+        pctBudget: Number(p.progressionBudgetPct ?? p.pctBudget ?? 0),
+        realisationPct: Number(p.progressionRealisationPct ?? 0),
+        prochaineDeadline: p.prochaineDeadline ? String(p.prochaineDeadline) : null,
         couleur: p.couleur ? String(p.couleur) : undefined,
       }));
 
@@ -319,34 +329,66 @@ export function DashboardConsultant() {
           </CardHeader>
           <CardContent className="space-y-3">
             {data.mesProjets.length > 0 ? (
-              data.mesProjets.map((p) => {
-                const projColor = p.couleur ?? "#3b82f6";
+              data.mesProjets.map((p, i) => {
+                const color = p.couleur ?? PROJET_COLORS[i % PROJET_COLORS.length];
                 const budgetBarColor = p.pctBudget > 100 ? "#b91c1c" : p.pctBudget > 85 ? "#f97316" : "#2563EB";
+                const margeLabel = p.realisationPct >= 40 ? "Bon" : p.realisationPct >= 30 ? "Moyen" : "Faible";
+                const margeBadgeClasses = p.realisationPct >= 40
+                  ? "bg-success/10 text-success"
+                  : p.realisationPct >= 30
+                  ? "bg-warning/10 text-warning-foreground"
+                  : "bg-destructive/10 text-destructive";
+                const joursRestants = p.prochaineDeadline
+                  ? differenceInDays(new Date(p.prochaineDeadline), new Date())
+                  : null;
+                const joursLabel = joursRestants != null
+                  ? joursRestants < 0 ? `J${joursRestants} retard` : `J+${joursRestants}`
+                  : null;
+                const joursColor = joursRestants != null
+                  ? joursRestants < 0 ? "text-destructive"
+                  : joursRestants <= 7 ? "text-destructive"
+                  : joursRestants <= 14 ? "text-warning"
+                  : "text-muted-foreground"
+                  : "";
                 return (
-                  <Link key={p.id} href={`/projets/${p.id}`}>
-                    <div className="rounded-xl border border-border overflow-hidden hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer">
-                      <div className="h-[3px] w-full" style={{ background: projColor }} />
-                      <div className="px-3 pt-2.5 pb-2" style={{ background: `${projColor}12` }}>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-sm" style={{ background: projColor }} />
-                          <span className="text-[10.5px] font-semibold" style={{ color: projColor }}>
-                            {p.statut === "EN_COURS" ? "En cours" : p.statut === "PLANIFIE" ? "Planifié" : "En pause"}
+                  <div key={p.id} className="relative rounded-xl border border-border overflow-hidden hover:-translate-y-px hover:shadow-sm transition-all">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl" style={{ background: color }} />
+                    <div className="pl-4 pr-4 py-3.5">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="text-[14px] font-bold text-foreground leading-tight">{p.nom}</div>
+                          <div className="text-[12px] text-muted-foreground mt-0.5">{p.client}</div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
+                          <span className={cn("text-[11.5px] font-semibold px-2 py-0.5 rounded-md", margeBadgeClasses)}>
+                            {margeLabel}
                           </span>
+                          <Link href={`/projets/${p.id}`} className="text-muted-foreground hover:text-primary transition-colors">
+                            <ArrowUpRight className="h-4 w-4" />
+                          </Link>
                         </div>
                       </div>
-                      <div className="px-3 pt-2 pb-3">
-                        <p className="text-[14px] font-bold text-foreground truncate">{p.nom}</p>
-                        <p className="text-[12px] text-muted-foreground mb-2">{p.client}</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-muted-foreground w-12 shrink-0">Budget</span>
-                          <div className="flex-1 h-[6px] rounded-full bg-border overflow-hidden">
-                            <div className="h-full rounded-full" style={{ width: `${Math.min(p.pctBudget, 100)}%`, background: budgetBarColor }} />
-                          </div>
-                          <span className="text-[11.5px] font-bold w-9 text-right" style={{ color: budgetBarColor }}>{p.pctBudget.toFixed(0)}%</span>
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <span className="text-[11px] text-muted-foreground w-12 shrink-0">Budget</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${Math.min(p.pctBudget, 100)}%`, background: budgetBarColor }} />
                         </div>
+                        <span className="text-[11.5px] font-bold w-9 text-right" style={{ color: budgetBarColor }}>{p.pctBudget.toFixed(1)}%</span>
                       </div>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-[11px] text-muted-foreground w-12 shrink-0">Réalisé</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
+                          <div className="h-full rounded-full bg-[#10b981]" style={{ width: `${p.realisationPct}%` }} />
+                        </div>
+                        <span className="text-[11.5px] font-bold text-muted-foreground w-9 text-right">{p.realisationPct.toFixed(1)}%</span>
+                      </div>
+                      {joursLabel && (
+                        <div className={cn("text-right text-[11px] font-semibold mt-1.5", joursColor)}>
+                          {joursLabel}
+                        </div>
+                      )}
                     </div>
-                  </Link>
+                  </div>
                 );
               })
             ) : (
