@@ -190,7 +190,7 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
                                     key={e.id}
                                     onContextMenu={(ev) => onContextMenu(ev, e)}
                                     onClick={() => onSelectEtape(e)}
-                                    className="w-full text-left text-[9px] rounded px-1 py-0.5 truncate cursor-pointer transition-opacity hover:opacity-80 flex items-center justify-between gap-1"
+                                    className="w-full text-left text-[9px] rounded px-1 py-0.5 cursor-pointer transition-opacity hover:opacity-80 flex items-center justify-between gap-1 overflow-hidden"
                                     style={{
                                       backgroundColor: e.projet.couleur + "20",
                                       borderLeft: `2px solid ${e.projet.couleur}`,
