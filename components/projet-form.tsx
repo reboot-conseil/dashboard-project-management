@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
+
+const PROJET_COLORS = ["#3b82f6", "#6366f1", "#14b8a6", "#f43f5e", "#84cc16", "#f97316"];
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -23,6 +25,7 @@ const formSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
   client: z.string().min(1, "Le client est requis"),
   budget: z.number().min(0, "Le budget doit être positif"),
+  couleur: z.string(),
   chargeEstimeeTotale: z.number().nullable().optional(),
   dateDebut: z.string().min(1, "La date de début est requise"),
   dateFin: z.string(),
@@ -36,6 +39,7 @@ export interface ProjetData {
   nom: string;
   client: string;
   budget: number;
+  couleur?: string;
   chargeEstimeeTotale: number | null;
   dateDebut: string;
   dateFin: string;
@@ -72,6 +76,8 @@ export function ProjetForm({
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -84,6 +90,7 @@ export function ProjetForm({
           dateDebut: toDateInput(projet.dateDebut),
           dateFin: toDateInput(projet.dateFin),
           statut: projet.statut,
+          couleur: projet.couleur ?? PROJET_COLORS[0],
         }
       : {
           nom: "",
@@ -93,8 +100,11 @@ export function ProjetForm({
           dateDebut: format(new Date(), "yyyy-MM-dd"),
           dateFin: "",
           statut: "PLANIFIE",
+          couleur: PROJET_COLORS[0],
         },
   });
+
+  const couleurValue = useWatch({ control, name: "couleur" });
 
   // Pré-remplir le formulaire quand le dialog s'ouvre
   useEffect(() => {
@@ -107,6 +117,7 @@ export function ProjetForm({
         dateDebut: toDateInput(projet.dateDebut),
         dateFin: toDateInput(projet.dateFin),
         statut: projet.statut,
+        couleur: projet.couleur ?? PROJET_COLORS[0],
       });
     } else if (open) {
       reset({
@@ -117,6 +128,7 @@ export function ProjetForm({
         dateDebut: format(new Date(), "yyyy-MM-dd"),
         dateFin: "",
         statut: "PLANIFIE",
+        couleur: PROJET_COLORS[0],
       });
     }
   }, [open, projet, reset]);
@@ -237,6 +249,26 @@ export function ProjetForm({
             <div className="space-y-2">
               <Label htmlFor="dateFin">Date de fin</Label>
               <Input id="dateFin" type="date" {...register("dateFin")} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Couleur du projet</Label>
+            <div className="flex gap-2">
+              {PROJET_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setValue("couleur", c)}
+                  className="w-7 h-7 rounded-md transition-all"
+                  style={{
+                    background: c,
+                    outline: couleurValue === c ? `2px solid ${c}` : "none",
+                    outlineOffset: "2px",
+                    opacity: couleurValue === c ? 1 : 0.45,
+                  }}
+                />
+              ))}
             </div>
           </div>
 

@@ -5,6 +5,8 @@ import { differenceInDays } from "date-fns";
 import { calculerProgression } from "@/lib/projet-metrics";
 import { requireAuth } from "@/lib/auth-guard";
 
+const PROJET_COLORS = ["#3b82f6", "#6366f1", "#14b8a6", "#f43f5e", "#84cc16", "#f97316"];
+
 const projetSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
   client: z.string().min(1, "Le client est requis"),
@@ -13,6 +15,7 @@ const projetSchema = z.object({
   dateDebut: z.string().min(1, "La date de début est requise"),
   dateFin: z.string().nullable().optional(),
   statut: z.enum(["PLANIFIE", "EN_COURS", "EN_PAUSE", "TERMINE"]),
+  couleur: z.string().optional(),
 });
 
 export async function GET(request: Request) {
@@ -164,6 +167,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = projetSchema.parse(body);
 
+    // Auto-assign couleur si non fournie : rotation basée sur le nombre de projets existants
+    let couleur = data.couleur;
+    if (!couleur) {
+      const count = await prisma.projet.count();
+      couleur = PROJET_COLORS[count % PROJET_COLORS.length];
+    }
+
     const projet = await prisma.projet.create({
       data: {
         nom: data.nom,
@@ -173,6 +183,7 @@ export async function POST(request: Request) {
         dateDebut: new Date(data.dateDebut),
         dateFin: data.dateFin ? new Date(data.dateFin) : null,
         statut: data.statut,
+        couleur,
       },
     });
     return NextResponse.json(projet, { status: 201 });

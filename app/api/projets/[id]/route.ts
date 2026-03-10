@@ -11,6 +11,7 @@ const updateSchema = z.object({
   dateDebut: z.string().min(1, "La date de début est requise"),
   dateFin: z.string().nullable().optional(),
   statut: z.enum(["PLANIFIE", "EN_COURS", "EN_PAUSE", "TERMINE"]),
+  couleur: z.string().optional(),
 });
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -72,6 +73,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         dateDebut: new Date(data.dateDebut),
         dateFin: data.dateFin ? new Date(data.dateFin) : null,
         statut: data.statut,
+        ...(data.couleur ? { couleur: data.couleur } : {}),
       },
     });
     return NextResponse.json(projet);
