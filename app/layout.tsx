@@ -29,14 +29,13 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('theme');
+            var p = localStorage.getItem('palette');
             var cl = document.documentElement.classList;
+            var el = document.documentElement;
             if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
               cl.add('dark');
-            } else if (t === 'cerise') {
-              cl.add('theme-cerise');
-            } else if (t === 'reboot') {
-              cl.add('theme-reboot');
             }
+            if (p === 'slate') el.setAttribute('data-palette', 'slate');
           } catch(e) {}
         ` }} />
       </head>

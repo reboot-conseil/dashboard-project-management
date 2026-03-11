@@ -69,7 +69,7 @@ const THEME_META: Record<Theme, { icon: React.ElementType; label: string; color:
 };
 
 function ThemeCycleButton({ theme, onCycle }: { theme: Theme; onCycle: () => void }) {
-  const { icon: Icon, label, color } = THEME_META[theme];
+  const { icon: Icon, label, color } = THEME_META[theme] ?? THEME_META.light;
   return (
     <button
       onClick={onCycle}
