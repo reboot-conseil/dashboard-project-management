@@ -49,8 +49,11 @@ services:
       - app
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /home/jon/ssl.crt:/etc/nginx/ssl/ssl.crt:ro
+      - /home/jon/ssl.key:/etc/nginx/ssl/ssl.key:ro
     networks:
       - internal
 
