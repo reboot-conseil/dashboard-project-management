@@ -5,6 +5,15 @@ Format : [version] — date — description
 
 ---
 
+## [v2.3.2] — 2026-03-11
+Correctifs UX admin/users + rôle SSO
+
+### Fixes
+- Bouton "Modifier" visible pour tous les comptes actifs (SSO inclus, pas seulement credentials)
+- Changement de rôle nécessite une reconnexion pour prendre effet (comportement JWT normal)
+
+---
+
 ## [v2.3.1] — 2026-03-11
 Correctifs post-déploiement Microsoft SSO
 
