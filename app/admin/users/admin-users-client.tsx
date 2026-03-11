@@ -143,18 +143,22 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
 
                 {/* Badges */}
                 <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                  {user.hasAccount
-                    ? <Badge variant="default" className="text-[10px]">{ROLE_LABELS[user.role]}</Badge>
-                    : <Badge variant="outline" className="text-[10px]">Pas de compte</Badge>}
+                  {(user.hasAccount || user.actif) && (
+                    <Badge variant="default" className="text-[10px]">{ROLE_LABELS[user.role]}</Badge>
+                  )}
+                  {!user.hasAccount && !user.actif && (
+                    <Badge variant="outline" className="text-[10px]">Pas de compte</Badge>
+                  )}
                   {!user.actif && <Badge variant="destructive" className="text-[10px]">Inactif</Badge>}
                   {user.actif && user.hasAccount && <Badge variant="success" className="text-[10px]">Actif</Badge>}
+                  {user.actif && !user.hasAccount && <Badge variant="info" className="text-[10px]">SSO actif</Badge>}
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2 mt-1 flex-wrap justify-center">
                   {!user.hasAccount && (
                     <Button size="sm" variant="outline" onClick={() => setSelected(user)} className="text-xs gap-1">
-                      <UserPlus className="h-3 w-3" />Activer
+                      <UserPlus className="h-3 w-3" />{user.actif ? "Ajouter mot de passe" : "Activer"}
                     </Button>
                   )}
                   {user.hasAccount && (

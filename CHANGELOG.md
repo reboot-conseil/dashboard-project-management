@@ -5,6 +5,19 @@ Format : [version] — date — description
 
 ---
 
+## [v2.3.1] — 2026-03-11
+Correctifs post-déploiement Microsoft SSO
+
+### Fixes
+- `auth.ts` : jwt callback — lookup DB pour rôle correct des utilisateurs SSO
+- `nginx.conf` : proxy_buffer_size 128k pour headers JWT volumineux (502 corrigé)
+- `docker-compose.yml` : context `..` + variables Microsoft passées au container
+- `deploy.sh` : -p dashboard + -f infra/docker-compose.yml
+- Admin/users : badge "SSO actif" (info) pour comptes sans mot de passe mais actifs
+- Admin/users : bouton "Ajouter mot de passe" au lieu de "Activer" pour comptes SSO
+
+---
+
 ## [v2.3.0] — 2026-03-11 (tag `v2.3.0`)
 Microsoft SSO + Email automatique + HTTPS + Création utilisateurs
 
