@@ -30,6 +30,8 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
   const [selectedRole, setSelectedRole] = useState<Role>(Role.CONSULTANT)
   const [editRole, setEditRole] = useState<Role>(Role.CONSULTANT)
   const [loading, setLoading] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
+  const [createForm, setCreateForm] = useState({ nom: "", email: "", role: "CONSULTANT" as Role, password: "", tjm: "" })
 
   async function activateAccount() {
     if (!selected || !newPassword) return
@@ -70,6 +72,37 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
     } catch { toast.error("Erreur") } finally { setLoading(false) }
   }
 
+  async function createUser() {
+    if (!createForm.nom || !createForm.email || !createForm.password) {
+      toast.error("Nom, email et mot de passe sont requis")
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          nom: createForm.nom,
+          email: createForm.email,
+          role: createForm.role,
+          password: createForm.password,
+          tjm: createForm.tjm !== "" ? createForm.tjm : undefined,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error ?? "Erreur lors de la création")
+        return
+      }
+      toast.success(`Compte créé pour ${createForm.nom}`)
+      router.refresh()
+      setShowCreate(false)
+      setCreateForm({ nom: "", email: "", role: "CONSULTANT", password: "", tjm: "" })
+    } catch { toast.error("Erreur") } finally { setLoading(false) }
+  }
+
   async function toggleActive(user: UserEntry) {
     setLoading(true)
     try {
@@ -83,6 +116,9 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">Équipe <span className="text-muted-foreground font-normal text-sm">({users.length})</span></h2>
+          <Button size="sm" onClick={() => setShowCreate(true)} className="gap-1.5 text-xs">
+            <UserPlus className="h-3.5 w-3.5" />Nouvel utilisateur
+          </Button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {users.map((user) => {
@@ -201,6 +237,57 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
             <div className="flex gap-2">
               <Button variant="destructive" onClick={() => deleteUser(confirmDelete)} disabled={loading}>Confirmer la suppression</Button>
               <Button variant="outline" onClick={() => setConfirmDelete(null)}>Annuler</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {showCreate && (
+        <Card>
+          <CardHeader><CardTitle>Créer un utilisateur</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="create-nom">Nom complet *</Label>
+                <Input id="create-nom" placeholder="Julie Chen" value={createForm.nom}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, nom: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="create-email">Email *</Label>
+                <Input id="create-email" type="email" placeholder="julie.chen@reboot-conseil.com"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Rôle</Label>
+                <Select value={createForm.role} onChange={(e) => setCreateForm((f) => ({ ...f, role: e.target.value as Role }))}>
+                  <option value="ADMIN">Administrateur</option>
+                  <option value="PM">Chef de projet</option>
+                  <option value="CONSULTANT">Consultant</option>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="create-tjm">TJM €/j (optionnel)</Label>
+                <Input id="create-tjm" type="number" min={0} placeholder="600"
+                  value={createForm.tjm}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, tjm: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-password">Mot de passe initial *</Label>
+              <Input id="create-password" type="password" placeholder="Minimum 8 caractères"
+                value={createForm.password}
+                onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))} />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={createUser} disabled={loading}>Créer le compte</Button>
+              <Button variant="outline" onClick={() => {
+                setShowCreate(false)
+                setCreateForm({ nom: "", email: "", role: "CONSULTANT", password: "", tjm: "" })
+              }}>
+                Annuler
+              </Button>
             </div>
           </CardContent>
         </Card>
