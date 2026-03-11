@@ -20,7 +20,7 @@ describe('LoginPage', () => {
 
   it('affiche un bouton de connexion', () => {
     render(<LoginPage />)
-    expect(screen.getByRole('button', { name: /se connecter/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Se connecter' })).toBeInTheDocument()
   })
 
   it('appelle signIn au submit avec les credentials', async () => {
@@ -28,7 +28,7 @@ describe('LoginPage', () => {
     render(<LoginPage />)
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'admin@company.com' } })
     fireEvent.change(screen.getByLabelText(/mot de passe/i), { target: { value: 'password123' } })
-    fireEvent.click(screen.getByRole('button', { name: /se connecter/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }))
     expect(signIn).toHaveBeenCalledWith('credentials', expect.objectContaining({
       email: 'admin@company.com',
       password: 'password123',
