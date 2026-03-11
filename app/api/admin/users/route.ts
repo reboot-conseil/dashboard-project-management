@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { requireRole } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
+import { sendWelcomeEmail } from "@/lib/email"
 
 export async function GET() {
   const authError = await requireRole(["ADMIN"])
@@ -48,6 +49,12 @@ export async function POST(req: Request) {
         actif: true,
       },
     })
+    try {
+      await sendWelcomeEmail(nom, email, password)
+    } catch (emailErr) {
+      console.error("[admin/users] Email de bienvenue non envoyé :", emailErr)
+      // Silencieux : le compte existe, l'email n'est pas bloquant
+    }
     return NextResponse.json({ id: consultant.id, email: consultant.email, role: consultant.role }, { status: 201 })
   }
 
