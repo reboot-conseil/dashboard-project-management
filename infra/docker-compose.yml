@@ -44,6 +44,7 @@ services:
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET}
       EMAIL_FROM: ${EMAIL_FROM}
       APP_URL: ${APP_URL}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     networks:
       - internal
     expose:
