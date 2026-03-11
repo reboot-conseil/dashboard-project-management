@@ -67,30 +67,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true
     },
 
-    jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id as string
-        token.role = (user as { role: Role }).role
+        if (account?.provider === "microsoft-entra-id") {
+          // SSO : récupérer id et rôle réels depuis la DB
+          const consultant = await prisma.consultant.findUnique({
+            where: { email: user.email! },
+            select: { id: true, role: true },
+          })
+          if (consultant) {
+            token.id = String(consultant.id)
+            token.role = consultant.role
+          }
+        } else {
+          // Credentials : id et rôle fournis par authorize()
+          token.id = user.id as string
+          token.role = (user as { role: Role }).role
+        }
       }
       return token
     },
 
     async session({ session, token }) {
       if (session.user) {
-        // Pour SSO Microsoft, récupérer id et rôle depuis la DB
-        if (!token.id && session.user.email) {
-          const consultant = await prisma.consultant.findUnique({
-            where: { email: session.user.email },
-            select: { id: true, role: true },
-          })
-          if (consultant) {
-            session.user.id = String(consultant.id)
-            session.user.role = consultant.role as Role
-          }
-        } else {
-          session.user.id = token.id as string
-          session.user.role = token.role as Role
-        }
+        session.user.id = token.id as string
+        session.user.role = token.role as Role
       }
       return session
     },
