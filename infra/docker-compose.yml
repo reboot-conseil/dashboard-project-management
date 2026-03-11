@@ -21,8 +21,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: infra/Dockerfile
     container_name: dashboard_app
     restart: unless-stopped
     depends_on:
