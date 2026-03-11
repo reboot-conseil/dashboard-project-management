@@ -19,6 +19,8 @@ import {
   XCircle,
   AlertTriangle,
   Inbox,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +94,94 @@ function formatSize(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
+// ── Prompt ingestion ────────────────────────────────────────────
+
+const INGESTION_PROMPT = `Tu es un expert en gestion de projets consulting. Je te fournis un ensemble de documents relatifs à un projet (devis, compte-rendus, emails, transcripts de réunions, plannings, etc.).
+
+Ton objectif : produire UN SEUL document texte structuré, clair et complet, qui synthétise toutes les informations du projet de façon à être parfaitement analysé par un outil de gestion de projet.
+
+---
+
+INFORMATIONS À EXTRAIRE ET STRUCTURER :
+
+## 1. PROJET
+- Nom du projet (précis, pas générique)
+- Nom du client (entreprise)
+- Date de début (format JJ/MM/AAAA)
+- Date de fin prévue (format JJ/MM/AAAA)
+- Budget total en euros (chiffre uniquement)
+- Statut : Planifié / En cours
+- Description courte (2-3 phrases sur l'objectif du projet)
+
+## 2. ÉQUIPE / CONSULTANTS
+Pour chaque consultant impliqué :
+- Prénom Nom
+- Email professionnel (si disponible)
+- Rôle sur le projet (Chef de projet / Consultant / Expert / etc.)
+
+## 3. ÉTAPES DU PROJET
+Pour chaque phase ou étape :
+- Nom de l'étape (court et clair : ex. "Cadrage", "Audit", "Développement", "Recette", "Déploiement")
+- Ordre (1, 2, 3…)
+- Charge estimée en jours (ex. 5 jours)
+- Date de début (JJ/MM/AAAA)
+- Date de fin (JJ/MM/AAAA)
+- Description des livrables ou objectifs
+
+## 4. ACTIVITÉS RÉALISÉES
+Pour chaque activité ou temps passé déjà connu :
+- Date (JJ/MM/AAAA)
+- Nombre d'heures
+- Prénom Nom du consultant (ou email)
+- Étape associée (nom exact de l'étape)
+- Description de la tâche
+
+## 5. CONTACTS CLIENT
+Pour chaque interlocuteur côté client :
+- Prénom Nom
+- Email (si disponible)
+- Rôle (ex. DSI, Directeur de projet, Chef de projet client)
+
+---
+
+RÈGLES DE RÉDACTION :
+- Si une information est absente ou incertaine, indique explicitement "Non renseigné" (ne pas inventer)
+- Toutes les dates au format JJ/MM/AAAA
+- Les durées toujours en jours (convertir semaines et mois : 1 semaine = 5 jours, 1 mois = 20 jours)
+- Le budget en chiffre entier euros, sans symbole ni espace (ex. 45000)
+- Les noms des étapes : courts, sans numéro, sans date (ex. "Cadrage" pas "Phase 1 - Cadrage - Jan 2026")
+- Les heures d'activité en chiffre décimal (ex. 3.5 pour 3h30)
+- Un consultant identifié par son email est préférable à son nom seul
+
+---
+
+STRUCTURE DE SORTIE ATTENDUE :
+
+Rédige le document avec exactement les sections suivantes, dans cet ordre, avec les titres en majuscules :
+
+PROJET
+[informations projet]
+
+ÉQUIPE
+[liste des consultants]
+
+ÉTAPES
+[liste des étapes numérotées]
+
+ACTIVITÉS RÉALISÉES
+[liste des activités avec date, heures, consultant, étape, description]
+
+CONTACTS CLIENT
+[liste des contacts]
+
+NOTES COMPLÉMENTAIRES
+[tout ce qui ne rentre pas dans les catégories ci-dessus mais pourrait être utile]
+
+---
+
+Voici les documents à analyser :
+[JOINDRE LES DOCUMENTS ICI]`;
+
 // ── Page ────────────────────────────────────────────────────────
 
 export default function DocumentsPage() {
@@ -100,6 +190,14 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function copyPrompt() {
+    await navigator.clipboard.writeText(INGESTION_PROMPT);
+    setCopied(true);
+    toast.success("Prompt copié — colle-le dans Claude avec tes documents");
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   const fetchDocs = useCallback(async () => {
     try {
@@ -151,12 +249,18 @@ export default function DocumentsPage() {
             Documents uploadés et analysés par l'IA
           </p>
         </div>
-        <Link href="/documents/upload">
-          <Button>
-            <Upload className="h-4 w-4 mr-2" />
-            Uploader un document
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={copyPrompt}>
+            {copied ? <Check className="h-4 w-4 mr-2 text-green-600" /> : <Copy className="h-4 w-4 mr-2" />}
+            {copied ? "Copié !" : "Prompt"}
           </Button>
-        </Link>
+          <Link href="/documents/upload">
+            <Button>
+              <Upload className="h-4 w-4 mr-2" />
+              Uploader un document
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats — masquées si tout à zéro */}
