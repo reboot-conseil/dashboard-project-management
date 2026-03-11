@@ -14,6 +14,11 @@ type Role = "ADMIN" | "PM" | "CONSULTANT"
 const Role = { ADMIN: "ADMIN" as Role, PM: "PM" as Role, CONSULTANT: "CONSULTANT" as Role }
 
 type UserEntry = { id: number; nom: string; email: string; role: Role; actif: boolean; hasAccount: boolean }
+
+function isPlaceholderEmail(email: string) {
+  return email.startsWith("_sans-email-") && email.endsWith("@noemail.local")
+}
+
 const ROLE_LABELS: Record<Role, string> = { ADMIN: "Administrateur", PM: "Chef de projet", CONSULTANT: "Consultant" }
 
 function nameToColor(nom: string): string {
@@ -25,6 +30,7 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
   const router = useRouter()
   const [selected, setSelected] = useState<UserEntry | null>(null)
   const [editingRole, setEditingRole] = useState<UserEntry | null>(null)
+  const [editEmail, setEditEmail] = useState("")
   const [confirmDelete, setConfirmDelete] = useState<UserEntry | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [selectedRole, setSelectedRole] = useState<Role>(Role.CONSULTANT)
@@ -54,11 +60,14 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
     } catch { toast.error("Erreur") } finally { setLoading(false) }
   }
 
-  async function updateRole(user: UserEntry, role: Role) {
+  async function updateRole(user: UserEntry, role: Role, newEmail?: string) {
     setLoading(true)
     try {
-      await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consultantId: user.id, role }) })
-      toast.success(`Rôle mis à jour pour ${user.nom}`)
+      const body: Record<string, unknown> = { consultantId: user.id, role }
+      if (newEmail && newEmail !== user.email) body.email = newEmail
+      const res = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      if (!res.ok) { const d = await res.json(); toast.error(d.error ?? "Erreur"); return }
+      toast.success(`Profil mis à jour pour ${user.nom}`)
       router.refresh(); setEditingRole(null)
     } catch { toast.error("Erreur") } finally { setLoading(false) }
   }
@@ -152,6 +161,7 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                   {!user.actif && <Badge variant="destructive" className="text-[10px]">Inactif</Badge>}
                   {user.actif && user.hasAccount && <Badge variant="success" className="text-[10px]">Actif</Badge>}
                   {user.actif && !user.hasAccount && <Badge variant="info" className="text-[10px]">SSO actif</Badge>}
+                  {isPlaceholderEmail(user.email) && <Badge variant="warning-soft" className="text-[10px]">Sans email</Badge>}
                 </div>
 
                 {/* Actions */}
@@ -162,7 +172,7 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                     </Button>
                   )}
                   {user.actif && (
-                    <Button size="sm" variant="outline" onClick={() => { setEditingRole(user); setEditRole(user.role); }} className="text-xs gap-1">
+                    <Button size="sm" variant="outline" onClick={() => { setEditingRole(user); setEditRole(user.role); setEditEmail(isPlaceholderEmail(user.email) ? "" : user.email) }} className="text-xs gap-1">
                       <Pencil className="h-3 w-3" />Modifier
                     </Button>
                   )}
@@ -213,10 +223,16 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
 
       {editingRole && (
         <Card>
-          <CardHeader><CardTitle>Modifier le rôle — {editingRole.nom}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Modifier — {editingRole.nom}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {isPlaceholderEmail(editingRole.email) && (
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-email">Email <span className="text-muted-foreground text-xs">(requis pour lier le compte SSO)</span></Label>
+                <Input id="edit-email" type="email" placeholder="prenom.nom@reboot-conseil.com" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+              </div>
+            )}
             <div className="space-y-1.5">
-              <Label>Nouveau rôle</Label>
+              <Label>Rôle</Label>
               <Select value={editRole} onChange={(e) => setEditRole(e.target.value as Role)}>
                 <option value="ADMIN">Administrateur</option>
                 <option value="PM">Chef de projet</option>
@@ -224,7 +240,7 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
               </Select>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => updateRole(editingRole, editRole)} disabled={loading}>Enregistrer</Button>
+              <Button onClick={() => updateRole(editingRole, editRole, editEmail || undefined)} disabled={loading}>Enregistrer</Button>
               <Button variant="outline" onClick={() => setEditingRole(null)}>Annuler</Button>
             </div>
           </CardContent>

@@ -5,6 +5,36 @@ Format : [version] — date — description
 
 ---
 
+## [v2.4.0] — 2026-03-11
+Agent IA — création complète depuis document (consultant par nom ou email)
+
+### Documents / IA
+- `validate/route.ts` : création automatique du profil consultant si inconnu en DB
+  - Match par email → utilisé tel quel (lien SSO automatique à la 1ère connexion)
+  - Match par nom (insensible à la casse) → consultant existant réutilisé
+  - Email inconnu → profil créé, lien SSO automatique à la 1ère connexion Microsoft
+  - Nom seul → profil créé avec email placeholder `_sans-email-{ts}@noemail.local`
+  - Ni email ni nom → activité ignorée (signal d'échec de parsing)
+- `review/[id]/page.tsx` : formulaire de validation enrichi
+  - Champ `consultantNom` ajouté sur chaque ligne d'activité (à côté de la description)
+  - Pre-fill intelligent : `act.consultant` routé vers email ou nom selon présence de `@`
+  - Activités sans email ni nom surlignées en orange avec placeholder ambré
+  - `runChecks` : avertissement si activités sans consultant (email ou nom)
+  - Note de bas de section mise à jour pour expliquer le comportement
+
+### Admin / Utilisateurs
+- `admin/users/route.ts PATCH` : supporte la mise à jour de l'email (unicité vérifiée)
+- `admin-users-client.tsx` :
+  - Badge "Sans email" (warning-soft) sur les consultants créés par import
+  - Panel "Modifier" : champ email affiché uniquement si email placeholder, avec rappel SSO
+
+---
+
+Toutes les versions notables de ce projet sont documentées ici.
+Format : [version] — date — description
+
+---
+
 ## [v2.3.2] — 2026-03-11
 Correctifs UX admin/users + rôle SSO
 

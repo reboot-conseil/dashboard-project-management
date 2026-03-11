@@ -79,12 +79,17 @@ export async function DELETE(req: Request) {
 export async function PATCH(req: Request) {
   const authError = await requireRole(["ADMIN"])
   if (authError) return authError
-  const { consultantId, password, role, actif } = await req.json()
+  const { consultantId, password, role, actif, email } = await req.json()
   if (!consultantId) return NextResponse.json({ error: "consultantId manquant" }, { status: 400 })
   const data: Record<string, unknown> = {}
   if (password) data.password = await bcrypt.hash(password, 12)
   if (role) data.role = role
   if (actif !== undefined) data.actif = actif
+  if (email) {
+    const existing = await prisma.consultant.findFirst({ where: { email, NOT: { id: consultantId } } })
+    if (existing) return NextResponse.json({ error: "Email déjà utilisé" }, { status: 409 })
+    data.email = email
+  }
   const updated = await prisma.consultant.update({ where: { id: consultantId }, data })
   return NextResponse.json({ id: updated.id, email: updated.email, role: updated.role })
 }

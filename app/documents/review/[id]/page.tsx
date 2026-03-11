@@ -114,6 +114,7 @@ interface ActiviteForm {
   heures: string;
   description: string;
   consultantEmail: string;
+  consultantNom: string;
   etapeNom: string;
 }
 
@@ -181,9 +182,9 @@ function runChecks(projetForm: ProjetForm, etapes: EtapeForm[], activites: Activ
   if (projetForm.dateDebut && projetForm.dateFin && projetForm.dateDebut > projetForm.dateFin)
     errors.push("Date début > date fin");
 
-  const orphanActivites = activites.filter((a) => !a.consultantEmail);
+  const orphanActivites = activites.filter((a) => !a.consultantEmail && !a.consultantNom);
   if (orphanActivites.length > 0)
-    warnings.push(`${orphanActivites.length} activité(s) sans consultant`);
+    warnings.push(`${orphanActivites.length} activité(s) sans consultant — un profil sera créé à la validation`);
 
   const isValid = errors.length === 0;
   return { isValid, errors, warnings, successes };
@@ -248,13 +249,17 @@ function ReviewContent() {
         }
         if (a.activites) {
           setActivites(
-            a.activites.map((act) => ({
-              date: act.date ?? "",
-              heures: String(act.heures ?? ""),
-              description: act.description ?? "",
-              consultantEmail: act.consultant ?? "",
-              etapeNom: act.etape ?? "",
-            }))
+            a.activites.map((act) => {
+              const isEmail = act.consultant?.includes("@") ?? false;
+              return {
+                date: act.date ?? "",
+                heures: String(act.heures ?? ""),
+                description: act.description ?? "",
+                consultantEmail: isEmail ? (act.consultant ?? "") : "",
+                consultantNom: isEmail ? "" : (act.consultant ?? ""),
+                etapeNom: act.etape ?? "",
+              };
+            })
           );
         }
         if (data.projet) {
@@ -312,7 +317,7 @@ function ReviewContent() {
   function addActivite() {
     setActivites((prev) => [
       ...prev,
-      { date: format(new Date(), "yyyy-MM-dd"), heures: "", description: "", consultantEmail: "", etapeNom: "" },
+      { date: format(new Date(), "yyyy-MM-dd"), heures: "", description: "", consultantEmail: "", consultantNom: "", etapeNom: "" },
     ]);
   }
 
@@ -342,7 +347,8 @@ function ReviewContent() {
               date: a.date,
               heures: a.heures ? parseFloat(a.heures) : 0,
               description: a.description,
-              consultantEmail: a.consultantEmail,
+              consultantEmail: a.consultantEmail || null,
+              consultantNom: a.consultantNom || null,
               etapeNom: a.etapeNom || null,
             })),
           },
@@ -729,58 +735,69 @@ function ReviewContent() {
                   Aucune activité détectée.
                 </p>
               )}
-              {activites.map((act, idx) => (
-                <div
-                  key={idx}
-                  className="border rounded-lg p-3 space-y-2 relative group"
-                >
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <Input
-                      type="date"
-                      value={act.date}
-                      onChange={(e) => updateActivite(idx, "date", e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={act.heures}
-                      onChange={(e) => updateActivite(idx, "heures", e.target.value)}
-                      placeholder="Heures"
-                      className="h-8 text-sm"
-                    />
-                    <Input
-                      value={act.consultantEmail}
-                      onChange={(e) => updateActivite(idx, "consultantEmail", e.target.value)}
-                      placeholder="Email consultant"
-                      className="h-8 text-sm"
-                    />
-                    <div className="flex items-center gap-1">
+              {activites.map((act, idx) => {
+                const noConsultant = !act.consultantEmail && !act.consultantNom;
+                return (
+                  <div
+                    key={idx}
+                    className={`border rounded-lg p-3 space-y-2 relative group ${noConsultant ? "border-amber-300 bg-amber-50/40" : ""}`}
+                  >
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <Input
-                        value={act.etapeNom}
-                        onChange={(e) => updateActivite(idx, "etapeNom", e.target.value)}
-                        placeholder="Étape"
-                        className="h-8 text-sm flex-1"
+                        type="date"
+                        value={act.date}
+                        onChange={(e) => updateActivite(idx, "date", e.target.value)}
+                        className="h-8 text-sm"
                       />
-                      <button
-                        onClick={() => removeActivite(idx)}
-                        className="p-1 text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        value={act.heures}
+                        onChange={(e) => updateActivite(idx, "heures", e.target.value)}
+                        placeholder="Heures"
+                        className="h-8 text-sm"
+                      />
+                      <Input
+                        value={act.consultantEmail}
+                        onChange={(e) => updateActivite(idx, "consultantEmail", e.target.value)}
+                        placeholder="Email consultant"
+                        className="h-8 text-sm"
+                      />
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={act.etapeNom}
+                          onChange={(e) => updateActivite(idx, "etapeNom", e.target.value)}
+                          placeholder="Étape"
+                          className="h-8 text-sm flex-1"
+                        />
+                        <button
+                          onClick={() => removeActivite(idx)}
+                          className="p-1 text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={act.consultantNom}
+                        onChange={(e) => updateActivite(idx, "consultantNom", e.target.value)}
+                        placeholder="Nom consultant (si pas d'email)"
+                        className={`h-7 text-xs ${noConsultant ? "border-amber-400 placeholder:text-amber-500" : ""}`}
+                      />
+                      <Input
+                        value={act.description}
+                        onChange={(e) => updateActivite(idx, "description", e.target.value)}
+                        placeholder="Description"
+                        className="h-7 text-xs"
+                      />
                     </div>
                   </div>
-                  <Input
-                    value={act.description}
-                    onChange={(e) => updateActivite(idx, "description", e.target.value)}
-                    placeholder="Description"
-                    className="h-7 text-xs"
-                  />
-                </div>
-              ))}
+                );
+              })}
               {activites.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Les activités sans consultant valide seront ignorées.
+                  Sans email : un profil consultant sera créé. Sans email ni nom : l'activité sera ignorée.
                 </p>
               )}
             </CardContent>

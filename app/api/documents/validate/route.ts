@@ -107,21 +107,61 @@ export async function POST(req: NextRequest) {
         for (const act of activitesData) {
           if (!act.date || !act.heures) continue;
 
-          // Matcher consultant par email
+          // Matcher consultant par email ou créer le profil
           let consultantId: number | null = null;
+          const CONSULTANT_COLORS = ["#8B5CF6","#EC4899","#F59E0B","#10B981","#06B6D4","#F97316"];
+
           if (act.consultantEmail) {
             const consultant = await tx.consultant.findUnique({
               where: { email: act.consultantEmail },
               select: { id: true },
             });
-            consultantId = consultant?.id ?? null;
+            if (consultant) {
+              consultantId = consultant.id;
+            } else {
+              // Créer le profil consultant avec email connu
+              const count = await tx.consultant.count();
+              const created = await tx.consultant.create({
+                data: {
+                  email: act.consultantEmail,
+                  nom: act.consultantNom ?? act.consultantEmail.split("@")[0],
+                  role: "CONSULTANT",
+                  actif: true,
+                  couleur: CONSULTANT_COLORS[count % CONSULTANT_COLORS.length],
+                },
+              });
+              consultantId = created.id;
+              console.log(`[DOC VALIDATE] Nouveau consultant créé (email): ${created.nom}`);
+            }
+          } else if (act.consultantNom) {
+            // Chercher par nom exact d'abord
+            const byName = await tx.consultant.findFirst({
+              where: { nom: { equals: act.consultantNom, mode: "insensitive" } },
+              select: { id: true },
+            });
+            if (byName) {
+              consultantId = byName.id;
+            } else {
+              // Créer avec email placeholder — admin liera l'email plus tard
+              const count = await tx.consultant.count();
+              const placeholder = `_sans-email-${Date.now()}@noemail.local`;
+              const created = await tx.consultant.create({
+                data: {
+                  email: placeholder,
+                  nom: act.consultantNom,
+                  role: "CONSULTANT",
+                  actif: true,
+                  couleur: CONSULTANT_COLORS[count % CONSULTANT_COLORS.length],
+                },
+              });
+              consultantId = created.id;
+              console.log(`[DOC VALIDATE] Nouveau consultant créé (nom seul): ${created.nom}`);
+            }
           }
 
-          // Skip si pas de consultant trouvé
+          // Skip si ni email ni nom disponible
           if (!consultantId) {
-            console.warn(
-              `[DOC VALIDATE] Activité skip — consultant non trouvé: ${act.consultantEmail || "?"}`
-            );
+            console.warn(`[DOC VALIDATE] Activité skip — aucun consultant identifiable`);
             continue;
           }
 
