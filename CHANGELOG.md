@@ -5,6 +5,34 @@ Format : [version] — date — description
 
 ---
 
+## [v2.3.0] — 2026-03-11 (tag `v2.3.0`)
+Microsoft SSO + Email automatique + HTTPS + Création utilisateurs
+
+### Authentification
+- Login Microsoft SSO via Office 365 (restreint @reboot-conseil.com)
+- Bouton "Se connecter avec Microsoft" sur la page login
+- Auto-création du consultant en DB au premier login SSO (rôle CONSULTANT)
+- Credentials provider conservé pour ADMIN / urgence
+- `auth.ts` : provider MicrosoftEntraId + callbacks signIn/session/jwt
+
+### Email automatique
+- `lib/email.ts` : service `sendWelcomeEmail` via Microsoft Graph API
+- Email de bienvenue envoyé à la création d'un compte depuis `/admin/users`
+- Contient : URL, email, mot de passe initial
+- Échec silencieux si Microsoft Graph non configuré
+
+### HTTPS
+- `infra/nginx.conf` : port 443 SSL + redirection HTTP→HTTPS
+- `infra/docker-compose.yml` : port 443 exposé + montage certificats SSL
+- Certificat auto-signé sur le serveur (365 jours)
+
+### Gestion utilisateurs
+- Bouton "Nouvel utilisateur" dans `/admin/users`
+- Création consultant + compte en une action (nom, email, rôle, TJM, password)
+- API `POST /api/admin/users` : action=create atomique avec bcrypt
+
+---
+
 ## [v2.2.0] — 2026-03-10 (tag `v2.2.0`)
 Système de couleurs — Option A implémentée + Option B en paramètres
 
