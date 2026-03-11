@@ -16,7 +16,7 @@ rsync -az --exclude='.git' --exclude='node_modules' --exclude='.next' \
 echo "==> [2/5] Copie du fichier .env.production..."
 scp .env.production "${SERVER}:${REMOTE_DIR}/.env.production"
 
-COMPOSE="-f ${REMOTE_DIR}/infra/docker-compose.yml"
+COMPOSE="-p dashboard -f ${REMOTE_DIR}/infra/docker-compose.yml"
 
 echo "==> [3/5] Build de l'image Docker..."
 $SSH "${SERVER}" "cd ${REMOTE_DIR} && DOCKER_BUILDKIT=0 docker compose ${COMPOSE} build --no-cache"
