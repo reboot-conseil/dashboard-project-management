@@ -161,7 +161,7 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                       <UserPlus className="h-3 w-3" />{user.actif ? "Ajouter mot de passe" : "Activer"}
                     </Button>
                   )}
-                  {user.hasAccount && (
+                  {user.actif && (
                     <Button size="sm" variant="outline" onClick={() => { setEditingRole(user); setEditRole(user.role); }} className="text-xs gap-1">
                       <Pencil className="h-3 w-3" />Modifier
                     </Button>
