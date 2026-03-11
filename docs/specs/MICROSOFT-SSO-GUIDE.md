@@ -1,11 +1,16 @@
-# Guide d'implémentation — Connexion Microsoft SSO
-*Rédigé le 2026-03-10 — À implémenter en v2.3*
+# Guide d'implémentation — Microsoft SSO + Email automatique
+*Rédigé le 2026-03-10 — Mis à jour le 2026-03-11 — À implémenter en v2.3*
 
 ## Contexte
 
-L'auth actuelle (v2.2) utilise un provider Credentials (email + mot de passe bcrypt).
-L'objectif est d'ajouter la connexion via Microsoft Office 365, **restreinte aux comptes @reboot-conseil.com**.
+Ce guide couvre **deux fonctionnalités** qui partagent la même App Registration Azure :
 
+1. **Connexion Microsoft SSO** — login via Office 365 restreint aux `@reboot-conseil.com`
+2. **Email automatique** — envoi d'un email de bienvenue lors de la création d'un compte depuis `/admin/users`
+
+**Avantage clé** : une seule App Registration Azure, deux permissions → zéro duplication de config.
+
+L'auth actuelle (v2.2) utilise un provider Credentials (email + mot de passe bcrypt).
 Les deux providers coexisteront en parallèle : SSO Microsoft pour les utilisateurs courants, Credentials conservé pour l'accès d'urgence ADMIN.
 
 ---
@@ -25,6 +30,9 @@ Un administrateur Microsoft de Reboot Conseil doit :
    - `Directory (tenant) ID` → `AUTH_MICROSOFT_ENTRA_ID_ISSUER` (format : `https://login.microsoftonline.com/{tenantId}/v2.0`)
 5. **Certificates & secrets** → **New client secret** → copier la valeur → `AUTH_MICROSOFT_ENTRA_ID_SECRET`
 6. **API permissions** → vérifier que `openid`, `profile`, `email` sont présents (par défaut)
+7. **Ajouter la permission email** → **Add a permission** → Microsoft Graph → **Application permissions** → chercher `Mail.Send` → cocher → **Add permissions**
+8. **Grant admin consent** → cliquer "Grant admin consent for Reboot Conseil" (bouton vert) — indispensable pour les Application permissions
+9. Choisir l'adresse d'expédition des emails (ex: `noreply@reboot-conseil.com` ou ton adresse `jonathan.braun@reboot-conseil.com`)
 
 ---
 
@@ -33,17 +41,28 @@ Un administrateur Microsoft de Reboot Conseil doit :
 Dans `.env` (dev) et `.env.production` (prod) :
 
 ```env
+# SSO Microsoft
 AUTH_MICROSOFT_ENTRA_ID_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 AUTH_MICROSOFT_ENTRA_ID_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AUTH_MICROSOFT_ENTRA_ID_ISSUER=https://login.microsoftonline.com/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/v2.0
+
+# Email automatique (même App Registration, même credentials)
+MICROSOFT_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # même que dans ISSUER
+MICROSOFT_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   # même que AUTH_MICROSOFT_ENTRA_ID_ID
+MICROSOFT_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # même que AUTH_MICROSOFT_ENTRA_ID_SECRET
+EMAIL_FROM=jonathan.braun@reboot-conseil.com               # adresse expéditeur
+APP_URL=http://192.168.1.63                                 # URL de l'app (dans l'email)
 ```
+
+Note : `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID` et `MICROSOFT_CLIENT_SECRET` sont identiques aux variables SSO — tu peux référencer les mêmes valeurs.
 
 ---
 
-## Package à installer
+## Packages à installer
 
 ```bash
-npm install @auth/microsoft-entra-id
+npm install @auth/microsoft-entra-id   # SSO
+# Pas de package supplémentaire pour l'email — Microsoft Graph API via fetch natif
 ```
 
 ---
@@ -189,6 +208,108 @@ import { signIn } from "@/auth"
 
 ---
 
+---
+
+## Email automatique à la création de compte
+
+### Comment ça fonctionne
+
+1. Admin crée un compte via `/admin/users` → `POST /api/admin/users` avec `action: "create"`
+2. Après création réussie, l'API appelle `sendWelcomeEmail(nom, email, password, appUrl)`
+3. La fonction obtient un token OAuth2 (client_credentials) via Microsoft Identity
+4. Appel Microsoft Graph API pour envoyer l'email depuis `EMAIL_FROM`
+
+### Fichier à créer : `lib/email.ts`
+
+```typescript
+// lib/email.ts
+export async function sendWelcomeEmail(nom: string, email: string, password: string) {
+  const tenantId = process.env.MICROSOFT_TENANT_ID!
+  const clientId = process.env.MICROSOFT_CLIENT_ID!
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET!
+  const from = process.env.EMAIL_FROM!
+  const appUrl = process.env.APP_URL ?? "http://192.168.1.63"
+
+  // 1. Obtenir un access token (client credentials flow)
+  const tokenRes = await fetch(
+    `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: "https://graph.microsoft.com/.default",
+      }),
+    }
+  )
+  if (!tokenRes.ok) throw new Error("Impossible d'obtenir le token Microsoft")
+  const { access_token } = await tokenRes.json()
+
+  // 2. Envoyer l'email via Microsoft Graph
+  const mailRes = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${from}/sendMail`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          subject: "Votre accès PM Dashboard — Reboot Conseil",
+          body: {
+            contentType: "HTML",
+            content: `
+              <p>Bonjour <strong>${nom}</strong>,</p>
+              <p>Votre accès à la plateforme <strong>PM Dashboard</strong> de Reboot Conseil a été créé.</p>
+              <table>
+                <tr><td><strong>URL</strong></td><td><a href="${appUrl}">${appUrl}</a></td></tr>
+                <tr><td><strong>Email</strong></td><td>${email}</td></tr>
+                <tr><td><strong>Mot de passe</strong></td><td>${password}</td></tr>
+              </table>
+              <p>Nous vous recommandons de changer votre mot de passe après votre première connexion.</p>
+              <p>Cordialement,<br>L'équipe Reboot Conseil</p>
+            `,
+          },
+          toRecipients: [{ emailAddress: { address: email } }],
+        },
+        saveToSentItems: false,
+      }),
+    }
+  )
+  if (!mailRes.ok) {
+    const err = await mailRes.json().catch(() => ({}))
+    throw new Error(`Erreur envoi email : ${JSON.stringify(err)}`)
+  }
+}
+```
+
+### Modification de `app/api/admin/users/route.ts`
+
+Dans le cas `action === "create"`, après `prisma.consultant.create(...)`, ajouter :
+
+```typescript
+import { sendWelcomeEmail } from "@/lib/email"
+
+// Après la création du consultant :
+try {
+  await sendWelcomeEmail(nom, email, password)
+} catch (emailError) {
+  // L'email échoue silencieusement — le compte est déjà créé
+  console.error("Email de bienvenue non envoyé :", emailError)
+}
+```
+
+L'email échoue **silencieusement** : si Microsoft Graph n'est pas configuré, le compte est quand même créé. L'admin peut renvoyer les identifiants manuellement.
+
+### Sécurité
+
+⚠️ Le mot de passe temporaire est envoyé en clair dans l'email. Acceptable pour un outil interne, mais l'utilisateur doit changer son mot de passe à la première connexion. Une future amélioration pourrait envoyer un lien de reset plutôt que le mot de passe.
+
+---
+
 ## Décisions à prendre avant implémentation
 
 | Question | Options |
@@ -203,14 +324,27 @@ import { signIn } from "@/auth"
 
 ## Checklist d'implémentation
 
-- [ ] Admin Azure crée l'App Registration et fournit les 3 credentials
-- [ ] Ajouter les variables dans `.env` et `.env.production`
+### Azure (côté admin Microsoft — à faire en premier)
+- [ ] Créer l'App Registration (`PM Dashboard`)
+- [ ] Ajouter permission `Mail.Send` (Application) + Grant admin consent
+- [ ] Récupérer `TENANT_ID`, `CLIENT_ID`, `CLIENT_SECRET`
+- [ ] Configurer la Redirect URI pour le SSO
+
+### Code
+- [ ] Ajouter toutes les variables dans `.env` et `.env.production`
 - [ ] `npm install @auth/microsoft-entra-id`
-- [ ] Mettre à jour `auth.ts` (provider + callbacks)
+- [ ] Créer `lib/email.ts` avec `sendWelcomeEmail()`
+- [ ] Mettre à jour `auth.ts` (provider Microsoft + callbacks)
 - [ ] Mettre à jour `app/(auth)/login/page.tsx` (bouton Microsoft)
-- [ ] Tester en dev avec un compte @reboot-conseil.com
+- [ ] Mettre à jour `app/api/admin/users/route.ts` (appel `sendWelcomeEmail` après création)
+
+### Tests
+- [ ] Tester envoi email depuis `/admin/users` → créer un compte → vérifier réception
+- [ ] Tester SSO avec un compte @reboot-conseil.com
 - [ ] Tester le blocage avec un compte hors domaine
-- [ ] Tester la création auto d'un nouveau consultant
+- [ ] Tester que l'email échoue silencieusement si Graph non configuré
 - [ ] Tester que les rôles existants sont préservés
-- [ ] Déployer + configurer la Redirect URI en production dans Azure
-- [ ] Mettre à jour `CHANGELOG.md`
+
+### Déploiement
+- [ ] Déployer via `bash infra/deploy.sh`
+- [ ] Mettre à jour `CHANGELOG.md` (v2.3.0)
