@@ -49,6 +49,8 @@ services:
       - internal
     expose:
       - "3000"
+    volumes:
+      - uploads_data:/app/uploads
 
   nginx:
     image: nginx:alpine
@@ -68,6 +70,7 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
 
 networks:
   internal:
