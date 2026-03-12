@@ -5,6 +5,60 @@ Format : [version] — date — description
 
 ---
 
+## [v2.4.5] — 2026-03-12
+Page projet blanche + matching consultant par nom partiel
+
+### Fixes
+- `projets/[id] API` : null safety `a.consultant?.tjm` — évite crash si consultant supprimé post-import
+- `projets/[id] page` : fallback `"Non attribué"` si `a.consultant` null — page ne crashe plus
+- `validate/route.ts` : matching consultant en deux passes — exact d'abord, puis `contains` en fallback
+  (ex: "Jonathan" trouve maintenant "Jonathan Braun" en DB)
+
+---
+
+## [v2.4.4] — 2026-03-12
+Fix middleware — exclure toutes les routes /api/ de l'auth middleware
+
+### Fixes
+- `middleware.ts` : matcher `api/auth` → `api/` (toutes les routes API exclues)
+- Le middleware redirigait les appels internes non-authentifiés vers `/login`
+  → redirect HTTPS avec cert auto-signé → `TypeError: fetch failed` sur le trigger processing
+- Les routes API gèrent leur propre auth via `requireRole()` — le middleware ne protège que les pages
+
+---
+
+## [v2.4.3] — 2026-03-12
+Fix processing trigger — appel interne localhost au lieu de APP_URL HTTPS
+
+### Fixes
+- `upload/route.ts` : URL de processing `http://localhost:{PORT}` au lieu de `${APP_URL}`
+- `APP_URL=https://192.168.1.63` faisait passer le trigger par nginx + cert auto-signé
+  → Node.js rejetait le fetch → status bloqué sur UPLOADING indéfiniment
+
+---
+
+## [v2.4.2] — 2026-03-12
+Fix Docker — permissions /app/uploads + volume persistant
+
+### Fixes
+- `Dockerfile` : `mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads` avant `USER nextjs`
+  (résout `EACCES: permission denied, mkdir '/app/uploads'`)
+- `docker-compose.yml` : volume `uploads_data` monté sur `/app/uploads`
+  (fichiers uploadés persistés entre redémarrages du container)
+
+---
+
+## [v2.4.1] — 2026-03-12
+Bouton Prompt sur la page Documents
+
+### Fonctionnalité
+- `documents/page.tsx` : bouton "Prompt" dans le header
+- Copie le prompt d'ingestion IA dans le presse-papier en un clic
+- Toast de confirmation + icône check 2s puis retour à l'état initial
+- Prompt intégré directement dans le composant (pas de fetch fichier)
+
+---
+
 ## [v2.4.0] — 2026-03-11
 Agent IA — création complète depuis document (consultant par nom ou email)
 
