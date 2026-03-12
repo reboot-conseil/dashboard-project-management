@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { UserPlus, RotateCcw, UserX, UserCheck, Pencil, Trash2 } from "lucide-react"
+import { UserPlus, RotateCcw, UserX, UserCheck, Pencil, Trash2, GitMerge } from "lucide-react"
 import { toast } from "sonner"
 
 type Role = "ADMIN" | "PM" | "CONSULTANT"
@@ -31,6 +31,8 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
   const [selected, setSelected] = useState<UserEntry | null>(null)
   const [editingRole, setEditingRole] = useState<UserEntry | null>(null)
   const [editEmail, setEditEmail] = useState("")
+  const [mergingSource, setMergingSource] = useState<UserEntry | null>(null)
+  const [mergeTargetId, setMergeTargetId] = useState<string>("")
   const [confirmDelete, setConfirmDelete] = useState<UserEntry | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [selectedRole, setSelectedRole] = useState<Role>(Role.CONSULTANT)
@@ -120,6 +122,26 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
     } catch { toast.error("Erreur") } finally { setLoading(false) }
   }
 
+  async function mergeConsultant() {
+    if (!mergingSource || !mergeTargetId) return
+    setLoading(true)
+    try {
+      const res = await fetch("/api/admin/consultants/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceId: mergingSource.id, targetId: parseInt(mergeTargetId) }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? "Erreur lors de la fusion"); return }
+      toast.success(
+        `${data.sourceNom} fusionné avec ${data.targetNom} — ${data.activitesMigrees} activité(s) migrée(s)`
+      )
+      router.refresh()
+      setMergingSource(null)
+      setMergeTargetId("")
+    } catch { toast.error("Erreur réseau") } finally { setLoading(false) }
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-3">
@@ -176,6 +198,15 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                       <Pencil className="h-3 w-3" />Modifier
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { setMergingSource(user); setMergeTargetId("") }}
+                    className="h-8 w-8 p-0"
+                    title="Fusionner avec un autre consultant"
+                  >
+                    <GitMerge className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
                   {user.hasAccount && (
                     <Button size="sm" variant="ghost" onClick={() => resetPassword(user)} className="h-8 w-8 p-0" title="Réinitialiser le mot de passe">
                       <RotateCcw className="h-3.5 w-3.5" />
@@ -306,6 +337,64 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                 setShowCreate(false)
                 setCreateForm({ nom: "", email: "", role: "CONSULTANT", password: "", tjm: "" })
               }}>
+                Annuler
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {mergingSource && (
+        <Card className="border-amber-300/60">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <GitMerge className="h-4 w-4 text-amber-600" />
+              Fusionner — <span className="font-bold">{mergingSource.nom}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Toutes les activités de <strong>{mergingSource.nom}</strong> seront transférées vers le consultant sélectionné.
+              Le profil <strong>{mergingSource.nom}</strong> sera ensuite supprimé définitivement.
+            </p>
+            <div className="space-y-1.5">
+              <Label>Fusionner avec</Label>
+              <Select
+                value={mergeTargetId}
+                onChange={(e) => setMergeTargetId(e.target.value)}
+              >
+                <option value="">— Sélectionner le consultant cible —</option>
+                {users
+                  .filter((u) => u.id !== mergingSource.id)
+                  .map((u) => (
+                    <option key={u.id} value={String(u.id)}>
+                      {u.nom}{isPlaceholderEmail(u.email) ? " (sans email)" : ` — ${u.email}`}
+                    </option>
+                  ))}
+              </Select>
+            </div>
+            {mergeTargetId && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/40 dark:text-amber-300">
+                <p>
+                  Les activités de <strong>{mergingSource.nom}</strong> seront rattachées à{" "}
+                  <strong>{users.find((u) => u.id === parseInt(mergeTargetId))?.nom}</strong>.
+                </p>
+                <p className="mt-1 text-xs opacity-75">Cette action est irréversible.</p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={mergeConsultant}
+                disabled={!mergeTargetId || loading}
+                className="gap-1.5"
+              >
+                <GitMerge className="h-3.5 w-3.5" />
+                Confirmer la fusion
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setMergingSource(null); setMergeTargetId("") }}
+              >
                 Annuler
               </Button>
             </div>
