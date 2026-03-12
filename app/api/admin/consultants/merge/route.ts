@@ -14,42 +14,53 @@ export async function POST(req: NextRequest) {
   if (sourceId === targetId)
     return NextResponse.json({ error: "sourceId et targetId doivent être différents" }, { status: 400 })
 
+  const sid = typeof sourceId === "number" ? sourceId : parseInt(sourceId)
+  const tid = typeof targetId === "number" ? targetId : parseInt(targetId)
+  if (!sid || !tid || isNaN(sid) || isNaN(tid))
+    return NextResponse.json({ error: "sourceId et targetId doivent être des nombres valides" }, { status: 400 })
+
   const source = await prisma.consultant.findUnique({
-    where: { id: parseInt(sourceId) },
-    select: { id: true, nom: true, email: true, password: true },
+    where: { id: sid },
+    select: { id: true, nom: true, email: true, actif: true },
   })
   if (!source)
     return NextResponse.json({ error: "Consultant source introuvable" }, { status: 404 })
 
-  if (source.password)
+  if (source.actif)
     return NextResponse.json(
-      { error: "Impossible de fusionner un consultant avec un compte actif — réinitialisez d'abord le mot de passe" },
+      { error: "Impossible de fusionner un consultant avec un compte actif" },
       { status: 400 }
     )
 
   const target = await prisma.consultant.findUnique({
-    where: { id: parseInt(targetId) },
-    select: { id: true, nom: true },
+    where: { id: tid },
+    select: { id: true, nom: true, actif: true },
   })
   if (!target)
     return NextResponse.json({ error: "Consultant cible introuvable" }, { status: 404 })
 
-  const { count } = await prisma.$transaction(async (tx) => {
+  if (!target.actif)
+    return NextResponse.json(
+      { error: "Le consultant cible est inactif" },
+      { status: 400 }
+    )
+
+  const result = await prisma.$transaction(async (tx) => {
     const { count } = await tx.activite.updateMany({
       where: { consultantId: source.id },
       data: { consultantId: target.id },
     })
     await tx.consultant.delete({ where: { id: source.id } })
-    return { count }
+    return count
   })
 
   console.log(
-    `[MERGE] ${source.nom} (id:${source.id}) → ${target.nom} (id:${target.id}) — ${count} activités migrées`
+    `[MERGE] ${source.nom} (id:${source.id}) → ${target.nom} (id:${target.id}) — ${result} activités migrées`
   )
 
   return NextResponse.json({
     success: true,
-    activitesMigrees: count,
+    activitesMigrees: result,
     sourceNom: source.nom,
     targetNom: target.nom,
   })

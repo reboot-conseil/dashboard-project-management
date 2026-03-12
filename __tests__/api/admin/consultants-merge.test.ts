@@ -7,7 +7,7 @@ const { mockUpdateMany, mockDelete, mockFindUnique, mockTransaction } = vi.hoist
   const mockTransaction = vi.fn(async (fn: any) =>
     fn({
       activite: { updateMany: mockUpdateMany },
-      consultant: { delete: mockDelete, findUnique: mockFindUnique },
+      consultant: { delete: mockDelete },
     })
   )
   return { mockUpdateMany, mockDelete, mockFindUnique, mockTransaction }
@@ -54,18 +54,26 @@ describe("POST /api/admin/consultants/merge", () => {
     expect(res.status).toBe(404)
   })
 
-  it("returns 400 if source has a real account (password set)", async () => {
-    mockFindUnique.mockResolvedValueOnce({ id: 2, nom: "Jean", password: "hash", email: "jean@x.com" })
+  it("returns 400 if source is active (has real account)", async () => {
+    mockFindUnique.mockResolvedValueOnce({ id: 2, nom: "Jean", actif: true, email: "jean@x.com" })
     const res = await POST(makeReq({ sourceId: 2, targetId: 1 }))
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/compte actif/)
   })
 
+  it("returns 404 if target consultant not found", async () => {
+    mockFindUnique
+      .mockResolvedValueOnce({ id: 2, nom: "Jonathan", actif: false, email: "_sans-email-123@noemail.local" })
+      .mockResolvedValueOnce(null)
+    const res = await POST(makeReq({ sourceId: 2, targetId: 99 }))
+    expect(res.status).toBe(404)
+  })
+
   it("migrates activités and deletes source on success", async () => {
     mockFindUnique
-      .mockResolvedValueOnce({ id: 2, nom: "Jonathan", password: null, email: "_sans-email-123@noemail.local" })
-      .mockResolvedValueOnce({ id: 1, nom: "Jonathan Braun" })
+      .mockResolvedValueOnce({ id: 2, nom: "Jonathan", actif: false, email: "_sans-email-123@noemail.local" })
+      .mockResolvedValueOnce({ id: 1, nom: "Jonathan Braun", actif: true })
     const res = await POST(makeReq({ sourceId: 2, targetId: 1 }))
     expect(res.status).toBe(200)
     const data = await res.json()
