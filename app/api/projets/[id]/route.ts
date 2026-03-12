@@ -39,11 +39,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   const budgetConsomme = projet.activites.reduce(
-    (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0),
+    (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant?.tjm ?? 0),
     0
   );
   const coutReel = projet.activites.reduce(
-    (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0),
+    (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant?.coutJournalierEmployeur ?? 0),
     0
   );
   const totalHeures = projet.activites.reduce(

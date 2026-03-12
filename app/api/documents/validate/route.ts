@@ -134,11 +134,17 @@ export async function POST(req: NextRequest) {
               console.log(`[DOC VALIDATE] Nouveau consultant créé (email): ${created.nom}`);
             }
           } else if (act.consultantNom) {
-            // Chercher par nom exact d'abord
-            const byName = await tx.consultant.findFirst({
+            // 1. Exact match (insensible à la casse)
+            const byExact = await tx.consultant.findFirst({
               where: { nom: { equals: act.consultantNom, mode: "insensitive" } },
               select: { id: true },
             });
+            // 2. Match partiel — ex: "Jonathan" trouve "Jonathan Braun"
+            const byPartial = byExact ? null : await tx.consultant.findFirst({
+              where: { nom: { contains: act.consultantNom, mode: "insensitive" } },
+              select: { id: true },
+            });
+            const byName = byExact ?? byPartial;
             if (byName) {
               consultantId = byName.id;
             } else {

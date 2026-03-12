@@ -187,7 +187,7 @@ export default function ProjetDetailPage() {
 
     const consultantMap = new Map<string, { heures: number; couleur: string }>();
     for (const a of projet.activites) {
-      const { nom, couleur } = a.consultant;
+      const { nom, couleur } = a.consultant ?? { nom: "Non attribué", couleur: "#94a3b8" };
       if (!consultantMap.has(nom)) consultantMap.set(nom, { heures: 0, couleur: couleur ?? "#3b82f6" });
       consultantMap.get(nom)!.heures += Number(a.heures);
     }
