@@ -5,6 +5,22 @@ Format : [version] — date — description
 
 ---
 
+## [v2.5.0] — 2026-03-12
+Fusion de profils consultants — merge + migration activités
+
+### Fonctionnalité
+- `POST /api/admin/consultants/merge` : migration atomique des activités source → cible + suppression source
+  - Validation IDs (type check + isNaN guard)
+  - Bloque si source `actif: true` (compte réel protégé — SSO inclus)
+  - Bloque si cible `actif: false` (évite de rattacher des données à un profil inactif)
+  - Transaction Prisma garantit intégrité (tout ou rien)
+  - 7 cas de test couverts
+- `admin-users-client.tsx` : bouton `GitMerge` sur les cards consultants inactifs
+  - Panel de fusion : sélection cible (filtrée), avertissement irréversible amber, bouton Confirmer destructif
+  - Toast de succès avec sourceNom, targetNom et nombre d'activités migrées
+
+---
+
 ## [v2.4.5] — 2026-03-12
 Page projet blanche + matching consultant par nom partiel
 
