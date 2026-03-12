@@ -198,15 +198,17 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                       <Pencil className="h-3 w-3" />Modifier
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => { setMergingSource(user); setMergeTargetId("") }}
-                    className="h-8 w-8 p-0"
-                    title="Fusionner avec un autre consultant"
-                  >
-                    <GitMerge className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
+                  {!user.actif && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setMergingSource(user); setMergeTargetId("") }}
+                      className="h-8 w-8 p-0"
+                      title="Fusionner avec un autre consultant"
+                    >
+                      <GitMerge className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                  )}
                   {user.hasAccount && (
                     <Button size="sm" variant="ghost" onClick={() => resetPassword(user)} className="h-8 w-8 p-0" title="Réinitialiser le mot de passe">
                       <RotateCcw className="h-3.5 w-3.5" />
