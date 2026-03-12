@@ -95,12 +95,9 @@ export async function POST(req: NextRequest) {
     });
 
     // ── Trigger processing interne (fire-and-forget) ───────────
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.APP_URL ||
-      "http://localhost:3000";
-
-    const processingUrl = `${appUrl}/api/documents/process`;
+    // Toujours appeler localhost directement — évite de passer par nginx/SSL
+    // APP_URL pointe vers l'URL publique (HTTPS auto-signé) que Node.js rejette
+    const processingUrl = `http://localhost:${process.env.PORT || 3000}/api/documents/process`;
 
     console.log("[UPLOAD] 🚀 About to trigger processing...");
     console.log("[UPLOAD] Document ID:", doc.id);
