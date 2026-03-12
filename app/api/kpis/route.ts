@@ -68,9 +68,9 @@ export async function GET(request: Request) {
   // ── 1. Taux de marge global ────────────────────────────────────
   const caTotal = activites
     .filter((a) => a.facturable)
-    .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+    .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant?.tjm ?? 0), 0);
   const coutTotal = activites.reduce(
-    (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+    (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant?.coutJournalierEmployeur ?? 0), 0
   );
   const margeBrute = caTotal - coutTotal;
   const tauxMarge = caTotal > 0 ? Math.round((margeBrute / caTotal) * 1000) / 10 : 0;
@@ -93,7 +93,7 @@ export async function GET(request: Request) {
     const budget = Number(p.budget ?? 0);
     if (budget <= 0) continue;
     const consomme = p.activites.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0
+      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant?.tjm ?? 0), 0
     );
     if (consomme > budget) projetsDepassementBudget++;
   }
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
     if (totalDuration <= 0 || elapsed <= 0) continue;
     const pctTempsEcoule = elapsed / totalDuration;
     const consomme = p.activites.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0
+      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant?.tjm ?? 0), 0
     );
     const pctBudgetConsomme = consomme / budget;
     const burnRate = pctTempsEcoule > 0 ? Math.round((pctBudgetConsomme / pctTempsEcoule) * 100) / 100 : 0;
@@ -157,9 +157,9 @@ export async function GET(request: Request) {
   for (const p of projetsAll) {
     const ca = p.activites
       .filter((a) => a.facturable)
-      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant?.tjm ?? 0), 0);
     const cout = p.activites.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant?.coutJournalierEmployeur ?? 0), 0
     );
     if (cout <= 0) continue;
     const roi = Math.round(((ca - cout) / cout) * 1000) / 10;
@@ -186,9 +186,9 @@ export async function GET(request: Request) {
     });
     const mCA = moisActivites
       .filter((a) => a.facturable)
-      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant?.tjm ?? 0), 0);
     const mCout = moisActivites.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant?.coutJournalierEmployeur ?? 0), 0
     );
     const mHeures = moisActivites.reduce((s, a) => s + Number(a.heures), 0);
     tendance6Mois.push({

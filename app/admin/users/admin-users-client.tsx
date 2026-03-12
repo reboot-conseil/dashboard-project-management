@@ -13,7 +13,7 @@ import { toast } from "sonner"
 type Role = "ADMIN" | "PM" | "CONSULTANT"
 const Role = { ADMIN: "ADMIN" as Role, PM: "PM" as Role, CONSULTANT: "CONSULTANT" as Role }
 
-type UserEntry = { id: number; nom: string; email: string; role: Role; actif: boolean; hasAccount: boolean }
+type UserEntry = { id: number; nom: string; email: string; role: Role; actif: boolean; hasAccount: boolean; tjm: number | null; coutJournalierEmployeur: number | null }
 
 function isPlaceholderEmail(email: string) {
   return email.startsWith("_sans-email-") && email.endsWith("@noemail.local")
@@ -31,6 +31,8 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
   const [selected, setSelected] = useState<UserEntry | null>(null)
   const [editingRole, setEditingRole] = useState<UserEntry | null>(null)
   const [editEmail, setEditEmail] = useState("")
+  const [editTjm, setEditTjm] = useState("")
+  const [editCout, setEditCout] = useState("")
   const [mergingSource, setMergingSource] = useState<UserEntry | null>(null)
   const [mergeTargetId, setMergeTargetId] = useState<string>("")
   const [confirmDelete, setConfirmDelete] = useState<UserEntry | null>(null)
@@ -62,11 +64,13 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
     } catch { toast.error("Erreur") } finally { setLoading(false) }
   }
 
-  async function updateRole(user: UserEntry, role: Role, newEmail?: string) {
+  async function updateRole(user: UserEntry, role: Role, newEmail?: string, newTjm?: string, newCout?: string) {
     setLoading(true)
     try {
       const body: Record<string, unknown> = { consultantId: user.id, role }
       if (newEmail && newEmail !== user.email) body.email = newEmail
+      if (newTjm !== undefined) body.tjm = newTjm !== "" ? newTjm : null
+      if (newCout !== undefined) body.coutJournalierEmployeur = newCout !== "" ? newCout : null
       const res = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       if (!res.ok) { const d = await res.json(); toast.error(d.error ?? "Erreur"); return }
       toast.success(`Profil mis à jour pour ${user.nom}`)
@@ -194,7 +198,7 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                     </Button>
                   )}
                   {user.actif && (
-                    <Button size="sm" variant="outline" onClick={() => { setEditingRole(user); setEditRole(user.role); setEditEmail(isPlaceholderEmail(user.email) ? "" : user.email) }} className="text-xs gap-1">
+                    <Button size="sm" variant="outline" onClick={() => { setEditingRole(user); setEditRole(user.role); setEditEmail(isPlaceholderEmail(user.email) ? "" : user.email); setEditTjm(user.tjm != null ? String(user.tjm) : ""); setEditCout(user.coutJournalierEmployeur != null ? String(user.coutJournalierEmployeur) : "") }} className="text-xs gap-1">
                       <Pencil className="h-3 w-3" />Modifier
                     </Button>
                   )}
@@ -272,8 +276,18 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                 <option value="CONSULTANT">Consultant</option>
               </Select>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-tjm">TJM €/j</Label>
+                <Input id="edit-tjm" type="number" min={0} placeholder="600" value={editTjm} onChange={(e) => setEditTjm(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-cout">Coût employeur €/j</Label>
+                <Input id="edit-cout" type="number" min={0} placeholder="350" value={editCout} onChange={(e) => setEditCout(e.target.value)} />
+              </div>
+            </div>
             <div className="flex gap-2">
-              <Button onClick={() => updateRole(editingRole, editRole, editEmail || undefined)} disabled={loading}>Enregistrer</Button>
+              <Button onClick={() => updateRole(editingRole, editRole, editEmail || undefined, editTjm, editCout)} disabled={loading}>Enregistrer</Button>
               <Button variant="outline" onClick={() => setEditingRole(null)}>Annuler</Button>
             </div>
           </CardContent>

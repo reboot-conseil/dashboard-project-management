@@ -8,7 +8,7 @@ export async function GET() {
   const authError = await requireRole(["ADMIN"])
   if (authError) return authError
   const consultants = await prisma.consultant.findMany({
-    select: { id: true, nom: true, email: true, role: true, actif: true, password: true },
+    select: { id: true, nom: true, email: true, role: true, actif: true, password: true, tjm: true, coutJournalierEmployeur: true },
     orderBy: { nom: "asc" },
   })
   return NextResponse.json(consultants.map((c) => ({ ...c, hasAccount: !!c.password, password: undefined })))
@@ -79,7 +79,7 @@ export async function DELETE(req: Request) {
 export async function PATCH(req: Request) {
   const authError = await requireRole(["ADMIN"])
   if (authError) return authError
-  const { consultantId, password, role, actif, email } = await req.json()
+  const { consultantId, password, role, actif, email, tjm, coutJournalierEmployeur } = await req.json()
   if (!consultantId) return NextResponse.json({ error: "consultantId manquant" }, { status: 400 })
   const data: Record<string, unknown> = {}
   if (password) data.password = await bcrypt.hash(password, 12)
@@ -90,6 +90,8 @@ export async function PATCH(req: Request) {
     if (existing) return NextResponse.json({ error: "Email déjà utilisé" }, { status: 409 })
     data.email = email
   }
+  if (tjm !== undefined) data.tjm = tjm !== null && tjm !== "" ? Number(tjm) : null
+  if (coutJournalierEmployeur !== undefined) data.coutJournalierEmployeur = coutJournalierEmployeur !== null && coutJournalierEmployeur !== "" ? Number(coutJournalierEmployeur) : null
   const updated = await prisma.consultant.update({ where: { id: consultantId }, data })
   return NextResponse.json({ id: updated.id, email: updated.email, role: updated.role })
 }
