@@ -70,6 +70,16 @@ describe("POST /api/admin/consultants/merge", () => {
     expect(res.status).toBe(404)
   })
 
+  it("returns 400 if target is inactive", async () => {
+    mockFindUnique
+      .mockResolvedValueOnce({ id: 2, nom: "Jonathan", actif: false, email: "_sans-email-123@noemail.local" })
+      .mockResolvedValueOnce({ id: 1, nom: "Jonathan Braun", actif: false })
+    const res = await POST(makeReq({ sourceId: 2, targetId: 1 }))
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/inactif/)
+  })
+
   it("migrates activités and deletes source on success", async () => {
     mockFindUnique
       .mockResolvedValueOnce({ id: 2, nom: "Jonathan", actif: false, email: "_sans-email-123@noemail.local" })
