@@ -32,11 +32,11 @@ function LoginForm() {
         const session = await getSession()
         const role = session?.user?.role
         if (role === "CONSULTANT") {
-          localStorage.setItem("dashboard-active-view", "consultants")
+          localStorage.setItem("dashboard-active-view", JSON.stringify("consultants"))
         } else if (role === "ADMIN") {
-          localStorage.setItem("dashboard-active-view", "strategique")
+          localStorage.setItem("dashboard-active-view", JSON.stringify("strategique"))
         } else {
-          localStorage.setItem("dashboard-active-view", "operationnel")
+          localStorage.setItem("dashboard-active-view", JSON.stringify("operationnel"))
         }
       } catch (_) { /* ignore */ }
       window.location.href = callbackUrl

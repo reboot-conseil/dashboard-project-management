@@ -5,6 +5,58 @@ Format : [version] — date — description
 
 ---
 
+## [v2.5.2] — 2026-03-19
+Audit complet — correctifs critiques dashboard, projets, alertes, routing login
+
+### Fixes critiques
+- `components/sidebar.tsx:414,473` : `<main className="flex-1">` → `<main className="flex-1 flex flex-col">` (vertical + horizontal)
+  - Bug racine : sans `flex-col` sur `<main>`, le `motion.div` enfant (`flex-1 min-h-0`) ne recevait aucune hauteur
+  - Le `DashboardPage` avait `h-full` = auto → le `div.flex-1.overflow-y-auto` du contenu avait hauteur 0
+  - Tout le contenu du dashboard (KPIs, graphiques, projets) était rendu en DOM mais entièrement invisible (clippé)
+- `app/(auth)/login/page.tsx:35-39` : `localStorage.setItem("dashboard-active-view", "consultants")` → `JSON.stringify("consultants")`
+  - `useLocalStorage` lit avec `JSON.parse()` : `"consultants"` brut lève SyntaxError → catch → retombe sur "operationnel"
+  - Résultat : Admin et Consultant voyaient toujours la vue Opérationnel après login, routing par rôle inopérant
+- `app/projets/page.tsx:417-450` : badge écart projets — couleurs et signe complètement inversés
+  - `ecart = realisationPct − budgetConsommePct` (négatif = dérive, positif = avance)
+  - Ancien code : `ecart >= 20` → rouge (bien), `< 10` → vert (inclut −22.8 critique) → couleurs à l'envers
+  - Nouveau : `ecart <= -20` → rouge, `<= -10` → amber, sinon vert
+  - Label corrigé : `Écart +X%/−X%` avec signe réel (anciennement inversé : −22.8 affichait "+22.8%" en vert)
+
+### Fixes importants
+- `components/dashboard/DashboardOperationnel.tsx:306-317` : badge santé projets actifs
+  - Remplace `realisationPct` utilisé comme proxy de marge (faux : 74.7% pour un projet critique → "Bon")
+  - Utilise désormais `proj.health` ("critique"/"normal"/"bon") et `proj.healthLabel` de l'API
+- `app/api/alertes/route.ts:103-126` : deadline aujourd'hui (0 jours) classée `attention` → `critique`
+  - Une étape dont la deadline est aujourd'hui génère maintenant une alerte critique "Deadline aujourd'hui"
+  - Cohérent avec les deadlines dépassées (jours < 0) déjà en critique
+- `app/page.tsx` + `DashboardOperationnel.tsx` : datepicker "Personnalisé" désormais fonctionnel
+  - Les deux `<input type="date">` étaient non contrôlés — les dates saisies n'étaient jamais transmises
+  - Ajout états `customDebut`/`customFin` (saisie) et `appliedCustomRange` (confirmé par "Appliquer")
+  - `DashboardOperationnel` reçoit `customDateDebut`/`customDateFin` et les utilise quand `periode === "personnalise"`
+
+---
+
+## [v2.5.1] — 2026-03-19
+Fixes bugs navigation + dropdowns + infra réseau Docker
+
+### Fixes
+- `components/layout/page-transition.tsx` : suppression de `AnimatePresence mode="wait"`
+  - `mode="wait"` impose que la page sortante finisse son animation avant de monter la nouvelle
+  - Incompatible avec React concurrent mode (Next.js App Router) → page `/projets/[id]` blanche au clic
+  - Fix : sans `mode="wait"` les animations se chevauchent, la nouvelle page monte toujours
+- `app/activites/page.tsx` : `fetch("/api/projets?statut=EN_COURS")` → `fetch("/api/projets")`
+  - Dropdowns saisie/édition d'activité ne montraient que les projets EN_COURS
+  - Les projets PLANIFIE et EN_PAUSE sont maintenant disponibles à la sélection
+  - Les étapes de ces projets deviennent également accessibles
+
+### Infra
+- `infra/docker-compose.yml` : réseau `internal` → `dashboard_private_net` (avec `name:` explicite)
+  - `reboot-conges-app-1` s'était connecté à `dashboard_internal` (nom générique partagé entre projets)
+  - Conflit DNS : nginx résolvait `app` vers reboot-conges au lieu de dashboard_app → mauvaise app servie
+  - Nom unique `dashboard_private_net` empêche toute collision future avec d'autres projets Docker
+
+---
+
 ## [v2.5.0] — 2026-03-12
 Fusion de profils consultants — merge + migration activités
 

@@ -85,9 +85,9 @@ function formatEuros(v: number) {
 }
 
 // ── Component ──────────────────────────────────────────────────────────
-interface DashboardOperationnelProps { periode?: string }
+interface DashboardOperationnelProps { periode?: string; customDateDebut?: string; customDateFin?: string }
 
-export function DashboardOperationnel({ periode: periodeProp }: DashboardOperationnelProps = {}) {
+export function DashboardOperationnel({ periode: periodeProp, customDateDebut, customDateFin }: DashboardOperationnelProps = {}) {
   const { data: session } = useSession();
   const isPM = session?.user?.role === "PM";
   const pmConsultantId = session?.user?.id ? Number(session.user.id) || null : null;
@@ -113,12 +113,16 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
 
   // Sync période depuis le parent
   useEffect(() => {
+    if (periodeProp === "personnalise" && customDateDebut && customDateFin) {
+      setFilters({ periode: "custom", dateDebut: customDateDebut, dateFin: customDateFin, projetId: "all" });
+      return;
+    }
     const map: Record<string, PeriodeKey> = {
       jour: "today", semaine: "week", mois: "month", trimestre: "quarter", annee: "year",
     };
     const key = map[periodeProp ?? ""] ?? "week";
     setFilters(getDefaultFilters(key));
-  }, [periodeProp]);
+  }, [periodeProp, customDateDebut, customDateFin]);
 
   // Hydration + saved filters
   useEffect(() => {
@@ -303,18 +307,14 @@ export function DashboardOperationnel({ periode: periodeProp }: DashboardOperati
                   ) : (
                     data.projetsActifs.map((proj, i) => {
                       const color = PROJET_COLORS[i % PROJET_COLORS.length];
-                      // Badge marge : basé sur tauxMarge réel (100 - ecart donne une approximation)
-                      // ecart = pctBudget - realisationPct (positif = en retard)
-                      // On utilise realisationPct comme proxy de la marge
-                      const tauxMarge = proj.realisationPct; // valeur disponible
+                      // ecart = realisationPct - budgetConsommePct (négatif = dérive/mauvais)
                       const margeBadgeClasses =
-                        tauxMarge < 30
+                        proj.health === "critique"
                           ? "bg-destructive/10 text-destructive"
-                          : tauxMarge < 40
+                          : proj.health === "normal"
                           ? "bg-warning/10 text-warning-foreground"
                           : "bg-success/10 text-success";
-                      const margeLabel =
-                        tauxMarge < 30 ? "Faible" : tauxMarge < 40 ? "Moyen" : "Bon";
+                      const margeLabel = proj.healthLabel ?? (proj.health === "critique" ? "Critique" : proj.health === "normal" ? "On track" : "Avance");
                       const budgetBarColor =
                         proj.budgetConsommePct > 100
                           ? "#b91c1c"

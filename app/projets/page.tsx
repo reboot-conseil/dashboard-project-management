@@ -414,10 +414,10 @@ export default function ProjetsPage() {
             const ecart = p.progressionEcart ?? 0;
             const projColor = p.couleur ?? "#3b82f6";
             const budgetBarColor = budgetPct > 100 ? "#b91c1c" : budgetPct > 85 ? "#f97316" : "#2563EB";
-            const margePct = ecart;
-            const margeBadgeClass = margePct >= 20
+            // ecart = realisationPct - budgetConsommePct : négatif = dérive, positif = avance
+            const margeBadgeClass = ecart <= -20
               ? "bg-destructive/10 text-destructive"
-              : margePct >= 10
+              : ecart <= -10
               ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-500"
               : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-500";
             const isSelected = selectedProjectId === p.id;
@@ -447,7 +447,7 @@ export default function ProjetsPage() {
                       </span>
                     </div>
                     <span className={cn("text-[11.5px] font-semibold px-2 py-0.5 rounded-md", margeBadgeClass)}>
-                      Marge {ecart > 0 ? `-${ecart.toFixed(1)}` : `+${Math.abs(ecart).toFixed(1)}`}%
+                      Écart {ecart >= 0 ? `+${ecart.toFixed(1)}` : `${ecart.toFixed(1)}`}%
                     </span>
                   </div>
                 </div>

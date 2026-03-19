@@ -411,7 +411,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex flex-col">
         <NavbarHorizontal pathname={pathname} onSwitchVertical={switchToVertical} alertCount={alertCount} />
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 flex flex-col">{children}</main>
       </div>
     );
   }
@@ -470,7 +470,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 flex flex-col">{children}</main>
       </div>
     </div>
   );

@@ -111,6 +111,17 @@ export async function GET() {
           projetNom: p.nom,
           valeur: jours,
         });
+      } else if (jours === 0) {
+        alertes.push({
+          id: `deadline-depassee-${e.id}`,
+          type: "deadline_depassee",
+          severite: "critique",
+          titre: "Deadline aujourd'hui",
+          description: `${p.nom} — étape "${e.nom}" à rendre aujourd'hui`,
+          projetId: p.id,
+          projetNom: p.nom,
+          valeur: 0,
+        });
       } else if (jours <= 7) {
         alertes.push({
           id: `deadline-proche-${e.id}`,

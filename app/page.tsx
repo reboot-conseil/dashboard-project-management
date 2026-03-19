@@ -38,6 +38,9 @@ export default function DashboardPage() {
   const [storedVue, setVue] = useLocalStorage<string>("dashboard-active-view", "operationnel");
   const [periode, setPeriode] = useLocalStorage<Periode>("dashboard-periode", "semaine");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customDebut, setCustomDebut] = useState("");
+  const [customFin, setCustomFin] = useState("");
+  const [appliedCustomRange, setAppliedCustomRange] = useState<{ dateDebut: string; dateFin: string } | null>(null);
 
   const vue: VueDashboard = VALID_VUES.includes(storedVue as VueDashboard)
     ? (storedVue as VueDashboard)
@@ -120,15 +123,22 @@ export default function DashboardPage() {
             <div className="absolute top-full right-0 mt-2 z-50 flex items-center gap-2 bg-background border border-border rounded-xl px-4 py-3 shadow-lg">
               <input
                 type="date"
+                value={customDebut}
+                onChange={(e) => setCustomDebut(e.target.value)}
                 className="bg-muted border border-border rounded-lg px-2.5 py-1.5 text-[12.5px] text-foreground outline-none focus:border-primary"
               />
               <span className="text-muted-foreground text-sm">→</span>
               <input
                 type="date"
+                value={customFin}
+                onChange={(e) => setCustomFin(e.target.value)}
                 className="bg-muted border border-border rounded-lg px-2.5 py-1.5 text-[12.5px] text-foreground outline-none focus:border-primary"
               />
               <button
-                onClick={() => setShowDatePicker(false)}
+                onClick={() => {
+                  if (customDebut && customFin) setAppliedCustomRange({ dateDebut: customDebut, dateFin: customFin });
+                  setShowDatePicker(false);
+                }}
                 className="px-3 py-1.5 rounded-lg bg-primary text-white text-[12.5px] font-semibold"
               >
                 Appliquer
@@ -140,7 +150,7 @@ export default function DashboardPage() {
 
       {/* ── Dashboard content ── */}
       <div className="flex-1 overflow-y-auto px-6 pb-8">
-        {vue === "operationnel" && <DashboardOperationnel periode={periode} />}
+        {vue === "operationnel" && <DashboardOperationnel periode={periode} customDateDebut={appliedCustomRange?.dateDebut} customDateFin={appliedCustomRange?.dateFin} />}
         {vue === "consultants"  && <DashboardConsultants  periode={periode} />}
         {vue === "strategique"  && <DashboardStrategique  periode={periode} />}
       </div>
