@@ -1,6 +1,9 @@
-import { auth } from "@/auth"
+import NextAuth from "next-auth"
+import { authConfig } from "@/auth.config"
 import { NextResponse } from "next/server"
 import { getRedirectPath } from "@/lib/middleware-utils"
+
+const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
@@ -15,7 +18,6 @@ export default auth((req) => {
     const url = req.nextUrl.clone()
     url.pathname = redirectTo
     if (redirectTo === "/login" && pathname !== "/login") {
-      // Sanitise: only allow relative paths (starts with / but not //)
       const safeCallback = pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : "/"
       url.searchParams.set("callbackUrl", safeCallback)
     }

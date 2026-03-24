@@ -1,4 +1,5 @@
 import NextAuth from "next-auth"
+import { authConfig } from "@/auth.config"
 import Credentials from "next-auth/providers/credentials"
 import MicrosoftEntraId from "next-auth/providers/microsoft-entra-id"
 import bcrypt from "bcryptjs"
@@ -6,7 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { Role } from "@prisma/client"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  trustHost: true,
+  ...authConfig,
   providers: [
     // ── Microsoft SSO ──────────────────────────────────────
     MicrosoftEntraId({
@@ -46,9 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user, account }) {
       if (account?.provider === "microsoft-entra-id") {
         const email = user.email ?? ""
-        // Bloquer les emails hors domaine
         if (!email.endsWith("@reboot-conseil.com")) return false
-        // Créer ou vérifier le consultant en DB (upsert atomique)
         const CONSULTANT_COLORS = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#06B6D4", "#F97316"]
         const count = await prisma.consultant.count()
         const consultant = await prisma.consultant.upsert({
@@ -70,7 +69,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, account }) {
       if (user) {
         if (account?.provider === "microsoft-entra-id") {
-          // SSO : récupérer id et rôle réels depuis la DB
           const consultant = await prisma.consultant.findUnique({
             where: { email: user.email! },
             select: { id: true, role: true },
@@ -80,7 +78,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.role = consultant.role
           }
         } else {
-          // Credentials : id et rôle fournis par authorize()
           token.id = user.id as string
           token.role = (user as { role: Role }).role
         }
@@ -96,7 +93,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session
     },
   },
-
-  pages: { signIn: "/login" },
-  session: { strategy: "jwt" },
 })
