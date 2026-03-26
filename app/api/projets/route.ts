@@ -24,6 +24,16 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const statut = searchParams.get("statut");
+    const simple = searchParams.get("simple") === "true";
+
+    // Mode léger pour les dropdowns : retourne uniquement id, nom, couleur, statut
+    if (simple) {
+      const projets = await prisma.projet.findMany({
+        select: { id: true, nom: true, couleur: true, statut: true },
+        orderBy: { nom: "asc" },
+      });
+      return NextResponse.json(projets);
+    }
 
     const where = statut && statut !== "TOUS"
       ? { statut: statut as "PLANIFIE" | "EN_COURS" | "EN_PAUSE" | "TERMINE" }

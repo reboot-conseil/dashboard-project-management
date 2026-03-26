@@ -128,12 +128,12 @@ export default function ActivitesPage() {
 
   useEffect(() => {
     async function loadRef() {
-      const [cRes, pRes] = await Promise.all([fetch("/api/consultants"), fetch("/api/projets?statut=EN_COURS")]);
+      const [cRes, pRes] = await Promise.all([fetch("/api/consultants"), fetch("/api/projets?simple=true")]);
       const cData = await cRes.json();
       const pData = await pRes.json();
       const activeConsultants = cData.filter((c: { actif: boolean }) => c.actif);
       setConsultants(activeConsultants);
-      setProjets(pData);
+      if (Array.isArray(pData)) setProjets(pData);
       const lastC = localStorage.getItem("lastConsultantId");
       const lastP = localStorage.getItem("lastProjetId");
       if (lastC && activeConsultants.find((c: Consultant) => c.id === parseInt(lastC)))
