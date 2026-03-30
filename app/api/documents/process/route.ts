@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
-import fs from 'fs/promises'
 
 // mammoth : types complets disponibles
 import mammoth from 'mammoth'
@@ -140,8 +139,10 @@ export async function POST(request: Request) {
     console.log('[PROCESS] Starting text extraction...')
 
     try {
-      const fileBuffer = await fs.readFile(doc.filepath)
-      console.log('[PROCESS] File read from disk:', fileBuffer.length, 'bytes')
+      const fileResponse = await fetch(doc.filepath)
+      if (!fileResponse.ok) throw new Error(`Failed to fetch file: ${fileResponse.status}`)
+      const fileBuffer = Buffer.from(await fileResponse.arrayBuffer())
+      console.log('[PROCESS] File fetched:', fileBuffer.length, 'bytes')
 
       if (doc.mimetype === 'application/pdf') {
         console.log('[PROCESS] Extracting PDF...')

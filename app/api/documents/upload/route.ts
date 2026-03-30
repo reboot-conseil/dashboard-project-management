@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import path from "path";
-import fs from "fs/promises";
+import { put } from "@vercel/blob";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_MIMES = [
@@ -9,40 +8,19 @@ const ALLOWED_MIMES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
 ];
-const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 
 export async function POST(req: NextRequest) {
-  console.log("═══════════════════════════════════════════════════");
-  console.log("[UPLOAD] ===== NEW UPLOAD REQUEST =====");
-  console.log("[UPLOAD] Time:", new Date().toISOString());
-  console.log("═══════════════════════════════════════════════════");
-
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const documentType = (formData.get("documentType") as string) || null;
     const projetIdStr = formData.get("projetId") as string | null;
 
-    console.log("[UPLOAD] FormData fields:", {
-      hasFile: !!file,
-      documentType,
-      projetIdStr,
-    });
-
-    // ── Validation fichier ─────────────────────────────────────
     if (!file) {
-      console.log("[UPLOAD] ❌ No file in request");
       return NextResponse.json({ error: "Aucun fichier fourni" }, { status: 400 });
     }
 
-    console.log("[UPLOAD] File received:", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
-
     if (file.size > MAX_FILE_SIZE) {
-      console.log("[UPLOAD] ❌ File too large:", file.size, ">", MAX_FILE_SIZE);
       return NextResponse.json(
         { error: `Fichier trop volumineux (max ${MAX_FILE_SIZE / 1024 / 1024} MB)` },
         { status: 400 }
@@ -50,25 +28,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (!ALLOWED_MIMES.includes(file.type)) {
-      console.log("[UPLOAD] ❌ Unsupported MIME type:", file.type);
       return NextResponse.json(
         { error: "Format non supporté. Formats acceptés : PDF, DOCX, TXT" },
         { status: 400 }
       );
     }
 
-    console.log("[UPLOAD] ✅ File validated");
-
-    // ── Sauvegarde fichier ─────────────────────────────────────
+    // ── Sauvegarde fichier → Vercel Blob ───────────────────────
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const filename = `${Date.now()}-${sanitizedName}`;
-    const filepath = path.join(UPLOADS_DIR, filename);
-
-    await fs.mkdir(UPLOADS_DIR, { recursive: true });
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filepath, buffer);
-
-    console.log("[UPLOAD] ✅ File saved to:", filepath, `(${file.size} bytes)`);
+    const filename = `documents/${Date.now()}-${sanitizedName}`;
+    const blob = await put(filename, file, { access: "public" });
 
     // ── Création en DB ─────────────────────────────────────────
     const projetId =
@@ -79,7 +48,7 @@ export async function POST(req: NextRequest) {
     const doc = await prisma.documentIngestion.create({
       data: {
         filename: file.name,
-        filepath,
+        filepath: blob.url,
         filesize: file.size,
         mimetype: file.type,
         type: documentType === "auto" ? null : documentType,
@@ -88,56 +57,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log("[UPLOAD] ✅ Document created in DB:", {
-      id: doc.id,
-      filename: doc.filename,
-      status: doc.status,
-    });
-
-    // ── Trigger processing interne (fire-and-forget) ───────────
-    // Toujours appeler localhost directement — évite de passer par nginx/SSL
-    // APP_URL pointe vers l'URL publique (HTTPS auto-signé) que Node.js rejette
-    const processingUrl = `http://localhost:${process.env.PORT || 3000}/api/documents/process`;
-
-    console.log("[UPLOAD] 🚀 About to trigger processing...");
-    console.log("[UPLOAD] Document ID:", doc.id);
-    console.log("[UPLOAD] Processing URL:", processingUrl);
-
-    fetch(processingUrl, {
+    // ── Trigger processing (fire-and-forget) ──────────────────
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || "http://localhost:3000";
+    fetch(`${baseUrl}/api/documents/process`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ documentId: doc.id }),
-    })
-      .then(async (res) => {
-        console.log("[UPLOAD] ✅ Processing HTTP response — status:", res.status);
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          console.log("[UPLOAD] Processing response body:", data);
-        } catch {
-          console.log("[UPLOAD] Processing response (raw):", text.substring(0, 300));
-        }
-      })
-      .catch((err) => {
-        console.error("[UPLOAD] ❌ Processing trigger FAILED:", err.message);
-        console.error("[UPLOAD] Error stack:", err.stack);
-      });
-
-    console.log("[UPLOAD] Processing call initiated (async, not awaited)");
-
-    console.log("[UPLOAD] ✅ Upload route completed, returning:", {
-      documentId: doc.id,
-      success: true,
-    });
-    console.log("═══════════════════════════════════════════════════");
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, documentId: doc.id }, { status: 201 });
 
   } catch (error: any) {
-    console.error("═══════════════════════════════════════════════════");
-    console.error("[UPLOAD] ❌ FATAL ERROR:", error.message);
-    console.error("[UPLOAD] Stack:", error.stack);
-    console.error("═══════════════════════════════════════════════════");
+    console.error("[UPLOAD] ERROR:", error.message);
     return NextResponse.json(
       {
         error: "Erreur lors de l'upload",
