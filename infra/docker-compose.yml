@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - internal
+      - dashboard_net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dashboard"]
       interval: 10s
@@ -30,6 +30,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://dashboard:${POSTGRES_PASSWORD}@postgres:5432/dashboard?schema=public
+      DIRECT_URL: postgresql://dashboard:${POSTGRES_PASSWORD}@postgres:5432/dashboard?schema=public
       AUTH_URL: ${NEXTAUTH_URL}
       AUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
@@ -46,7 +47,7 @@ services:
       APP_URL: ${APP_URL}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     networks:
-      - internal
+      - dashboard_net
     expose:
       - "3000"
     volumes:
@@ -66,12 +67,13 @@ services:
       - /home/jon/ssl.crt:/etc/nginx/ssl/ssl.crt:ro
       - /home/jon/ssl.key:/etc/nginx/ssl/ssl.key:ro
     networks:
-      - internal
+      - dashboard_net
 
 volumes:
   postgres_data:
   uploads_data:
 
 networks:
-  internal:
+  dashboard_net:
     driver: bridge
+    name: dashboard_private_net
