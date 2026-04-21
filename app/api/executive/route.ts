@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { differenceInDays, subMonths, startOfMonth, endOfMonth, format, addMonths } from "date-fns";
+import { CA, cout, marge, margePct, HEURES_PAR_JOUR } from "@/lib/financial";
 
 export async function GET() {
   const now = new Date();
@@ -34,12 +35,12 @@ export async function GET() {
   // ── 1. Performance Globale ────────────────────────────────────
   const caAnnuel = activitesAnnee
     .filter((a) => a.facturable)
-    .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+    .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
   const coutAnnuel = activitesAnnee.reduce(
-    (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+    (s, a) => s + cout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
   );
-  const margeGlobale = caAnnuel - coutAnnuel;
-  const tauxMargeGlobal = caAnnuel > 0 ? Math.round((margeGlobale / caAnnuel) * 1000) / 10 : 0;
+  const margeGlobale = marge(caAnnuel, coutAnnuel);
+  const tauxMargeGlobal = Math.round(margePct(caAnnuel, coutAnnuel) * 10) / 10;
 
   // Projection: linear extrapolation based on elapsed year
   const dayOfYear = Math.ceil((now.getTime() - yearStart.getTime()) / 86400000);
@@ -61,13 +62,13 @@ export async function GET() {
   for (const p of projetsAll) {
     const ca = p.activites
       .filter((a) => a.facturable)
-      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
-    const cout = p.activites.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+      .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
+    const coutProjet = p.activites.reduce(
+      (s, a) => s + cout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
     );
-    if (cout <= 0 && ca <= 0) continue;
-    const roi = cout > 0 ? Math.round(((ca - cout) / cout) * 1000) / 10 : 0;
-    roiParProjet.push({ projetId: p.id, projetNom: p.nom, client: p.client, roi, ca: Math.round(ca), cout: Math.round(cout), statut: p.statut });
+    if (coutProjet <= 0 && ca <= 0) continue;
+    const roi = coutProjet > 0 ? Math.round(((ca - coutProjet) / coutProjet) * 1000) / 10 : 0;
+    roiParProjet.push({ projetId: p.id, projetNom: p.nom, client: p.client, roi, ca: Math.round(ca), cout: Math.round(coutProjet), statut: p.statut });
   }
   roiParProjet.sort((a, b) => b.roi - a.roi);
 
@@ -104,7 +105,7 @@ export async function GET() {
     if (p.statut === "TERMINE") continue;
     const budget = Number(p.budget ?? 0);
     const consomme = p.activites.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0
+      (s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0
     );
     if (budget > 0 && consomme > budget) {
       risques.push({ type: "budget", description: `Budget dépassé (${Math.round((consomme / budget) * 100)}%)`, impact: "critique", projetNom: p.nom });
@@ -151,7 +152,7 @@ export async function GET() {
   const totalHeuresMois = utilisationParConsultant.reduce((s, c) => s + c.heures, 0);
   const totalCapaciteMois = consultantsActifs.length * capaciteMoisParConsultant;
   const capaciteDisponible = Math.max(0, totalCapaciteMois - totalHeuresMois);
-  const joursHommeDisponibles = Math.round(capaciteDisponible / 8);
+  const joursHommeDisponibles = Math.round(capaciteDisponible / HEURES_PAR_JOUR);
 
   // Projection recrutement
   const besoinRecrutement = tauxOccupation > 90
@@ -175,16 +176,16 @@ export async function GET() {
         where: { date: { gte: mDebut, lte: mFin } },
         include: { consultant: { select: { tjm: true, coutJournalierEmployeur: true } } },
       });
-      mCA = olderActs.filter((a) => a.facturable).reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
-      mCout = olderActs.reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0);
+      mCA = olderActs.filter((a) => a.facturable).reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
+      mCout = olderActs.reduce((s, a) => s + cout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0);
     } else {
-      mCA = moisActs.filter((a) => a.facturable).reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
-      mCout = moisActs.reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0);
+      mCA = moisActs.filter((a) => a.facturable).reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
+      mCout = moisActs.reduce((s, a) => s + cout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0);
     }
     tendance12Mois.push({
       mois: format(moisDate, "MMM yy"),
       ca: Math.round(mCA),
-      marge: Math.round(mCA - mCout),
+      marge: Math.round(marge(mCA, mCout)),
       couts: Math.round(mCout),
     });
   }

@@ -11,6 +11,7 @@ import {
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
 import { requireAuth } from "@/lib/auth-guard";
+import { CA, cout as coutFn, marge as margeFn, margePct, HEURES_PAR_JOUR } from "@/lib/financial";
 
 // GET /api/dashboard/strategique?dateDebut=YYYY-MM-DD&dateFin=YYYY-MM-DD&projetId=X
 export async function GET(request: Request) {
@@ -132,22 +133,22 @@ export async function GET(request: Request) {
   // ── KPIs financiers période ──────────────────────────────────────
   const caTotal = activitesPeriode
     .filter((a) => a.facturable)
-    .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+    .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
   const coutTotal = activitesPeriode.reduce(
-    (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+    (s, a) => s + coutFn(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
   );
-  const margeBrute = caTotal - coutTotal;
-  const tauxMarge = caTotal > 0 ? Math.round((margeBrute / caTotal) * 1000) / 10 : 0;
+  const margeBrute = margeFn(caTotal, coutTotal);
+  const tauxMarge = Math.round(margePct(caTotal, coutTotal) * 10) / 10;
 
   // ── YTD pour objectifs ───────────────────────────────────────────
   const caAnnuelYTD = activitesAnnee
     .filter((a) => a.facturable)
-    .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+    .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
   const coutAnnuelYTD = activitesAnnee.reduce(
-    (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+    (s, a) => s + coutFn(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
   );
-  const margeAnnuelleYTD = caAnnuelYTD - coutAnnuelYTD;
-  const tauxMargeYTD = caAnnuelYTD > 0 ? Math.round((margeAnnuelleYTD / caAnnuelYTD) * 1000) / 10 : 0;
+  const margeAnnuelleYTD = margeFn(caAnnuelYTD, coutAnnuelYTD);
+  const tauxMargeYTD = Math.round(margePct(caAnnuelYTD, coutAnnuelYTD) * 10) / 10;
   const projectionCAannuel =
     dayOfYear > 0 ? Math.round((caAnnuelYTD / dayOfYear) * 365) : 0;
   const pctObjectifCA =
@@ -178,15 +179,15 @@ export async function GET(request: Request) {
 
     const ca = p.activites
       .filter((a) => a.facturable)
-      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
-    const cout = p.activites.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+      .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
+    const coutProjet = p.activites.reduce(
+      (s, a) => s + coutFn(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
     );
-    const marge = ca - cout;
-    const tauxMargeProjt = ca > 0 ? Math.round((marge / ca) * 1000) / 10 : 0;
+    const margeProjet = margeFn(ca, coutProjet);
+    const tauxMargeProjt = Math.round(margePct(ca, coutProjet) * 10) / 10;
     const budget = Number(p.budget ?? 0);
     const pctBudget = budget > 0 ? Math.round((ca / budget) * 1000) / 10 : 0;
-    const roi = cout > 0 ? Math.round(((ca - cout) / cout) * 1000) / 10 : 0;
+    const roi = coutProjet > 0 ? Math.round(((ca - coutProjet) / coutProjet) * 1000) / 10 : 0;
 
     // Prochaine deadline
     const prochainDeadline = p.etapes
@@ -210,8 +211,8 @@ export async function GET(request: Request) {
       healthLabel: prog.healthLabel,
       dateFinEstimee: prog.dateFinEstimee,
       ca: Math.round(ca),
-      cout: Math.round(cout),
-      marge: Math.round(marge),
+      cout: Math.round(coutProjet),
+      marge: Math.round(margeProjet),
       tauxMarge: tauxMargeProjt,
       roi,
       couleur: p.couleur,
@@ -251,7 +252,7 @@ export async function GET(request: Request) {
       const heures = c.activites.reduce((s, a) => s + Number(a.heures), 0);
       const ca = c.activites
         .filter((a) => a.facturable)
-        .reduce((s, a) => s + (Number(a.heures) / 8) * Number(c.tjm ?? 0), 0);
+        .reduce((s, a) => s + CA(Number(a.heures), Number(c.tjm ?? 0)), 0);
       return {
         id: c.id,
         nom: c.nom,
@@ -292,7 +293,7 @@ export async function GET(request: Request) {
   const joursOuvresRestants = Math.round(joursRestantsMois * 5 / 7);
   const capaciteDisponibleHeures =
     consultantsActifs.length * joursOuvresRestants * 8 * (1 - tauxOccupationMoyen / 100);
-  const joursHommeDisponibles = Math.round(capaciteDisponibleHeures / 8);
+  const joursHommeDisponibles = Math.round(capaciteDisponibleHeures / HEURES_PAR_JOUR);
 
   // Pipeline
   const pipelineCA = pipelineProjects.reduce((s, p) => s + Number(p.budget ?? 0), 0);
@@ -397,9 +398,9 @@ export async function GET(request: Request) {
     });
     const mCA = acts
       .filter((a) => a.facturable)
-      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+      .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
     const mCout = acts.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+      (s, a) => s + coutFn(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
     );
     caLast3.push(Math.round(mCA));
     tendancesData.push({
@@ -464,12 +465,12 @@ export async function GET(request: Request) {
   });
   const caPrev = actsPrev
     .filter((a) => a.facturable)
-    .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+    .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
   const coutPrev = actsPrev.reduce(
-    (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+    (s, a) => s + coutFn(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
   );
-  const margePrev = caPrev - coutPrev;
-  const tauxMargePrev = caPrev > 0 ? Math.round((margePrev / caPrev) * 1000) / 10 : 0;
+  const margePrev = margeFn(caPrev, coutPrev);
+  const tauxMargePrev = Math.round(margePct(caPrev, coutPrev) * 10) / 10;
 
   const variationCA = caPrev > 0 ? Math.round(((caTotal - caPrev) / caPrev) * 1000) / 10 : 0;
   const variationMarge = tauxMarge - tauxMargePrev;

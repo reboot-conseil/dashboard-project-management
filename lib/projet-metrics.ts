@@ -2,6 +2,7 @@
  * Fonctions de calcul des métriques de progression projet
  * Budget vs Réalisation - Health Score
  */
+import { HEURES_PAR_JOUR } from "@/lib/financial";
 
 export interface EtapeMetrics {
   id: number;
@@ -93,7 +94,7 @@ export function calculerProgression(
 
   // ── Charge consommée (heures activités / 8) ──
   const totalHeures = activites.reduce((s, a) => s + a.heures, 0);
-  const chargeConsommee = totalHeures / 8;
+  const chargeConsommee = totalHeures / HEURES_PAR_JOUR;
 
   // ── % Budget Consommé ──
   const budgetConsommePct =
@@ -118,7 +119,7 @@ export function calculerProgression(
         const heuresEtape = activites
           .filter((a) => a.etapeId === e.id)
           .reduce((h, a) => h + a.heures, 0);
-        const joursRealises = heuresEtape / 8;
+        const joursRealises = heuresEtape / HEURES_PAR_JOUR;
         const ratio = Math.min(joursRealises / (e.chargeEstimeeJours ?? 1), 0.9); // cap at 90%
         return s + (e.chargeEstimeeJours ?? 0) * ratio;
       }, 0);
@@ -190,7 +191,7 @@ export function calculerProgression(
     const heuresReelles = activites
       .filter((a) => a.etapeId === e.id)
       .reduce((s, a) => s + a.heures, 0);
-    const joursReels = heuresReelles / 8;
+    const joursReels = heuresReelles / HEURES_PAR_JOUR;
     const ecartJours =
       e.chargeEstimeeJours !== null ? Math.round((joursReels - e.chargeEstimeeJours) * 10) / 10 : null;
     const performancePct =
@@ -311,13 +312,13 @@ function calculerHistorique(
 
     const budgetPct =
       chargeEstimeeTotale > 0
-        ? Math.round((cumulHeures / 8 / chargeEstimeeTotale) * 1000) / 10
+        ? Math.round((cumulHeures / HEURES_PAR_JOUR / chargeEstimeeTotale) * 1000) / 10
         : 0;
 
     // Réalisation : based on étapes validées avant cette date
     // Simplification: on utilise le prorata budget comme proxy si pas mieux
     // Pour une v2, il faudrait tracker les dates de validation des étapes
-    const denominator = Math.max(cumulHeures / 8, 0.1);
+    const denominator = Math.max(cumulHeures / HEURES_PAR_JOUR, 0.1);
     const ratio = chargeEstimeeTotale > 0 ? Math.min(1, chargeEstimeeTotale / denominator) : 1;
     const realisationPct = isFinite(ratio) ? budgetPct * ratio : budgetPct;
 
@@ -334,7 +335,7 @@ function calculerHistorique(
     cumulHeures = activitesTriees.reduce((s, a) => s + a.heures, 0);
     const budgetPct =
       chargeEstimeeTotale > 0
-        ? Math.round((cumulHeures / 8 / chargeEstimeeTotale) * 1000) / 10
+        ? Math.round((cumulHeures / HEURES_PAR_JOUR / chargeEstimeeTotale) * 1000) / 10
         : 0;
 
     // Recalculer réalisation avec méthode étapes

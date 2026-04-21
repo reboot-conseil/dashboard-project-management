@@ -6,6 +6,7 @@ import { fr } from "date-fns/locale";
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import { Plus, ChevronLeft, ChevronRight, Eye, Pencil, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HEURES_PAR_JOUR } from "@/lib/financial";
 import type { Etape } from "./types";
 
 export const KANBAN_COLS: {
@@ -149,7 +150,7 @@ function KanbanCard({
               {e.chargeEstimeeJours && (
                 <span className="ml-1">
                   / {e.chargeEstimeeJours}j est.
-                  {heures / 8 > e.chargeEstimeeJours && (
+                  {heures / HEURES_PAR_JOUR > e.chargeEstimeeJours && (
                     <span className="text-destructive ml-0.5">⚠️</span>
                   )}
                 </span>

@@ -27,6 +27,7 @@ import {
 } from "@/components/dashboard/DashboardFilters";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { CA } from "@/lib/financial";
 
 // ── Types ──────────────────────────────────────────────────────────────
 interface ProjetOption { id: number; nom: string; client: string; statut?: string }
@@ -189,7 +190,7 @@ export function DashboardOperationnel({ periode: periodeProp, customDateDebut, c
       {isPM && pmConsultantId && (() => {
         const me = data?.consultants.find((c) => c.id === pmConsultantId);
         const mesHeures = me?.heuresPeriode ?? 0;
-        const monCA = (mesHeures / 8) * pmTjm;
+        const monCA = CA(mesHeures, pmTjm);
         const occupation = me?.tauxOccupation ?? 0;
         const mesProjets = data?.projetsActifs?.length ?? "—";
         return (

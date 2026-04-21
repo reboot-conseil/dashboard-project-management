@@ -14,6 +14,7 @@ import {
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
 import { requireAuth } from "@/lib/auth-guard";
+import { CA } from "@/lib/financial";
 
 // GET /api/dashboard/consultants?consultantId=X&periode=mois|trimestre|annee
 export async function GET(request: Request) {
@@ -160,11 +161,13 @@ export async function GET(request: Request) {
   const tjm = Number(consultant.tjm ?? 0);
   const heuresTotal = activitesPeriode.reduce((s, a) => s + Number(a.heures), 0);
   const heuresBill = activitesPeriode.filter((a) => a.facturable).reduce((s, a) => s + Number(a.heures), 0);
-  const caGenere = (heuresBill / 8) * tjm;
+  const caGenere = CA(heuresBill, tjm);
 
   const heuresPrev = activitesPrev.reduce((s, a) => s + Number(a.heures), 0);
-  const caGenerePrev =
-    (activitesPrev.filter((a) => a.facturable).reduce((s, a) => s + Number(a.heures), 0) / 8) * tjm;
+  const caGenerePrev = CA(
+    activitesPrev.filter((a) => a.facturable).reduce((s, a) => s + Number(a.heures), 0),
+    tjm
+  );
 
   const variationHeures = Math.round(heuresTotal - heuresPrev);
   const variationCA =
@@ -326,7 +329,7 @@ export async function GET(request: Request) {
 
     const hTotal = acts.reduce((s, a) => s + Number(a.heures), 0);
     const hBill = acts.filter((a) => a.facturable).reduce((s, a) => s + Number(a.heures), 0);
-    const caMois = (hBill / 8) * tjm;
+    const caMois = CA(hBill, tjm);
     const tauxMois = joursMois > 0 ? Math.round((hTotal / (joursMois * 8)) * 1000) / 10 : 0;
 
     historique6Mois.push({

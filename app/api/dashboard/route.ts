@@ -4,6 +4,7 @@ import { differenceInDays, subDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
 import { requireAuth } from "@/lib/auth-guard";
+import { CA, cout as coutFn, marge as margeFn, margePct } from "@/lib/financial";
 
 export async function GET(request: Request) {
   const authError = await requireAuth();
@@ -177,12 +178,12 @@ export async function GET(request: Request) {
   // Finance
   const caFacturable = activitesFinance
     .filter((a) => a.facturable)
-    .reduce((sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+    .reduce((sum, a) => sum + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
   const coutReel = activitesFinance.reduce(
-    (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+    (sum, a) => sum + coutFn(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
   );
-  const marge = caFacturable - coutReel;
-  const tauxMarge = caFacturable > 0 ? Math.round((marge / caFacturable) * 1000) / 10 : 0;
+  const marge = margeFn(caFacturable, coutReel);
+  const tauxMarge = Math.round(margePct(caFacturable, coutReel) * 10) / 10;
 
   // ── Alertes ───────────────────────────────────────────────────
   interface AlerteItem {
@@ -199,12 +200,12 @@ export async function GET(request: Request) {
   for (const p of projetsActifsAlertes) {
     const budget = Number(p.budget ?? 0);
     const ca = p.activites.reduce(
-      (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0
+      (sum, a) => sum + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0
     );
     const cr = p.activites.reduce(
-      (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+      (sum, a) => sum + coutFn(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
     );
-    const m = ca - cr;
+    const m = margeFn(ca, cr);
     const pct = budget > 0 ? Math.round((ca / budget) * 100) : 0;
 
     if (budget > 0 && pct > 100) {

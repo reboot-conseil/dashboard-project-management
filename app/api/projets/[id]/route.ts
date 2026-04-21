@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth-guard";
+import { CA, cout, marge } from "@/lib/financial";
 
 const updateSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
@@ -39,20 +40,20 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   const budgetConsomme = projet.activites.reduce(
-    (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant?.tjm ?? 0),
+    (sum, a) => sum + CA(Number(a.heures), Number(a.consultant?.tjm ?? 0)),
     0
   );
   const coutReel = projet.activites.reduce(
-    (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant?.coutJournalierEmployeur ?? 0),
+    (sum, a) => sum + cout(Number(a.heures), Number(a.consultant?.coutJournalierEmployeur ?? 0)),
     0
   );
   const totalHeures = projet.activites.reduce(
     (sum, a) => sum + Number(a.heures),
     0
   );
-  const marge = budgetConsomme - coutReel;
+  const margeVal = marge(budgetConsomme, coutReel);
 
-  return NextResponse.json({ ...projet, budgetConsomme, coutReel, marge, totalHeures });
+  return NextResponse.json({ ...projet, budgetConsomme, coutReel, marge: margeVal, totalHeures });
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {

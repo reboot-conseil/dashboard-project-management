@@ -1,9 +1,11 @@
 "use client";
 
 import { format, startOfWeek, addDays, isToday, isWeekend } from "date-fns";
+import { HEURES_PAR_JOUR } from "@/lib/financial";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { CA } from "@/lib/financial";
 import type { CalData, EtapeInfo } from "./types";
 
 interface ChargeEquipeViewProps {
@@ -47,7 +49,7 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
         if (isWeekend(day)) continue;
         const key = format(day, "yyyy-MM-dd");
         const heures = jourMap[key] ?? 0;
-        if (consultant.tjm && heures > 0) total += (heures / 8) * consultant.tjm;
+        if (consultant.tjm && heures > 0) total += CA(heures, consultant.tjm);
       }
     }
     return Math.round(total);
@@ -177,8 +179,8 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
                             {heuresLoguees > 0 && (
                               <div className="h-1 w-full rounded-full bg-muted mb-1 overflow-hidden">
                                 <div
-                                  className={cn("h-full rounded-full", chargeColor(Math.round((heuresLoguees / 8) * 100)))}
-                                  style={{ width: `${Math.min(100, Math.round((heuresLoguees / 8) * 100))}%` }}
+                                  className={cn("h-full rounded-full", chargeColor(Math.round((heuresLoguees / HEURES_PAR_JOUR) * 100)))}
+                                  style={{ width: `${Math.min(100, Math.round((heuresLoguees / HEURES_PAR_JOUR) * 100))}%` }}
                                 />
                               </div>
                             )}
@@ -217,7 +219,7 @@ export function ChargeEquipeView({ currentDate, data, onSelectEtape, onContextMe
                     <div className="text-sm font-semibold">{Math.round(totalHeures * 10) / 10}h</div>
                     {consultant.tjm && (
                       <div className="text-[10px] text-muted-foreground">
-                        {Math.round((totalHeures / 8) * consultant.tjm).toLocaleString("fr-FR")}€
+                        {Math.round(CA(totalHeures, consultant.tjm)).toLocaleString("fr-FR")}€
                       </div>
                     )}
                   </div>

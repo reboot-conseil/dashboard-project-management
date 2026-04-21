@@ -4,6 +4,7 @@ import { z } from "zod";
 import { differenceInDays } from "date-fns";
 import { calculerProgression } from "@/lib/projet-metrics";
 import { requireAuth } from "@/lib/auth-guard";
+import { CA, cout, marge } from "@/lib/financial";
 
 const PROJET_COLORS = ["#3b82f6", "#6366f1", "#14b8a6", "#f43f5e", "#84cc16", "#f97316"];
 
@@ -61,22 +62,22 @@ export async function GET(request: Request) {
     const result = projets.map((p) => {
       const etapesValidees = p.etapes.filter((e) => e.statut === "VALIDEE").length;
       const budgetConsomme = p.activites.reduce(
-        (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0),
+        (sum, a) => sum + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)),
         0
       );
       const coutReel = p.activites.reduce(
-        (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0),
+        (sum, a) => sum + cout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)),
         0
       );
       const budget = Number(p.budget ?? 0);
-      const marge = budgetConsomme - coutReel;
+      const margeVal = marge(budgetConsomme, coutReel);
       const pctBudget = budget > 0 ? Math.round((budgetConsomme / budget) * 100) : 0;
 
       // Compute alerts for this project
       const alertes: string[] = [];
       if (budget > 0 && pctBudget > 100) alertes.push("budget_depasse");
       else if (budget > 0 && pctBudget >= 80) alertes.push("budget_eleve");
-      if (budgetConsomme > 0 && marge < 0) alertes.push("marge_negative");
+      if (budgetConsomme > 0 && margeVal < 0) alertes.push("marge_negative");
       for (const e of p.etapes) {
         if (!e.deadline || e.statut === "VALIDEE") continue;
         const jours = differenceInDays(new Date(e.deadline), now);
@@ -150,7 +151,7 @@ export async function GET(request: Request) {
         etapesValidees,
         budgetConsomme,
         coutReel,
-        marge,
+        marge: margeVal,
         pctBudget,
         prochaineDeadline: prochaineDeadline?.deadline ?? null,
         alertes,

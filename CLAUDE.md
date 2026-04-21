@@ -13,7 +13,7 @@ TailwindCSS, Shadcn UI, Recharts, Sonner, date-fns, next-auth@5.0.0-beta.30
 - `npm run db:seed-admin` — Seed admin account (needs ADMIN_EMAIL/ADMIN_PASSWORD/ADMIN_NOM)
 
 ## Financial Formula
-1 day = 8h. CA = (heures/8) × TJM. Cost = (heures/8) × coutJournalierEmployeur
+1 day = 7.5h. CA = (heures/7.5) × TJM. Cost = (heures/7.5) × coutJournalierEmployeur
 Margin thresholds: >40% good · 30–40% medium · <30% poor
 All logic centralized in `lib/financial.ts` — do not duplicate inline.
 

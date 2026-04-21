@@ -1,6 +1,7 @@
 "use client";
 
 import { RefObject } from "react";
+import { HEURES_PAR_JOUR } from "@/lib/financial";
 import { format } from "date-fns";
 import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ export function SaisieRapide({
         const heuresSur = activites
           .filter((a) => a.etape?.id === parseInt(form.etapeId))
           .reduce((s, a) => s + Number(a.heures), 0);
-        const joursRealises = heuresSur / 8;
+        const joursRealises = heuresSur / HEURES_PAR_JOUR;
         const restant = selectedEtape.chargeEstimeeJours! - joursRealises;
         return { joursRealises, restant, depasse: restant < 0, charge: selectedEtape.chargeEstimeeJours! };
       })()

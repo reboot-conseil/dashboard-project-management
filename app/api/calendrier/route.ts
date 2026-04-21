@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { eachDayOfInterval, isWeekend, parseISO } from "date-fns";
+import { HEURES_PAR_JOUR } from "@/lib/financial";
 
 // Palette couleurs consultants (différente des projets)
 const CONSULTANT_COLORS = [
@@ -170,7 +171,7 @@ export async function GET(request: Request) {
       tempsPasseHeures += Number(a.heures);
     }
     const consultants = Array.from(consultantMap.values());
-    const tempsPasseJours = tempsPasseHeures / 8;
+    const tempsPasseJours = tempsPasseHeures / HEURES_PAR_JOUR;
 
     // Calcul santé
     const chargeEstimeeJours = e.chargeEstimeeJours ?? 0;
@@ -269,8 +270,8 @@ export async function GET(request: Request) {
   let capaciteDisponible = 0;
   for (const [, jourMap] of Object.entries(chargePlanifiee)) {
     for (const [, heures] of Object.entries(jourMap)) {
-      if (heures > 8) surcharges++;
-      if (heures < 6) capaciteDisponible += (8 - heures) / 8; // en jours
+      if (heures > HEURES_PAR_JOUR) surcharges++;
+      if (heures < 6) capaciteDisponible += (HEURES_PAR_JOUR - heures) / HEURES_PAR_JOUR; // en jours
     }
   }
 

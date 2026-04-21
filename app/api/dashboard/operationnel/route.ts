@@ -12,6 +12,7 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
+import { CA, cout, marge } from "@/lib/financial";
 
 const PROJET_COLORS = ["#3b82f6", "#6366f1", "#14b8a6", "#f43f5e", "#84cc16", "#f97316"];
 
@@ -137,11 +138,11 @@ export async function GET(request: Request) {
   // ── KPIs financiers période ──────────────────────────────────────
   const caTotal = activitesPeriode
     .filter((a) => a.facturable)
-    .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+    .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
   const coutTotal = activitesPeriode.reduce(
-    (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+    (s, a) => s + cout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
   );
-  const margeBrute = caTotal - coutTotal;
+  const margeBrute = marge(caTotal, coutTotal);
   const tauxMarge = caTotal > 0 ? Math.round((margeBrute / caTotal) * 1000) / 10 : 0;
   const totalHeures = activitesPeriode.reduce((s, a) => s + Number(a.heures), 0);
 
@@ -180,7 +181,7 @@ export async function GET(request: Request) {
     const budget = Number(p.budget ?? 0);
     const caProjet = p.activites
       .filter((a) => a.facturable)
-      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+      .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
     const pctBudget = budget > 0 ? Math.round((caProjet / budget) * 1000) / 10 : 0;
 
     // Prochaine deadline
@@ -376,16 +377,16 @@ export async function GET(request: Request) {
 
     const mCA = moisActivites
       .filter((a) => a.facturable)
-      .reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+      .reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
     const mCout = moisActivites.reduce(
-      (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+      (s, a) => s + cout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
     );
     const mHeures = moisActivites.reduce((s, a) => s + Number(a.heures), 0);
 
     tendances6Mois.push({
       mois: format(moisDate, "MMM yy", { locale: fr }),
       ca: Math.round(mCA),
-      marge: Math.round(mCA - mCout),
+      marge: Math.round(marge(mCA, mCout)),
       heures: Math.round(mHeures),
     });
   }

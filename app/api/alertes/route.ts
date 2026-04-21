@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { differenceInDays } from "date-fns";
 import { requireAuth } from "@/lib/auth-guard";
+import { CA, cout as coutFn, marge as margeFn } from "@/lib/financial";
 
 export type AlerteSeverite = "critique" | "attention" | "info";
 export type AlerteType = "budget_depasse" | "budget_eleve" | "deadline_depassee" | "deadline_proche" | "marge_negative";
@@ -44,14 +45,14 @@ export async function GET() {
   for (const p of projets) {
     const budget = Number(p.budget ?? 0);
     const ca = p.activites.reduce(
-      (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0),
+      (sum, a) => sum + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)),
       0
     );
     const coutReel = p.activites.reduce(
-      (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0),
+      (sum, a) => sum + coutFn(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)),
       0
     );
-    const marge = ca - coutReel;
+    const marge = margeFn(ca, coutReel);
     const pctBudget = budget > 0 ? Math.round((ca / budget) * 100) : 0;
 
     // Budget > 100%

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth-guard";
+import { CA, cout as calcCout, marge as calcMarge, margePct } from "@/lib/financial";
 
 function escapeCsv(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return "";
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
         Number(a.heures),
         a.description,
         a.facturable ? "Oui" : "Non",
-        a.facturable ? (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0) : 0,
+        a.facturable ? CA(Number(a.heures), Number(a.consultant.tjm ?? 0)) : 0,
       ])
     );
 
@@ -87,19 +88,19 @@ export async function GET(request: Request) {
       const e = map.get(c.id)!;
       const h = Number(a.heures);
       e.heuresTotal += h;
-      e.coutReel += (h / 8) * Number(c.coutJournalierEmployeur ?? 0);
+      e.coutReel += calcCout(h, Number(c.coutJournalierEmployeur ?? 0));
       if (a.facturable) {
         e.heuresFact += h;
-        e.ca += (h / 8) * Number(c.tjm ?? 0);
+        e.ca += CA(h, Number(c.tjm ?? 0));
       }
     }
 
     const csv = buildCsv(
       ["Consultant", "Email", "TJM", "Heures totales", "Heures facturables", "CA généré", "Coût réel", "Marge", "Taux marge (%)"],
       Array.from(map.values()).map((c) => {
-        const marge = c.ca - c.coutReel;
-        const tauxMarge = c.ca > 0 ? Math.round((marge / c.ca) * 1000) / 10 : 0;
-        return [c.nom, c.email, c.tjm, c.heuresTotal, c.heuresFact, c.ca, c.coutReel, marge, tauxMarge];
+        const margeVal = calcMarge(c.ca, c.coutReel);
+        const tauxMarge = Math.round(margePct(c.ca, c.coutReel) * 10) / 10;
+        return [c.nom, c.email, c.tjm, c.heuresTotal, c.heuresFact, c.ca, c.coutReel, margeVal, tauxMarge];
       })
     );
 
@@ -126,11 +127,11 @@ export async function GET(request: Request) {
       projets
         .map((p) => {
           const heures = p.activites.reduce((s, a) => s + Number(a.heures), 0);
-          const ca = p.activites.reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
-          const coutReel = p.activites.reduce((s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0);
-          const marge = ca - coutReel;
+          const ca = p.activites.reduce((s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
+          const coutReel = p.activites.reduce((s, a) => s + calcCout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0);
+          const margeVal = calcMarge(ca, coutReel);
           const budget = Number(p.budget ?? 0);
-          return [p.nom, p.client, p.statut, budget, heures, ca, coutReel, marge, ca > 0 ? Math.round((marge / ca) * 1000) / 10 : 0, budget > 0 ? Math.round((ca / budget) * 100) : 0];
+          return [p.nom, p.client, p.statut, budget, heures, ca, coutReel, margeVal, Math.round(margePct(ca, coutReel) * 10) / 10, budget > 0 ? Math.round((ca / budget) * 100) : 0];
         })
     );
 

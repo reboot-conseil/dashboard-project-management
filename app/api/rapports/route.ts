@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { calculerProgression } from "@/lib/projet-metrics";
 import { requireRole } from "@/lib/auth-guard";
+import { CA, cout as calcCout, marge as calcMarge, margePct } from "@/lib/financial";
 
 export async function GET(request: Request) {
   const authError = await requireRole(["ADMIN", "PM"]);
@@ -83,14 +84,14 @@ export async function GET(request: Request) {
   // CA estimé
   const caTotal = activites
     .filter((a) => a.facturable)
-    .reduce((sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0), 0);
+    .reduce((sum, a) => sum + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)), 0);
 
   // Coût total (toutes activités, pas seulement facturables)
   const coutTotal = activites.reduce(
-    (sum, a) => sum + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0), 0
+    (sum, a) => sum + calcCout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)), 0
   );
-  const margeBrute = caTotal - coutTotal;
-  const tauxMarge = caTotal > 0 ? Math.round((margeBrute / caTotal) * 1000) / 10 : 0;
+  const margeBrute = calcMarge(caTotal, coutTotal);
+  const tauxMarge = Math.round(margePct(caTotal, coutTotal) * 10) / 10;
 
   // Jours travaillés uniques
   const joursUniques = new Set(
@@ -137,10 +138,10 @@ export async function GET(request: Request) {
     const entry = consultantMap.get(c.id)!;
     const h = Number(a.heures);
     entry.heuresTotal += h;
-    entry.coutReel += (h / 8) * entry.coutJournalier;
+    entry.coutReel += calcCout(h, entry.coutJournalier);
     if (a.facturable) {
       entry.heuresFacturables += h;
-      entry.ca += (h / 8) * Number(c.tjm ?? 0);
+      entry.ca += CA(h, Number(c.tjm ?? 0));
     } else {
       entry.heuresNonFacturables += h;
     }
@@ -159,8 +160,8 @@ export async function GET(request: Request) {
       tauxFacturable: c.heuresTotal > 0 ? Math.round((c.heuresFacturables / c.heuresTotal) * 100) : 0,
       ca: c.ca,
       coutReel: c.coutReel,
-      marge: c.ca - c.coutReel,
-      tauxMarge: c.ca > 0 ? Math.round(((c.ca - c.coutReel) / c.ca) * 1000) / 10 : 0,
+      marge: calcMarge(c.ca, c.coutReel),
+      tauxMarge: Math.round(margePct(c.ca, c.coutReel) * 10) / 10,
       joursTravailles: c.jours.size,
     }))
     .sort((a, b) => b.ca - a.ca);
@@ -176,17 +177,17 @@ export async function GET(request: Request) {
     .map((p) => {
       const heures = p.activites.reduce((s, a) => s + Number(a.heures), 0);
       const budgetConsomme = p.activites.reduce(
-        (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0),
+        (s, a) => s + CA(Number(a.heures), Number(a.consultant.tjm ?? 0)),
         0
       );
       const coutReelProjet = p.activites.reduce(
-        (s, a) => s + (Number(a.heures) / 8) * Number(a.consultant.coutJournalierEmployeur ?? 0),
+        (s, a) => s + calcCout(Number(a.heures), Number(a.consultant.coutJournalierEmployeur ?? 0)),
         0
       );
-      const margeProjet = budgetConsomme - coutReelProjet;
+      const margeProjet = calcMarge(budgetConsomme, coutReelProjet);
       const budget = Number(p.budget ?? 0);
       const pctBudget = budget > 0 ? Math.round((budgetConsomme / budget) * 100) : 0;
-      const tauxMargeProjet = budgetConsomme > 0 ? Math.round((margeProjet / budgetConsomme) * 1000) / 10 : 0;
+      const tauxMargeProjet = Math.round(margePct(budgetConsomme, coutReelProjet) * 10) / 10;
 
       // Progression calculation
       const projetActivites = allActivitesByProjet
@@ -290,7 +291,7 @@ export async function GET(request: Request) {
     }
     const pe = entry.projets.get(pId)!;
     pe.heures += Number(a.heures);
-    pe.montant += (Number(a.heures) / 8) * Number(a.consultant.tjm ?? 0);
+    pe.montant += CA(Number(a.heures), Number(a.consultant.tjm ?? 0));
   }
 
   const facturation = Array.from(facturationMap.values()).map((f) => ({
