@@ -14,7 +14,7 @@ import {
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
 import { requireAuth } from "@/lib/auth-guard";
-import { CA } from "@/lib/financial";
+import { CA, HEURES_PAR_JOUR } from "@/lib/financial";
 
 // GET /api/dashboard/consultants?consultantId=X&periode=mois|trimestre|annee
 export async function GET(request: Request) {
@@ -132,7 +132,6 @@ export async function GET(request: Request) {
         },
         include: {
           etapes: {
-            where: { statut: { not: "VALIDEE" } },
             select: {
               id: true,
               nom: true,
@@ -181,7 +180,7 @@ export async function GET(request: Request) {
     cursor = addDays(cursor, 1);
   }
   const tauxOccupation =
-    joursOuvrables > 0 ? Math.round((heuresTotal / (joursOuvrables * 8)) * 1000) / 10 : 0;
+    joursOuvrables > 0 ? Math.round((heuresTotal / (joursOuvrables * HEURES_PAR_JOUR)) * 1000) / 10 : 0;
 
   // Projets distincts avec activités ce mois
   const projetIdsActifs = [...new Set(activitesPeriode.map((a) => a.projet.id))];
