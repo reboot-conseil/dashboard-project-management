@@ -12,7 +12,7 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { calculerProgression } from "@/lib/projet-metrics";
-import { CA, cout, marge } from "@/lib/financial";
+import { CA, cout, marge, HEURES_PAR_JOUR } from "@/lib/financial";
 
 const PROJET_COLORS = ["#3b82f6", "#6366f1", "#14b8a6", "#f43f5e", "#84cc16", "#f97316"];
 
@@ -152,7 +152,7 @@ export async function GET(request: Request) {
     1
   );
   const joursOuvres = Math.round(totalJours * 5 / 7);
-  const capaciteTheorique = consultantsActifs.length * joursOuvres * 8;
+  const capaciteTheorique = consultantsActifs.length * joursOuvres * HEURES_PAR_JOUR;
   const tauxOccupation = capaciteTheorique > 0
     ? Math.round((totalHeures / capaciteTheorique) * 1000) / 10
     : 0;
@@ -243,12 +243,12 @@ export async function GET(request: Request) {
   // 4. Staffing
   const sousSollicites = consultantsActifs.filter((c) => {
     const heures = c.activites.reduce((s, a) => s + Number(a.heures), 0);
-    const pct = capaciteTheorique > 0 ? (heures / (joursOuvres * 8)) * 100 : 0;
+    const pct = capaciteTheorique > 0 ? (heures / (joursOuvres * HEURES_PAR_JOUR)) * 100 : 0;
     return pct < 60;
   });
   const surSollicites = consultantsActifs.filter((c) => {
     const heures = c.activites.reduce((s, a) => s + Number(a.heures), 0);
-    const pct = joursOuvres > 0 ? (heures / (joursOuvres * 8)) * 100 : 0;
+    const pct = joursOuvres > 0 ? (heures / (joursOuvres * HEURES_PAR_JOUR)) * 100 : 0;
     return pct > 100;
   });
 
@@ -481,7 +481,7 @@ export async function GET(request: Request) {
       tauxOccupation:
         joursOuvres > 0
           ? Math.round(
-              (c.activites.reduce((s, a) => s + Number(a.heures), 0) / (joursOuvres * 8)) * 1000
+              (c.activites.reduce((s, a) => s + Number(a.heures), 0) / (joursOuvres * HEURES_PAR_JOUR)) * 1000
             ) / 10
           : 0,
     })),

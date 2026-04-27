@@ -329,7 +329,7 @@ export async function GET(request: Request) {
     const hTotal = acts.reduce((s, a) => s + Number(a.heures), 0);
     const hBill = acts.filter((a) => a.facturable).reduce((s, a) => s + Number(a.heures), 0);
     const caMois = CA(hBill, tjm);
-    const tauxMois = joursMois > 0 ? Math.round((hTotal / (joursMois * 8)) * 1000) / 10 : 0;
+    const tauxMois = joursMois > 0 ? Math.round((hTotal / (joursMois * HEURES_PAR_JOUR)) * 1000) / 10 : 0;
 
     historique6Mois.push({
       mois: format(moisDate, "MMM yy", { locale: fr }),

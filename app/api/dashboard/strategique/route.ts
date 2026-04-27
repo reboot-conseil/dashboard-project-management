@@ -273,7 +273,7 @@ export async function GET(request: Request) {
   const joursOuvresPeriode = Math.round(totalJoursPeriode * 5 / 7);
   const consultantsOccupation = consultantsActifs.map((c) => {
     const heures = c.activites.reduce((s, a) => s + Number(a.heures), 0);
-    const capacite = joursOuvresPeriode * 8;
+    const capacite = joursOuvresPeriode * HEURES_PAR_JOUR;
     const taux = capacite > 0 ? Math.round((heures / capacite) * 1000) / 10 : 0;
     return { id: c.id, nom: c.nom, heures: Math.round(heures * 10) / 10, capacite, taux };
   });
@@ -292,12 +292,12 @@ export async function GET(request: Request) {
   const joursRestantsMois = Math.max(differenceInDays(endThisMonth, now), 0);
   const joursOuvresRestants = Math.round(joursRestantsMois * 5 / 7);
   const capaciteDisponibleHeures =
-    consultantsActifs.length * joursOuvresRestants * 8 * (1 - tauxOccupationMoyen / 100);
+    consultantsActifs.length * joursOuvresRestants * HEURES_PAR_JOUR * (1 - tauxOccupationMoyen / 100);
   const joursHommeDisponibles = Math.round(capaciteDisponibleHeures / HEURES_PAR_JOUR);
 
   // Pipeline
   const pipelineCA = pipelineProjects.reduce((s, p) => s + Number(p.budget ?? 0), 0);
-  const capaciteAnnuelleRestante = consultantsActifs.length * (365 - dayOfYear) * (5 / 7) * 8;
+  const capaciteAnnuelleRestante = consultantsActifs.length * (365 - dayOfYear) * (5 / 7) * HEURES_PAR_JOUR;
   const besoinRecrutement =
     pipelineCA > 0 &&
     tauxOccupationMoyen > 85 &&

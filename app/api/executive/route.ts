@@ -54,7 +54,7 @@ export async function GET() {
   // Capacity
   const joursOuvresAnnee = Math.round(365 * 5 / 7);
   const joursOuvresEcoules = Math.round(dayOfYear * 5 / 7);
-  const capaciteTheorique = consultantsActifs.length * joursOuvresEcoules * 8;
+  const capaciteTheorique = consultantsActifs.length * joursOuvresEcoules * HEURES_PAR_JOUR;
   const tauxOccupation = capaciteTheorique > 0 ? Math.round((heuresAnnee / capaciteTheorique) * 1000) / 10 : 0;
 
   // ── 2. ROI par projet ─────────────────────────────────────────
@@ -131,7 +131,7 @@ export async function GET() {
 
   const utilisationParConsultant: { id: number; nom: string; heures: number; capacite: number; taux: number }[] = [];
   const joursOuvresMois = Math.round(30 * 5 / 7);
-  const capaciteMoisParConsultant = joursOuvresMois * 8;
+  const capaciteMoisParConsultant = joursOuvresMois * HEURES_PAR_JOUR;
 
   for (const c of consultantsActifs) {
     const heures = activitesMois

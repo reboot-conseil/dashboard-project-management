@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { differenceInDays, subMonths, startOfMonth, endOfMonth, format } from "date-fns";
 import { requireAuth } from "@/lib/auth-guard";
-import { CA, cout as calcCout, marge as calcMarge, margePct } from "@/lib/financial";
+import { CA, cout as calcCout, marge as calcMarge, margePct, HEURES_PAR_JOUR } from "@/lib/financial";
 
 export async function GET(request: Request) {
   const authError = await requireAuth();
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
   const totalDays = Math.ceil((fin.getTime() - debut.getTime()) / 86400000) + 1;
   // Rough estimate: 5/7 of total days are workdays
   const joursOuvres = Math.round(totalDays * 5 / 7);
-  const capaciteTheorique = consultantsActifs * joursOuvres * 8;
+  const capaciteTheorique = consultantsActifs * joursOuvres * HEURES_PAR_JOUR;
   const tauxOccupation = capaciteTheorique > 0
     ? Math.round((totalHeures / capaciteTheorique) * 1000) / 10
     : 0;

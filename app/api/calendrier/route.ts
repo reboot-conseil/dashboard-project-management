@@ -248,7 +248,7 @@ export async function GET(request: Request) {
       const etapeDebut = etape.dateDebut ? parseISO(etape.dateDebut) : debut;
       const etapeFin = parseISO(etape.deadline);
       const joursOuvrables = getBusinessDays(etapeDebut, etapeFin);
-      const heuresParJourEtape = ((etape.chargeEstimeeJours ?? 1) * 8) / joursOuvrables;
+      const heuresParJourEtape = ((etape.chargeEstimeeJours ?? 1) * HEURES_PAR_JOUR) / joursOuvrables;
 
       for (const day of periodDays) {
         if (isWeekend(day)) continue;

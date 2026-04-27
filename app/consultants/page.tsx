@@ -1,4 +1,5 @@
 "use client";
+import { HEURES_PAR_JOUR } from "@/lib/financial";
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -103,7 +104,7 @@ export default function ConsultantsPage() {
       );
 
       const joursOuvres = Math.round((30 * 5) / 7);
-      const capacite = joursOuvres * 8;
+      const capacite = joursOuvres * HEURES_PAR_JOUR;
       const rapData = results[3];
       const prevData = results[2];
 
