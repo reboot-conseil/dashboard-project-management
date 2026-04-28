@@ -1,4 +1,5 @@
-import { requireRole } from "@/lib/auth-guard"
+import { auth } from "@/auth"
+import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { ConfigSection } from "@/components/admin/crakotte/ConfigSection"
 import { SyncLogSection } from "@/components/admin/crakotte/SyncLogSection"
@@ -7,8 +8,8 @@ import { PendingProjectsSection } from "@/components/admin/crakotte/PendingProje
 import { RawDataSection } from "@/components/admin/crakotte/RawDataSection"
 
 export default async function CrakottePage() {
-  const authError = await requireRole(["ADMIN"])
-  if (authError) return authError
+  const session = await auth()
+  if (!session || session.user.role !== "ADMIN") redirect("/")
 
   const [config, logs, conflicts, pendingProjects] = await Promise.all([
     prisma.crakotteConfig.findFirst(),
