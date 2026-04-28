@@ -285,9 +285,9 @@ export async function GET(request: Request) {
       });
     }
     const entry = facturationMap.get(cId)!;
-    const pId = a.projet.id;
+    const pId = a.projet?.id ?? 0;
     if (!entry.projets.has(pId)) {
-      entry.projets.set(pId, { projetNom: a.projet.nom, heures: 0, montant: 0 });
+      entry.projets.set(pId, { projetNom: a.projet?.nom ?? '', heures: 0, montant: 0 });
     }
     const pe = entry.projets.get(pId)!;
     pe.heures += Number(a.heures);

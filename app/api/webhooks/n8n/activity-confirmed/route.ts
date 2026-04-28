@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       activite: {
         id: activite.id,
         consultant: activite.consultant.nom,
-        projet: activite.projet.nom,
+        projet: activite.projet?.nom,
         etape: activite.etape?.nom || null,
         heures: activite.heures,
         description: activite.description,

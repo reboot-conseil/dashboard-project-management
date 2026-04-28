@@ -22,6 +22,7 @@ import {
   Moon,
   LogOut,
   Search,
+  RefreshCw,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ const NAV_SECTIONS = [
     label: "Admin",
     items: [
       { href: "/admin/users", label: "Utilisateurs", icon: Users2, adminOnly: true },
+      { href: "/admin/crakotte", label: "Intégration Crakotte", icon: RefreshCw, adminOnly: true },
     ] as NavItem[],
   },
 ];

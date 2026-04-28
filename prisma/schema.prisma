@@ -35,9 +35,11 @@ model Consultant {
   coutJournalierEmployeur Float?
   competences            String?
   couleur                String     @default("#8B5CF6")
-  actif                  Boolean    @default(true)
-  password               String?
-  role                   Role       @default(CONSULTANT)
+  actif                       Boolean    @default(true)
+  crakotteConsultantId        String?    @unique
+  resolvedPendingProjects     CrakottePendingProject[]
+  password                    String?
+  role                        Role       @default(CONSULTANT)
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt
   activites              Activite[]
@@ -53,6 +55,8 @@ model Projet {
   dateFin             DateTime?
   statut              StatutProjet       @default(PLANIFIE)
   couleur             String             @default("#3b82f6")
+  crakotteProjectId   String?            @unique
+  pendingCrakotte     CrakottePendingProject[]
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   activites           Activite[]
@@ -62,19 +66,21 @@ model Projet {
 }
 
 model Activite {
-  id           Int        @id @default(autoincrement())
-  consultantId Int
-  projetId     Int
-  etapeId      Int?
-  date         DateTime
-  heures       Decimal
-  description  String?
-  facturable   Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  consultant   Consultant @relation(fields: [consultantId], references: [id])
-  projet       Projet     @relation(fields: [projetId], references: [id])
-  etape        Etape?     @relation(fields: [etapeId], references: [id])
+  id               Int        @id @default(autoincrement())
+  consultantId     Int
+  projetId         Int?
+  etapeId          Int?
+  date             DateTime
+  heures           Decimal
+  description      String?
+  facturable       Boolean    @default(true)
+  source           String     @default("MANUEL")
+  crakotteEntryId  String?    @unique
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  consultant       Consultant @relation(fields: [consultantId], references: [id])
+  projet           Projet?    @relation(fields: [projetId], references: [id])
+  etape            Etape?     @relation(fields: [etapeId], references: [id])
 
   @@index([consultantId])
   @@index([projetId])
@@ -157,4 +163,53 @@ model IntegrationConfig {
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model CrakotteConfig {
+  id            Int       @id @default(autoincrement())
+  apiKey        String
+  actif         Boolean   @default(true)
+  dateDebutSync DateTime
+  lastSyncAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model CrakotteSyncLog {
+  id                  Int       @id @default(autoincrement())
+  startedAt           DateTime
+  finishedAt          DateTime?
+  status              String
+  activitesCreees     Int       @default(0)
+  conflitsDetectes    Int       @default(0)
+  nouveauxProjets     Int       @default(0)
+  consultantsSkippes  Int       @default(0)
+  errorMessage        String?
+  createdAt           DateTime  @default(now())
+}
+
+model CrakotteConflict {
+  id                 Int       @id @default(autoincrement())
+  crakotteActiviteId Int
+  manuelActiviteId   Int
+  resolved           Boolean   @default(false)
+  resolvedAt         DateTime?
+  resolvedById       Int?
+  keptSource         String?
+  createdAt          DateTime  @default(now())
+}
+
+model CrakottePendingProject {
+  id                   Int         @id @default(autoincrement())
+  crakotteProjectId    String      @unique
+  crakotteProjectName  String
+  crakotteCustomerId   String
+  crakotteCustomerName String
+  suggestedProjetId    Int?
+  suggestedProjet      Projet?     @relation(fields: [suggestedProjetId], references: [id])
+  status               String      @default("PENDING")
+  createdAt            DateTime    @default(now())
+  resolvedAt           DateTime?
+  resolvedById         Int?
+  resolvedBy           Consultant? @relation(fields: [resolvedById], references: [id])
 }

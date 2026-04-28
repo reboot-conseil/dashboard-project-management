@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync/crakotte",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
