@@ -34,11 +34,13 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
   ])
 
   const consultantsByEmail = new Map<string, number>()
+  const consultantsByNom = new Map<string, number>()
   const dbConsultants = await prisma.consultant.findMany({
-    select: { id: true, email: true, crakotteConsultantId: true },
+    select: { id: true, nom: true, email: true, crakotteConsultantId: true },
   })
   for (const c of dbConsultants) {
     if (c.email) consultantsByEmail.set(c.email.toLowerCase(), c.id)
+    if (c.nom) consultantsByNom.set(c.nom.toLowerCase(), c.id)
   }
 
   for (const cc of crakotteConsultants) {
@@ -64,7 +66,7 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
 
   for (const item of timeSpent.items) {
     try {
-      await processTimeEntry(item, consultantsByEmail, projetsByKrakotteId, dbProjets, result)
+      await processTimeEntry(item, consultantsByEmail, consultantsByNom, projetsByKrakotteId, dbProjets, result)
     } catch (e: unknown) {
       result.errors.push(`Entry ${item.entry.id}: ${e instanceof Error ? e.message : String(e)}`)
     }
@@ -76,6 +78,7 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
 async function processTimeEntry(
   item: CrakotteTimeEntry,
   consultantsByEmail: Map<string, number>,
+  consultantsByNom: Map<string, number>,
   projetsByKrakotteId: Map<string, number>,
   dbProjets: { id: number; nom: string; crakotteProjectId: string | null }[],
   result: SyncResult
@@ -85,7 +88,10 @@ async function processTimeEntry(
   })
   if (existing) return
 
-  const consultantId = consultantsByEmail.get(item.consultant.email.toLowerCase())
+  const fullName = `${item.consultant.firstName} ${item.consultant.lastName}`.toLowerCase()
+  const consultantId =
+    consultantsByEmail.get(item.consultant.email.toLowerCase()) ??
+    consultantsByNom.get(fullName)
   if (!consultantId) {
     result.consultantsSkippes++
     return

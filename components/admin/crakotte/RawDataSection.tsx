@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
+import { toast } from "sonner"
 
 interface ConsultantPreview {
   id: string
@@ -53,6 +54,7 @@ export function RawDataSection() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<"consultants" | "projets" | "entries">("consultants")
+  const [creating, setCreating] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -65,6 +67,57 @@ export function RawDataSection() {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function importConsultants(mode: "reboot" | "all" | "selected", ids?: string[]) {
+    setCreating(mode === "reboot" ? "reboot" : mode === "all" ? "all-consultants" : ids?.[0] ?? "")
+    try {
+      const res = await fetch("/api/admin/crakotte/import-consultants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ids }),
+      })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
+      toast.success(`${d.created} consultant(s) créé(s), ${d.linked} lié(s)`)
+      await load()
+    } finally {
+      setCreating(null)
+    }
+  }
+
+  async function importProject(projectId: string, nom: string, client: string) {
+    setCreating(projectId)
+    try {
+      const res = await fetch("/api/admin/crakotte/import-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, nom, client }),
+      })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
+      toast.success(`Projet "${nom}" créé`)
+      await load()
+    } finally {
+      setCreating(null)
+    }
+  }
+
+  async function importAllProjects() {
+    setCreating("all-projects")
+    try {
+      const res = await fetch("/api/admin/crakotte/import-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "all" }),
+      })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
+      toast.success(`${d.created} projet(s) créé(s)`)
+      await load()
+    } finally {
+      setCreating(null)
     }
   }
 
@@ -81,9 +134,9 @@ export function RawDataSection() {
 
       {data && (
         <div className="space-y-4">
-          <div className="text-sm text-muted-foreground">
-            Période : {data.periode.from} → {data.periode.to} (30 derniers jours)
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Période : {data.periode.from} → {data.periode.to}
+          </p>
 
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-lg border p-3 text-center">
@@ -121,42 +174,90 @@ export function RawDataSection() {
           </div>
 
           {tab === "consultants" && (
-            <div className="space-y-1">
-              {data.consultants.map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <div>
-                    <span className="font-medium">{c.nom}</span>
-                    <span className="ml-2 text-muted-foreground">{c.email}</span>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => importConsultants("reboot")}
+                  disabled={!!creating}
+                >
+                  {creating === "reboot" ? "Création..." : "Créer @reboot-conseil.com"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => importConsultants("all")}
+                  disabled={!!creating}
+                >
+                  {creating === "all-consultants" ? "Création..." : "Créer tous (69)"}
+                </Button>
+              </div>
+              <div className="space-y-1">
+                {data.consultants.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                    <div>
+                      <span className="font-medium">{c.nom}</span>
+                      <span className="ml-2 text-muted-foreground">{c.email}</span>
+                    </div>
+                    {c.matched ? (
+                      <Badge variant="success-soft">{c.matchedWith}</Badge>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          disabled={!!creating}
+                          onClick={() => importConsultants("selected", [c.id])}
+                        >
+                          {creating === c.id ? "..." : "Créer"}
+                        </Button>
+                        <Badge variant="destructive-soft">Non trouvé</Badge>
+                      </div>
+                    )}
                   </div>
-                  {c.matched ? (
-                    <Badge variant="success-soft">
-                      {c.matchedWith}
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive-soft">Non trouvé</Badge>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
           {tab === "projets" && (
-            <div className="space-y-1">
-              {data.projets.map((p) => (
-                <div key={p.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <div>
-                    <span className="font-medium">{p.nom}</span>
-                    <span className="ml-2 text-muted-foreground">{p.client}</span>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={importAllProjects}
+                  disabled={!!creating}
+                >
+                  {creating === "all-projects" ? "Création..." : `Créer tous les inconnus (${data.projets.filter((p) => !p.matchedById && !p.matchedByNom).length})`}
+                </Button>
+              </div>
+              <div className="space-y-1">
+                {data.projets.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                    <div>
+                      <span className="font-medium">{p.nom}</span>
+                      <span className="ml-2 text-muted-foreground">{p.client}</span>
+                    </div>
+                    {p.matchedById ? (
+                      <Badge variant="success-soft">ID lié</Badge>
+                    ) : p.matchedByNom ? (
+                      <Badge variant="warning-soft">Nom similaire</Badge>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          disabled={!!creating}
+                          onClick={() => importProject(p.id, p.nom, p.client)}
+                        >
+                          {creating === p.id ? "..." : "Créer"}
+                        </Button>
+                        <Badge variant="destructive-soft">Inconnu</Badge>
+                      </div>
+                    )}
                   </div>
-                  {p.matchedById ? (
-                    <Badge variant="success-soft">ID lié</Badge>
-                  ) : p.matchedByNom ? (
-                    <Badge variant="warning-soft">Nom similaire</Badge>
-                  ) : (
-                    <Badge variant="destructive-soft">Inconnu</Badge>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
@@ -177,9 +278,7 @@ export function RawDataSection() {
                       </span>
                       <span className="font-medium">{e.heures}h</span>
                     </div>
-                    <div className="text-muted-foreground">
-                      {e.projet} — {e.etape}
-                    </div>
+                    <p className="text-muted-foreground">{e.projet} — {e.etape}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <Badge variant="neutral">{e.status}</Badge>
@@ -191,7 +290,7 @@ export function RawDataSection() {
               ))}
               {data.stats.totalEntries > data.stats.shownEntries && (
                 <p className="text-xs text-muted-foreground text-center pt-1">
-                  Affichage des {data.stats.shownEntries} premières entrées sur {data.stats.totalEntries}
+                  {data.stats.shownEntries} / {data.stats.totalEntries} entrées affichées
                 </p>
               )}
             </div>
