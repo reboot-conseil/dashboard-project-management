@@ -12,6 +12,7 @@ interface ConsultantPreview {
   email: string
   matched: boolean
   matchedWith: string | null
+  matchedByNom: boolean
 }
 
 interface ProjetPreview {
@@ -200,7 +201,9 @@ export function RawDataSection() {
                       <span className="ml-2 text-muted-foreground">{c.email}</span>
                     </div>
                     {c.matched ? (
-                      <Badge variant="success-soft">{c.matchedWith}</Badge>
+                      <Badge variant={c.matchedByNom ? "warning-soft" : "success-soft"}>
+                        {c.matchedWith}{c.matchedByNom ? " (nom)" : ""}
+                      </Badge>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Button

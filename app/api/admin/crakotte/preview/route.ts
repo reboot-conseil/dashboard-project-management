@@ -27,19 +27,26 @@ export async function GET() {
       prisma.projet.findMany({ select: { id: true, nom: true, crakotteProjectId: true } }),
     ])
 
-  const dbEmailSet = new Set(dbConsultants.map((c) => c.email?.toLowerCase()))
+  const dbByEmail = new Map(dbConsultants.map((c) => [c.email?.toLowerCase() ?? "", c]))
+  const dbByNom = new Map(dbConsultants.map((c) => [c.nom.toLowerCase(), c]))
   const dbProjetNomSet = new Set(dbProjets.map((p) => p.nom.toLowerCase()))
   const dbProjetCrakotteIdSet = new Set(
     dbProjets.filter((p) => p.crakotteProjectId).map((p) => p.crakotteProjectId!)
   )
 
-  const consultants = crakotteConsultants.map((c) => ({
-    id: c.id,
-    nom: `${c.firstName} ${c.lastName}`,
-    email: c.email,
-    matched: dbEmailSet.has(c.email.toLowerCase()),
-    matchedWith: dbConsultants.find((d) => d.email?.toLowerCase() === c.email.toLowerCase())?.nom ?? null,
-  }))
+  const consultants = crakotteConsultants.map((c) => {
+    const fullName = `${c.firstName} ${c.lastName}`.toLowerCase()
+    const dbMatch =
+      dbByEmail.get(c.email.toLowerCase()) ?? dbByNom.get(fullName)
+    return {
+      id: c.id,
+      nom: `${c.firstName} ${c.lastName}`,
+      email: c.email,
+      matched: !!dbMatch,
+      matchedWith: dbMatch?.nom ?? null,
+      matchedByNom: !dbByEmail.has(c.email.toLowerCase()) && !!dbByNom.get(fullName),
+    }
+  })
 
   const projets = crakotteProjets.map((p) => ({
     id: p.id,
@@ -58,7 +65,9 @@ export async function GET() {
     projet: e.project.name,
     etape: e.step.name,
     status: e.entry.status,
-    consultantMatched: dbEmailSet.has(e.consultant.email.toLowerCase()),
+    consultantMatched:
+      dbByEmail.has(e.consultant.email.toLowerCase()) ||
+      dbByNom.has(`${e.consultant.firstName} ${e.consultant.lastName}`.toLowerCase()),
   }))
 
   return NextResponse.json({
@@ -69,7 +78,7 @@ export async function GET() {
     stats: {
       totalEntries: timeSpent.count,
       shownEntries: entries.length,
-      consultantsMatches: consultants.filter((c) => c.matched).length,
+      consultantsMatches: consultants.filter((c) => c.matched || c.matchedByNom).length,
       consultantsTotal: consultants.length,
       projetsMatches: projets.filter((p) => p.matchedById || p.matchedByNom).length,
       projetsTotal: projets.length,

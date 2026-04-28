@@ -24,15 +24,17 @@ export async function POST(req: NextRequest) {
     toProcess = all.filter((c) => ids.includes(c.id))
   }
 
-  const dbConsultants = await prisma.consultant.findMany({ select: { id: true, email: true, crakotteConsultantId: true } })
+  const dbConsultants = await prisma.consultant.findMany({ select: { id: true, nom: true, email: true, crakotteConsultantId: true } })
   const byEmail = new Map(dbConsultants.map((c) => [c.email.toLowerCase(), c]))
+  const byNom = new Map(dbConsultants.map((c) => [c.nom.toLowerCase(), c]))
 
   let created = 0
   let linked = 0
 
   for (let i = 0; i < toProcess.length; i++) {
     const c = toProcess[i]
-    const existing = byEmail.get(c.email.toLowerCase())
+    const fullName = `${c.firstName} ${c.lastName}`.toLowerCase()
+    const existing = byEmail.get(c.email.toLowerCase()) ?? byNom.get(fullName)
     if (existing) {
       if (!existing.crakotteConsultantId) {
         await prisma.consultant.update({ where: { id: existing.id }, data: { crakotteConsultantId: c.id } })
