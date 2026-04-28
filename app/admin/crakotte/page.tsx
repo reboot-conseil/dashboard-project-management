@@ -4,6 +4,7 @@ import { ConfigSection } from "@/components/admin/crakotte/ConfigSection"
 import { SyncLogSection } from "@/components/admin/crakotte/SyncLogSection"
 import { ConflictsSection } from "@/components/admin/crakotte/ConflictsSection"
 import { PendingProjectsSection } from "@/components/admin/crakotte/PendingProjectsSection"
+import { RawDataSection } from "@/components/admin/crakotte/RawDataSection"
 
 export default async function CrakottePage() {
   const authError = await requireRole(["ADMIN"])
@@ -90,6 +91,7 @@ export default async function CrakottePage() {
           resolvedAt: p.resolvedAt?.toISOString() ?? null,
         }))}
       />
+      <RawDataSection />
     </div>
   )
 }
