@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
                       },
                       {
                         title: 'Projet',
-                        value: activite.projet.nom
+                        value: activite.projet?.nom
                       },
                       {
                         title: 'Étape',
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
         activite: {
           id: activite.id,
           consultant: activite.consultant.nom,
-          projet: activite.projet.nom,
+          projet: activite.projet?.nom,
           etape: activite.etape?.nom || null,
           heures: activite.heures,
           description: activite.description,

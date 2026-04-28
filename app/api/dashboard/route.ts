@@ -297,7 +297,7 @@ export async function GET(request: Request) {
     prochaineEtape: prochaineEtape
       ? {
           nom: prochaineEtape.nom,
-          projetNom: prochaineEtape.projet.nom,
+          projetNom: prochaineEtape.projet?.nom,
           deadline: prochaineEtape.deadline,
           joursRestants: deadlineJours,
         }
@@ -309,14 +309,14 @@ export async function GET(request: Request) {
       date: a.date,
       heures: Number(a.heures),
       consultant: a.consultant.nom,
-      projet: a.projet.nom,
+      projet: a.projet?.nom,
     })),
     prochainesDeadlines: prochainesDeadlines.map((e) => ({
       id: e.id,
       nom: e.nom,
       statut: e.statut,
       deadline: e.deadline,
-      projetNom: e.projet.nom,
+      projetNom: e.projet?.nom,
       joursRestants: e.deadline ? differenceInDays(new Date(e.deadline), now) : null,
     })),
     alertes,

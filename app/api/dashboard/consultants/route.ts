@@ -183,14 +183,14 @@ export async function GET(request: Request) {
     joursOuvrables > 0 ? Math.round((heuresTotal / (joursOuvrables * HEURES_PAR_JOUR)) * 1000) / 10 : 0;
 
   // Projets distincts avec activités ce mois
-  const projetIdsActifs = [...new Set(activitesPeriode.map((a) => a.projet.id))];
+  const projetIdsActifs = [...new Set(activitesPeriode.map((a) => a.projet?.id))];
   const projetsActifsList = projetIdsActifs.map((pid) => {
-    const acts = activitesPeriode.filter((a) => a.projet.id === pid);
+    const acts = activitesPeriode.filter((a) => a.projet?.id === pid);
     return {
       id: pid,
-      nom: acts[0].projet.nom,
-      client: acts[0].projet.client,
-      couleur: acts[0].projet.couleur,
+      nom: acts[0].projet?.nom,
+      client: acts[0].projet?.client,
+      couleur: acts[0].projet?.couleur ?? "",
       heures: Math.round(acts.reduce((s, a) => s + Number(a.heures), 0) * 10) / 10,
     };
   }).sort((a, b) => b.heures - a.heures);
@@ -218,7 +218,7 @@ export async function GET(request: Request) {
 
     // Heures loguées par ce consultant sur ce projet
     const heuresConsultant = activitesPeriode
-      .filter((a) => a.projet.id === p.id)
+      .filter((a) => a.projet?.id === p.id)
       .reduce((s, a) => s + Number(a.heures), 0);
 
     return {
@@ -287,11 +287,11 @@ export async function GET(request: Request) {
     // Grouper par projet
     const parProjet: Record<number, { nom: string; couleur: string; heures: number; etape: string | null }> = {};
     for (const act of actsJour) {
-      const pid = act.projet.id;
+      const pid = act.projet?.id; if (pid === undefined) continue;
       if (!parProjet[pid]) {
-        parProjet[pid] = { nom: act.projet.nom, couleur: act.projet.couleur, heures: 0, etape: act.etape?.nom ?? null };
+        parProjet[pid] = { nom: act.projet?.nom ?? '', couleur: act.projet?.couleur ?? '', heures: 0, etape: act.etape?.nom ?? null };
       }
-      parProjet[pid].heures += Number(act.heures);
+      if (parProjet[pid]) parProjet[pid].heures += Number(act.heures);
     }
 
     planningSemaine.push({
@@ -403,9 +403,9 @@ export async function GET(request: Request) {
     activitesRecentes: activitesRecentes.map((a) => ({
       id: a.id,
       date: a.date.toISOString(),
-      projetId: a.projet.id,
-      projetNom: a.projet.nom,
-      projetCouleur: a.projet.couleur,
+      projetId: a.projet?.id,
+      projetNom: a.projet?.nom,
+      projetCouleur: a.projet?.couleur ?? "",
       etapeNom: a.etape?.nom ?? null,
       heures: Number(a.heures),
       facturable: a.facturable,
