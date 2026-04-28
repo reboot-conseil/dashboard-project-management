@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
@@ -15,12 +15,19 @@ interface ConsultantPreview {
   matchedByNom: boolean
 }
 
+interface ProjetSuggestion {
+  projetId: number
+  nom: string
+  score: number
+}
+
 interface ProjetPreview {
   id: string
   nom: string
   client: string
   matchedById: boolean
   matchedByNom: boolean
+  suggestions: ProjetSuggestion[]
 }
 
 interface EntryPreview {
@@ -57,7 +64,7 @@ export function RawDataSection() {
   const [tab, setTab] = useState<"consultants" | "projets" | "entries">("consultants")
   const [creating, setCreating] = useState<string | null>(null)
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -69,7 +76,9 @@ export function RawDataSection() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   async function importConsultants(mode: "reboot" | "all" | "selected", ids?: string[]) {
     setCreating(mode === "reboot" ? "reboot" : mode === "all" ? "all-consultants" : ids?.[0] ?? "")
@@ -105,6 +114,23 @@ export function RawDataSection() {
     }
   }
 
+  async function linkProject(projectId: string, existingProjetId: number, existingNom: string) {
+    setCreating(`link-${projectId}`)
+    try {
+      const res = await fetch("/api/admin/crakotte/import-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "link", projectId, existingProjetId }),
+      })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
+      toast.success(`Fusionné avec "${existingNom}"`)
+      await load()
+    } finally {
+      setCreating(null)
+    }
+  }
+
   async function importAllProjects() {
     setCreating("all-projects")
     try {
@@ -122,14 +148,24 @@ export function RawDataSection() {
     }
   }
 
+  const tabs = [
+    { key: "consultants" as const, label: "1. Consultants" },
+    { key: "projets" as const, label: "2. Projets" },
+    { key: "entries" as const, label: "3. Activités" },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Données brutes Crakotte</h2>
         <Button onClick={load} disabled={loading} variant="outline" size="sm">
-          {loading ? "Chargement..." : data ? "Actualiser" : "Charger"}
+          {loading ? "Chargement..." : "Actualiser"}
         </Button>
       </div>
+
+      {loading && !data && (
+        <p className="text-sm text-muted-foreground">Chargement des données Crakotte...</p>
+      )}
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
@@ -159,17 +195,17 @@ export function RawDataSection() {
           </div>
 
           <div className="flex gap-2 border-b">
-            {(["consultants", "projets", "entries"] as const).map((t) => (
+            {tabs.map(({ key, label }) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
+                key={key}
+                onClick={() => setTab(key)}
                 className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                  tab === t
+                  tab === key
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {t === "consultants" ? "Consultants" : t === "projets" ? "Projets" : "Entrées de temps"}
+                {label}
               </button>
             ))}
           </div>
@@ -190,7 +226,7 @@ export function RawDataSection() {
                   onClick={() => importConsultants("all")}
                   disabled={!!creating}
                 >
-                  {creating === "all-consultants" ? "Création..." : "Créer tous (69)"}
+                  {creating === "all-consultants" ? "Création..." : `Créer tous (${data.consultants.length})`}
                 </Button>
               </div>
               <div className="space-y-1">
@@ -236,26 +272,43 @@ export function RawDataSection() {
               </div>
               <div className="space-y-1">
                 {data.projets.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                    <div>
-                      <span className="font-medium">{p.nom}</span>
-                      <span className="ml-2 text-muted-foreground">{p.client}</span>
+                  <div key={p.id} className="rounded-md border px-3 py-2 text-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{p.nom}</span>
+                        <span className="ml-2 text-muted-foreground">{p.client}</span>
+                      </div>
+                      {p.matchedById ? (
+                        <Badge variant="success-soft">ID lié</Badge>
+                      ) : p.matchedByNom ? (
+                        <Badge variant="warning-soft">Nom similaire</Badge>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            disabled={!!creating}
+                            onClick={() => importProject(p.id, p.nom, p.client)}
+                          >
+                            {creating === p.id ? "..." : "Créer"}
+                          </Button>
+                          <Badge variant="destructive-soft">Inconnu</Badge>
+                        </div>
+                      )}
                     </div>
-                    {p.matchedById ? (
-                      <Badge variant="success-soft">ID lié</Badge>
-                    ) : p.matchedByNom ? (
-                      <Badge variant="warning-soft">Nom similaire</Badge>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          disabled={!!creating}
-                          onClick={() => importProject(p.id, p.nom, p.client)}
-                        >
-                          {creating === p.id ? "..." : "Créer"}
-                        </Button>
-                        <Badge variant="destructive-soft">Inconnu</Badge>
+                    {!p.matchedById && !p.matchedByNom && p.suggestions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pl-0.5">
+                        <span className="text-xs text-muted-foreground">Fusionner avec :</span>
+                        {p.suggestions.map((s) => (
+                          <button
+                            key={s.projetId}
+                            disabled={!!creating}
+                            onClick={() => linkProject(p.id, s.projetId, s.nom)}
+                            className="text-xs px-2 py-0.5 rounded border border-amber-400/60 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 transition-colors"
+                          >
+                            {creating === `link-${p.id}` ? "..." : `${s.nom} (${Math.round(s.score * 100)}%)`}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>

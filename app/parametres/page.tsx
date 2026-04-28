@@ -1,12 +1,14 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Settings } from "lucide-react";
+import { Settings, RefreshCw } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTheme, type Theme, type Palette } from "@/lib/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { GLOBAL_SHORTCUTS } from "@/lib/shortcuts";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 const UI_THEMES: { value: Theme; label: string; description: string; preview: string[] }[] = [
   {
@@ -40,6 +42,8 @@ const UI_PALETTES: { value: Palette; label: string; description: string; preview
 
 export default function ParametresPage() {
   const { theme, palette, setTheme: setUiTheme, setPalette, hydrated: themeHydrated } = useTheme();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
 
   return (
     <div className="min-h-screen p-6 md:p-10 max-w-3xl mx-auto">
@@ -132,6 +136,28 @@ export default function ParametresPage() {
 
           </CardContent>
         </Card>
+
+        {/* Intégrations — admin only */}
+        {isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Intégrations</CardTitle>
+              <CardDescription>Connectez des outils externes à votre dashboard</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin/crakotte" className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">API Crakotte</p>
+                    <p className="text-xs text-muted-foreground">Synchronisation automatique des temps saisis</p>
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground">→</span>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Raccourcis clavier */}
         <Card>

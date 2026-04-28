@@ -56,7 +56,7 @@ const NAV_SECTIONS = [
     label: "Admin",
     items: [
       { href: "/admin/users", label: "Utilisateurs", icon: Users2, adminOnly: true },
-      { href: "/admin/crakotte", label: "Intégration Crakotte", icon: RefreshCw, adminOnly: true },
+      { href: "/admin/crakotte", label: "API Crakotte", icon: RefreshCw, adminOnly: true },
     ] as NavItem[],
   },
 ];

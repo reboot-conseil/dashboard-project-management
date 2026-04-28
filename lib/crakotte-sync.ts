@@ -57,11 +57,15 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
   }
 
   const projetsByKrakotteId = new Map<string, number>()
-  const dbProjets = await prisma.projet.findMany({
-    select: { id: true, nom: true, crakotteProjectId: true },
-  })
+  const [dbProjets, dbAliases] = await Promise.all([
+    prisma.projet.findMany({ select: { id: true, nom: true, crakotteProjectId: true } }),
+    prisma.crakotteProjectAlias.findMany({ select: { crakotteProjectId: true, projetId: true } }),
+  ])
   for (const p of dbProjets) {
     if (p.crakotteProjectId) projetsByKrakotteId.set(p.crakotteProjectId, p.id)
+  }
+  for (const a of dbAliases) {
+    projetsByKrakotteId.set(a.crakotteProjectId, a.projetId)
   }
 
   for (const item of timeSpent.items) {

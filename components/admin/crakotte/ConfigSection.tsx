@@ -49,11 +49,16 @@ export function ConfigSection({ initial }: { initial: Config | null }) {
 
   async function syncNow() {
     setSyncing(true)
-    const res = await fetch("/api/admin/crakotte/sync", { method: "POST" })
-    const data = await res.json()
-    setSyncing(false)
-    if (res.ok) toast.success(`Sync terminée — ${data.result?.activitesCreees ?? 0} activités créées`)
-    else toast.error("Erreur sync: " + (data.error ?? "inconnue"))
+    try {
+      const res = await fetch("/api/admin/crakotte/sync", { method: "POST" })
+      const data = await res.json()
+      if (res.ok) toast.success(`Sync terminée — ${data.result?.activitesCreees ?? 0} activités créées`)
+      else toast.error("Erreur sync: " + (data.error ?? "inconnue"))
+    } catch {
+      toast.error("Erreur réseau lors de la sync")
+    } finally {
+      setSyncing(false)
+    }
   }
 
   return (

@@ -16,8 +16,23 @@ export async function POST(req: NextRequest) {
 
   const crakotteProjets = await fetchCrakotteProjects(config.apiKey)
 
-  const dbProjets = await prisma.projet.findMany({ select: { id: true, crakotteProjectId: true } })
-  const linkedIds = new Set(dbProjets.filter((p) => p.crakotteProjectId).map((p) => p.crakotteProjectId!))
+  const [dbProjets, dbAliases] = await Promise.all([
+    prisma.projet.findMany({ select: { id: true, crakotteProjectId: true } }),
+    prisma.crakotteProjectAlias.findMany({ select: { crakotteProjectId: true } }),
+  ])
+  const linkedIds = new Set([
+    ...dbProjets.filter((p) => p.crakotteProjectId).map((p) => p.crakotteProjectId!),
+    ...dbAliases.map((a) => a.crakotteProjectId),
+  ])
+
+  // Fusionner un projet Crakotte avec un projet dashboard existant (crée un alias)
+  if (body.mode === "link") {
+    const { projectId, existingProjetId } = body
+    if (!projectId || !existingProjetId) return NextResponse.json({ error: "projectId et existingProjetId requis" }, { status: 400 })
+    if (linkedIds.has(projectId)) return NextResponse.json({ error: "Déjà lié" }, { status: 409 })
+    await prisma.crakotteProjectAlias.create({ data: { crakotteProjectId: projectId, projetId: existingProjetId } })
+    return NextResponse.json({ success: true, projetId: existingProjetId })
+  }
 
   if (body.mode === "all") {
     let created = 0

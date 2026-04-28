@@ -56,6 +56,7 @@ model Projet {
   statut              StatutProjet       @default(PLANIFIE)
   couleur             String             @default("#3b82f6")
   crakotteProjectId   String?            @unique
+  crakotteAliases     CrakotteProjectAlias[]
   pendingCrakotte     CrakottePendingProject[]
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
@@ -197,6 +198,14 @@ model CrakotteConflict {
   resolvedById       Int?
   keptSource         String?
   createdAt          DateTime  @default(now())
+}
+
+model CrakotteProjectAlias {
+  id                Int      @id @default(autoincrement())
+  crakotteProjectId String   @unique
+  projetId          Int
+  projet            Projet   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
 }
 
 model CrakottePendingProject {
