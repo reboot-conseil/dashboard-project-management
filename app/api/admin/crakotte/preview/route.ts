@@ -27,7 +27,7 @@ export async function GET() {
       prisma.projet.findMany({ select: { id: true, nom: true, crakotteProjectId: true } }),
     ])
 
-  const dbByEmail = new Map(dbConsultants.map((c) => [c.email?.toLowerCase() ?? "", c]))
+  const dbByEmail = new Map(dbConsultants.map((c) => [c.email?.trim().toLowerCase() ?? "", c]))
   const dbByNom = new Map(dbConsultants.map((c) => [c.nom.toLowerCase(), c]))
   const dbProjetNomSet = new Set(dbProjets.map((p) => p.nom.toLowerCase()))
   const dbProjetCrakotteIdSet = new Set(
