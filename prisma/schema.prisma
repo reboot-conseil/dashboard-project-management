@@ -186,6 +186,7 @@ model CrakotteSyncLog {
   nouveauxProjets     Int       @default(0)
   consultantsSkippes  Int       @default(0)
   errorMessage        String?
+  details             Json?
   createdAt           DateTime  @default(now())
 }
 

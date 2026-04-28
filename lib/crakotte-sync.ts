@@ -7,12 +7,20 @@ import {
 } from "@/lib/crakotte"
 import { format } from "date-fns"
 
+export interface SyncDetail {
+  activites: { consultant: string; projet: string; date: string; heures: number }[]
+  conflits: { consultant: string; projet: string; date: string }[]
+  projetsEnAttente: { nom: string; client: string }[]
+  consultantsSkippes: string[]
+}
+
 export interface SyncResult {
   activitesCreees: number
   conflitsDetectes: number
   nouveauxProjets: number
   consultantsSkippes: number
   errors: string[]
+  detail: SyncDetail
 }
 
 export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Promise<SyncResult> {
@@ -22,6 +30,7 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
     nouveauxProjets: 0,
     consultantsSkippes: 0,
     errors: [],
+    detail: { activites: [], conflits: [], projetsEnAttente: [], consultantsSkippes: [] },
   }
 
   const fromStr = format(from, "yyyy-MM-dd")
@@ -44,14 +53,11 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
   }
 
   for (const cc of crakotteConsultants) {
-    const dbId = consultantsByEmail.get(cc.email.toLowerCase())
+    const dbId = consultantsByEmail.get(cc.email.trim().toLowerCase())
     if (dbId) {
       const dbC = dbConsultants.find((c) => c.id === dbId)
       if (!dbC?.crakotteConsultantId) {
-        await prisma.consultant.update({
-          where: { id: dbId },
-          data: { crakotteConsultantId: cc.id },
-        })
+        await prisma.consultant.update({ where: { id: dbId }, data: { crakotteConsultantId: cc.id } })
       }
     }
   }
@@ -87,9 +93,7 @@ async function processTimeEntry(
   dbProjets: { id: number; nom: string; crakotteProjectId: string | null }[],
   result: SyncResult
 ) {
-  const existing = await prisma.activite.findUnique({
-    where: { crakotteEntryId: item.entry.id },
-  })
+  const existing = await prisma.activite.findUnique({ where: { crakotteEntryId: item.entry.id } })
   if (existing) return
 
   const fullName = `${item.consultant.firstName} ${item.consultant.lastName}`.toLowerCase()
@@ -98,8 +102,12 @@ async function processTimeEntry(
     consultantsByEmail.get(item.consultant.email.trim().toLowerCase()) ??
     consultantsByNom.get(fullName) ??
     consultantsByNom.get(fullNameRev)
+
   if (!consultantId) {
     result.consultantsSkippes++
+    result.detail.consultantsSkippes.push(
+      `${item.consultant.firstName} ${item.consultant.lastName} (${item.consultant.email})`
+    )
     return
   }
 
@@ -108,14 +116,9 @@ async function processTimeEntry(
   if (projetsByKrakotteId.has(item.project.id)) {
     projetId = projetsByKrakotteId.get(item.project.id)!
   } else {
-    const match = dbProjets.find(
-      (p) => p.nom.toLowerCase() === item.project.name.toLowerCase()
-    )
+    const match = dbProjets.find((p) => p.nom.toLowerCase() === item.project.name.toLowerCase())
     if (match) {
-      await prisma.projet.update({
-        where: { id: match.id },
-        data: { crakotteProjectId: item.project.id },
-      })
+      await prisma.projet.update({ where: { id: match.id }, data: { crakotteProjectId: item.project.id } })
       projetsByKrakotteId.set(item.project.id, match.id)
       projetId = match.id
     } else {
@@ -132,6 +135,7 @@ async function processTimeEntry(
           },
         })
         result.nouveauxProjets++
+        result.detail.projetsEnAttente.push({ nom: item.project.name, client: item.customer.name })
       }
     }
   }
@@ -139,10 +143,7 @@ async function processTimeEntry(
   let etapeId: number | null = null
   if (projetId) {
     const etape = await prisma.etape.findFirst({
-      where: {
-        projetId,
-        nom: { equals: item.step.name, mode: "insensitive" },
-      },
+      where: { projetId, nom: { equals: item.step.name, mode: "insensitive" } },
       select: { id: true },
     })
     if (etape) etapeId = etape.id
@@ -162,25 +163,27 @@ async function processTimeEntry(
     },
   })
   result.activitesCreees++
+  result.detail.activites.push({
+    consultant: `${item.consultant.firstName} ${item.consultant.lastName}`,
+    projet: item.project.name,
+    date: item.date,
+    heures: item.time,
+  })
 
   if (projetId) {
     const doublon = await prisma.activite.findFirst({
-      where: {
-        consultantId,
-        projetId,
-        date: new Date(item.date),
-        source: "MANUEL",
-        id: { not: activite.id },
-      },
+      where: { consultantId, projetId, date: new Date(item.date), source: "MANUEL", id: { not: activite.id } },
     })
     if (doublon && Math.abs(Number(doublon.heures) - item.time) <= 0.5) {
       await prisma.crakotteConflict.create({
-        data: {
-          crakotteActiviteId: activite.id,
-          manuelActiviteId: doublon.id,
-        },
+        data: { crakotteActiviteId: activite.id, manuelActiviteId: doublon.id },
       })
       result.conflitsDetectes++
+      result.detail.conflits.push({
+        consultant: `${item.consultant.firstName} ${item.consultant.lastName}`,
+        projet: item.project.name,
+        date: item.date,
+      })
     }
   }
 }

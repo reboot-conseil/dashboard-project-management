@@ -44,7 +44,7 @@ export async function GET() {
       fetchCrakotteProjects(config.apiKey),
       fetchCrakotteTimeSpent(config.apiKey, from, to),
       prisma.consultant.findMany({ select: { id: true, nom: true, email: true } }),
-      prisma.projet.findMany({ select: { id: true, nom: true, crakotteProjectId: true } }),
+      prisma.projet.findMany({ select: { id: true, nom: true, client: true, crakotteProjectId: true } }),
       prisma.crakotteProjectAlias.findMany({ select: { crakotteProjectId: true, projetId: true } }),
     ])
 
@@ -79,7 +79,7 @@ export async function GET() {
     let suggestions: { projetId: number; nom: string; score: number }[] = []
     if (!matchedById && !matchedByNom) {
       suggestions = dbProjets
-        .map((dp) => ({ projetId: dp.id, nom: dp.nom, score: strSimilarity(p.name, dp.nom) }))
+        .map((dp) => ({ projetId: dp.id, nom: dp.nom, client: dp.client, score: strSimilarity(p.name, dp.nom) }))
         .filter((s) => s.score >= 0.55)
         .sort((a, b) => b.score - a.score)
         .slice(0, 3)
@@ -102,10 +102,13 @@ export async function GET() {
       dbByNom.has(`${e.consultant.lastName} ${e.consultant.firstName}`.toLowerCase()),
   }))
 
+  const allDbProjets = dbProjets.map((p) => ({ id: p.id, nom: p.nom, client: (p as typeof p & { client: string }).client }))
+
   return NextResponse.json({
     periode: { from, to },
     consultants,
     projets,
+    allDbProjets,
     entries,
     stats: {
       totalEntries: timeSpent.count,

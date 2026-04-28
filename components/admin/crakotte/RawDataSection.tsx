@@ -18,6 +18,7 @@ interface ConsultantPreview {
 interface ProjetSuggestion {
   projetId: number
   nom: string
+  client: string
   score: number
 }
 
@@ -28,6 +29,12 @@ interface ProjetPreview {
   matchedById: boolean
   matchedByNom: boolean
   suggestions: ProjetSuggestion[]
+}
+
+interface DbProjet {
+  id: number
+  nom: string
+  client: string
 }
 
 interface EntryPreview {
@@ -46,6 +53,7 @@ interface PreviewData {
   periode: { from: string; to: string }
   consultants: ConsultantPreview[]
   projets: ProjetPreview[]
+  allDbProjets: DbProjet[]
   entries: EntryPreview[]
   stats: {
     totalEntries: number
@@ -63,6 +71,8 @@ export function RawDataSection() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<"consultants" | "projets" | "entries">("consultants")
   const [creating, setCreating] = useState<string | null>(null)
+  // Manual project selection: crakotteProjectId → selected db projetId (as string for <select>)
+  const [manualSelect, setManualSelect] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -125,6 +135,7 @@ export function RawDataSection() {
       const d = await res.json()
       if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
       toast.success(`Fusionné avec "${existingNom}"`)
+      setManualSelect((prev) => { const n = { ...prev }; delete n[projectId]; return n })
       await load()
     } finally {
       setCreating(null)
@@ -150,8 +161,8 @@ export function RawDataSection() {
 
   const tabs = [
     { key: "consultants" as const, label: "1. Consultants" },
-    { key: "projets" as const, label: "2. Projets" },
-    { key: "entries" as const, label: "3. Activités" },
+    { key: "projets" as const,     label: "2. Projets" },
+    { key: "entries" as const,     label: "3. Activités" },
   ]
 
   return (
@@ -166,7 +177,6 @@ export function RawDataSection() {
       {loading && !data && (
         <p className="text-sm text-muted-foreground">Chargement des données Crakotte...</p>
       )}
-
       {error && <p className="text-destructive text-sm">{error}</p>}
 
       {data && (
@@ -177,15 +187,11 @@ export function RawDataSection() {
 
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-lg border p-3 text-center">
-              <p className="text-2xl font-bold">
-                {data.stats.consultantsMatches}/{data.stats.consultantsTotal}
-              </p>
+              <p className="text-2xl font-bold">{data.stats.consultantsMatches}/{data.stats.consultantsTotal}</p>
               <p className="text-xs text-muted-foreground mt-1">Consultants matchés</p>
             </div>
             <div className="rounded-lg border p-3 text-center">
-              <p className="text-2xl font-bold">
-                {data.stats.projetsMatches}/{data.stats.projetsTotal}
-              </p>
+              <p className="text-2xl font-bold">{data.stats.projetsMatches}/{data.stats.projetsTotal}</p>
               <p className="text-xs text-muted-foreground mt-1">Projets matchés</p>
             </div>
             <div className="rounded-lg border p-3 text-center">
@@ -210,22 +216,14 @@ export function RawDataSection() {
             ))}
           </div>
 
+          {/* ── 1. Consultants ── */}
           {tab === "consultants" && (
             <div className="space-y-2">
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => importConsultants("reboot")}
-                  disabled={!!creating}
-                >
+                <Button size="sm" onClick={() => importConsultants("reboot")} disabled={!!creating}>
                   {creating === "reboot" ? "Création..." : "Créer @reboot-conseil.com"}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => importConsultants("all")}
-                  disabled={!!creating}
-                >
+                <Button size="sm" variant="outline" onClick={() => importConsultants("all")} disabled={!!creating}>
                   {creating === "all-consultants" ? "Création..." : `Créer tous (${data.consultants.length})`}
                 </Button>
               </div>
@@ -234,7 +232,7 @@ export function RawDataSection() {
                   <div key={c.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                     <div>
                       <span className="font-medium">{c.nom}</span>
-                      <span className="ml-2 text-muted-foreground">{c.email}</span>
+                      <span className="ml-2 text-muted-foreground text-xs">{c.email}</span>
                     </div>
                     {c.matched ? (
                       <Badge variant={c.matchedByNom ? "warning-soft" : "success-soft"}>
@@ -242,12 +240,7 @@ export function RawDataSection() {
                       </Badge>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          disabled={!!creating}
-                          onClick={() => importConsultants("selected", [c.id])}
-                        >
+                        <Button size="xs" variant="outline" disabled={!!creating} onClick={() => importConsultants("selected", [c.id])}>
                           {creating === c.id ? "..." : "Créer"}
                         </Button>
                         <Badge variant="destructive-soft">Non trouvé</Badge>
@@ -259,64 +252,96 @@ export function RawDataSection() {
             </div>
           )}
 
+          {/* ── 2. Projets ── */}
           {tab === "projets" && (
             <div className="space-y-2">
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={importAllProjects}
-                  disabled={!!creating}
-                >
-                  {creating === "all-projects" ? "Création..." : `Créer tous les inconnus (${data.projets.filter((p) => !p.matchedById && !p.matchedByNom).length})`}
+                <Button size="sm" onClick={importAllProjects} disabled={!!creating}>
+                  {creating === "all-projects"
+                    ? "Création..."
+                    : `Créer tous les inconnus (${data.projets.filter((p) => !p.matchedById && !p.matchedByNom).length})`}
                 </Button>
               </div>
-              <div className="space-y-1">
-                {data.projets.map((p) => (
-                  <div key={p.id} className="rounded-md border px-3 py-2 text-sm space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-medium">{p.nom}</span>
-                        <span className="ml-2 text-muted-foreground">{p.client}</span>
+              <div className="space-y-2">
+                {data.projets.map((p) => {
+                  const selectedId = manualSelect[p.id] ? parseInt(manualSelect[p.id]) : null
+                  const selectedDbProjet = selectedId ? data.allDbProjets.find((dp) => dp.id === selectedId) : null
+                  const isUnmatched = !p.matchedById && !p.matchedByNom
+
+                  return (
+                    <div key={p.id} className="rounded-md border px-3 py-2.5 text-sm space-y-2">
+                      {/* Header row */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-medium">{p.nom}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">{p.client}</span>
+                        </div>
+                        {p.matchedById ? (
+                          <Badge variant="success-soft">ID lié</Badge>
+                        ) : p.matchedByNom ? (
+                          <Badge variant="warning-soft">Nom similaire</Badge>
+                        ) : (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button size="xs" variant="outline" disabled={!!creating} onClick={() => importProject(p.id, p.nom, p.client)}>
+                              {creating === p.id ? "..." : "Créer"}
+                            </Button>
+                            <Badge variant="destructive-soft">Inconnu</Badge>
+                          </div>
+                        )}
                       </div>
-                      {p.matchedById ? (
-                        <Badge variant="success-soft">ID lié</Badge>
-                      ) : p.matchedByNom ? (
-                        <Badge variant="warning-soft">Nom similaire</Badge>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="xs"
-                            variant="outline"
-                            disabled={!!creating}
-                            onClick={() => importProject(p.id, p.nom, p.client)}
-                          >
-                            {creating === p.id ? "..." : "Créer"}
-                          </Button>
-                          <Badge variant="destructive-soft">Inconnu</Badge>
+
+                      {/* Suggestions + manual select (only for unmatched) */}
+                      {isUnmatched && (
+                        <div className="space-y-2 pt-1 border-t">
+                          {/* Auto-suggestions */}
+                          {p.suggestions.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 items-center">
+                              <span className="text-xs text-muted-foreground">Suggestions :</span>
+                              {p.suggestions.map((s) => (
+                                <button
+                                  key={s.projetId}
+                                  disabled={!!creating}
+                                  onClick={() => linkProject(p.id, s.projetId, s.nom)}
+                                  className="text-xs px-2 py-0.5 rounded border border-amber-400/60 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 transition-colors"
+                                >
+                                  {creating === `link-${p.id}` ? "..." : `${s.nom} — ${s.client} (${Math.round(s.score * 100)}%)`}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Manual select */}
+                          <div className="flex gap-2 items-center">
+                            <select
+                              value={manualSelect[p.id] ?? ""}
+                              onChange={(e) => setManualSelect((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                              className="flex-1 text-xs rounded-md border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            >
+                              <option value="">Fusionner manuellement avec...</option>
+                              {data.allDbProjets.map((dp) => (
+                                <option key={dp.id} value={dp.id}>
+                                  {dp.nom} — {dp.client}
+                                </option>
+                              ))}
+                            </select>
+                            <Button
+                              size="xs"
+                              disabled={!selectedDbProjet || !!creating}
+                              onClick={() => selectedDbProjet && linkProject(p.id, selectedDbProjet.id, selectedDbProjet.nom)}
+                            >
+                              {creating === `link-${p.id}` ? "..." : "Fusionner"}
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
-                    {!p.matchedById && !p.matchedByNom && p.suggestions.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pl-0.5">
-                        <span className="text-xs text-muted-foreground">Fusionner avec :</span>
-                        {p.suggestions.map((s) => (
-                          <button
-                            key={s.projetId}
-                            disabled={!!creating}
-                            onClick={() => linkProject(p.id, s.projetId, s.nom)}
-                            className="text-xs px-2 py-0.5 rounded border border-amber-400/60 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 transition-colors"
-                          >
-                            {creating === `link-${p.id}` ? "..." : `${s.nom} (${Math.round(s.score * 100)}%)`}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
 
+          {/* ── 3. Activités ── */}
           {tab === "entries" && (
             <div className="space-y-1">
               {data.entries.map((e) => (
@@ -329,18 +354,14 @@ export function RawDataSection() {
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{e.consultant}</span>
-                      <span className="text-muted-foreground">
-                        {format(new Date(e.date), "dd MMM", { locale: fr })}
-                      </span>
+                      <span className="text-muted-foreground">{format(new Date(e.date), "dd MMM", { locale: fr })}</span>
                       <span className="font-medium">{e.heures}h</span>
                     </div>
-                    <p className="text-muted-foreground">{e.projet} — {e.etape}</p>
+                    <p className="text-muted-foreground text-xs">{e.projet} — {e.etape}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <Badge variant="neutral">{e.status}</Badge>
-                    {!e.consultantMatched && (
-                      <Badge variant="destructive-soft">consultant inconnu</Badge>
-                    )}
+                    {!e.consultantMatched && <Badge variant="destructive-soft">consultant inconnu</Badge>}
                   </div>
                 </div>
               ))}
