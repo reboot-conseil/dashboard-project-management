@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < toProcess.length; i++) {
     const c = toProcess[i]
     const fullName = `${c.firstName} ${c.lastName}`.toLowerCase()
-    const existing = byEmail.get(c.email.toLowerCase()) ?? byNom.get(fullName)
+    const fullNameRev = `${c.lastName} ${c.firstName}`.toLowerCase()
+    const existing = byEmail.get(c.email.trim().toLowerCase()) ?? byNom.get(fullName) ?? byNom.get(fullNameRev)
     if (existing) {
       if (!existing.crakotteConsultantId) {
         await prisma.consultant.update({ where: { id: existing.id }, data: { crakotteConsultantId: c.id } })

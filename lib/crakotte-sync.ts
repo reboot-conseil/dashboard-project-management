@@ -89,9 +89,11 @@ async function processTimeEntry(
   if (existing) return
 
   const fullName = `${item.consultant.firstName} ${item.consultant.lastName}`.toLowerCase()
+  const fullNameRev = `${item.consultant.lastName} ${item.consultant.firstName}`.toLowerCase()
   const consultantId =
-    consultantsByEmail.get(item.consultant.email.toLowerCase()) ??
-    consultantsByNom.get(fullName)
+    consultantsByEmail.get(item.consultant.email.trim().toLowerCase()) ??
+    consultantsByNom.get(fullName) ??
+    consultantsByNom.get(fullNameRev)
   if (!consultantId) {
     result.consultantsSkippes++
     return

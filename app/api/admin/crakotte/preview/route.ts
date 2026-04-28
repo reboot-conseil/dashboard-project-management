@@ -36,15 +36,17 @@ export async function GET() {
 
   const consultants = crakotteConsultants.map((c) => {
     const fullName = `${c.firstName} ${c.lastName}`.toLowerCase()
+    const fullNameRev = `${c.lastName} ${c.firstName}`.toLowerCase()
+    const emailKey = c.email.trim().toLowerCase()
     const dbMatch =
-      dbByEmail.get(c.email.toLowerCase()) ?? dbByNom.get(fullName)
+      dbByEmail.get(emailKey) ?? dbByNom.get(fullName) ?? dbByNom.get(fullNameRev)
     return {
       id: c.id,
       nom: `${c.firstName} ${c.lastName}`,
       email: c.email,
       matched: !!dbMatch,
       matchedWith: dbMatch?.nom ?? null,
-      matchedByNom: !dbByEmail.has(c.email.toLowerCase()) && !!dbByNom.get(fullName),
+      matchedByNom: !dbByEmail.has(emailKey) && !!(dbByNom.get(fullName) ?? dbByNom.get(fullNameRev)),
     }
   })
 
@@ -66,8 +68,9 @@ export async function GET() {
     etape: e.step.name,
     status: e.entry.status,
     consultantMatched:
-      dbByEmail.has(e.consultant.email.toLowerCase()) ||
-      dbByNom.has(`${e.consultant.firstName} ${e.consultant.lastName}`.toLowerCase()),
+      dbByEmail.has(e.consultant.email.trim().toLowerCase()) ||
+      dbByNom.has(`${e.consultant.firstName} ${e.consultant.lastName}`.toLowerCase()) ||
+      dbByNom.has(`${e.consultant.lastName} ${e.consultant.firstName}`.toLowerCase()),
   }))
 
   return NextResponse.json({
