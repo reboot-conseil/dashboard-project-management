@@ -29,6 +29,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProjetForm, type ProjetData } from "@/components/projet-form";
+import { useSession } from "next-auth/react";
+import { Trash2 } from "lucide-react";
 
 interface ProjetListItem {
   id: number;
@@ -126,6 +128,8 @@ function exportCsvProjets(projets: ProjetListItem[]) {
 
 export default function ProjetsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const [projets, setProjets] = useState<ProjetListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtre, setFiltre] = useState("TOUS");
@@ -459,13 +463,30 @@ export default function ProjetsPage() {
                       <div className="text-[15px] font-bold text-foreground truncate">{p.nom}</div>
                       <div className="text-[12px] text-muted-foreground mt-0.5">{p.client}</div>
                     </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); openDetail(p.id); }}
-                      className="shrink-0 ml-2 mt-0.5 text-muted-foreground hover:text-primary transition-colors"
-                      title="Aperçu rapide"
-                    >
-                      <ArrowUpRight className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0 ml-2 mt-0.5">
+                      {isAdmin && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!window.confirm(`Supprimer le projet "${p.nom}" ? Cette action est irréversible.`)) return;
+                            const res = await fetch(`/api/projets/${p.id}`, { method: "DELETE" });
+                            if (res.ok) { toast.success(`Projet "${p.nom}" supprimé`); setProjets((prev) => prev.filter((x) => x.id !== p.id)); }
+                            else toast.error("Erreur lors de la suppression");
+                          }}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          title="Supprimer le projet"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openDetail(p.id); }}
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        title="Aperçu rapide"
+                      >
+                        <ArrowUpRight className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground mb-3">
