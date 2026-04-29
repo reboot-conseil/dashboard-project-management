@@ -90,7 +90,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const authError = await requireRole("ADMIN");
+  const authError = await requireRole(["ADMIN"]);
   if (authError) return authError;
   try {
     const { id } = await params;
