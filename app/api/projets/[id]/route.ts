@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireAuth, requireRole } from "@/lib/auth-guard";
 import { CA, cout, marge } from "@/lib/financial";
 
 const updateSchema = z.object({
@@ -90,7 +90,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const authError = await requireAuth();
+  const authError = await requireRole("ADMIN");
   if (authError) return authError;
   try {
     const { id } = await params;

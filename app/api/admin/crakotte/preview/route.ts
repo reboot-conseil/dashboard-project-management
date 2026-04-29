@@ -51,11 +51,13 @@ export async function GET() {
   const dbByEmail = new Map(dbConsultants.map((c) => [c.email?.trim().toLowerCase() ?? "", c]))
   const dbByNom = new Map(dbConsultants.map((c) => [c.nom.toLowerCase(), c]))
 
-  const linkedCrakotteIds = new Set([
-    ...dbProjets.filter((p) => p.crakotteProjectId).map((p) => p.crakotteProjectId!),
-    ...dbAliases.map((a) => a.crakotteProjectId),
+  const linkedCrakotteIdToDbId = new Map<string, number>([
+    ...dbProjets.filter((p) => p.crakotteProjectId).map((p) => [p.crakotteProjectId!, p.id] as [string, number]),
+    ...dbAliases.map((a) => [a.crakotteProjectId, a.projetId] as [string, number]),
   ])
-  const dbProjetNomSet = new Set(dbProjets.map((p) => p.nom.toLowerCase()))
+  const linkedCrakotteIds = new Set(linkedCrakotteIdToDbId.keys())
+  const dbProjetNomToId = new Map(dbProjets.map((p) => [p.nom.toLowerCase(), p.id]))
+  const dbProjetNomSet = new Set(dbProjetNomToId.keys())
 
   const consultants = crakotteConsultants.map((c) => {
     const fullName = `${c.firstName} ${c.lastName}`.toLowerCase()
@@ -84,7 +86,9 @@ export async function GET() {
         .sort((a, b) => b.score - a.score)
         .slice(0, 3)
     }
-    return { id: p.id, nom: p.name, client: p.customer?.name ?? "", matchedById, matchedByNom, suggestions }
+    const dbProjetId = linkedCrakotteIdToDbId.get(p.id) ??
+      (matchedByNom ? (dbProjetNomToId.get(p.name.toLowerCase()) ?? null) : null)
+    return { id: p.id, nom: p.name, client: p.customer?.name ?? "", matchedById, matchedByNom, suggestions, dbProjetId }
   })
 
   const entries = timeSpent.items.slice(0, 50).map((e) => ({
@@ -102,7 +106,7 @@ export async function GET() {
       dbByNom.has(`${e.consultant.lastName} ${e.consultant.firstName}`.toLowerCase()),
   }))
 
-  const allDbProjets = dbProjets.map((p) => ({ id: p.id, nom: p.nom, client: (p as typeof p & { client: string }).client }))
+  const allDbProjets = dbProjets.map((p) => ({ id: p.id, nom: p.nom, client: p.client }))
 
   return NextResponse.json({
     periode: { from, to },

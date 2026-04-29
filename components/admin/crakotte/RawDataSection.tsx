@@ -29,6 +29,7 @@ interface ProjetPreview {
   matchedById: boolean
   matchedByNom: boolean
   suggestions: ProjetSuggestion[]
+  dbProjetId: number | null
 }
 
 interface DbProjet {
@@ -71,6 +72,7 @@ export function RawDataSection() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<"consultants" | "projets" | "entries">("consultants")
   const [creating, setCreating] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<number | null>(null)
   // Manual project selection: crakotteProjectId → selected db projetId (as string for <select>)
   const [manualSelect, setManualSelect] = useState<Record<string, string>>({})
 
@@ -139,6 +141,19 @@ export function RawDataSection() {
       await load()
     } finally {
       setCreating(null)
+    }
+  }
+
+  async function deleteProject(dbProjetId: number, nom: string) {
+    if (!window.confirm(`Supprimer le projet "${nom}" ? Cette action est irréversible.`)) return
+    setDeleting(dbProjetId)
+    try {
+      const res = await fetch(`/api/projets/${dbProjetId}`, { method: "DELETE" })
+      if (!res.ok) { toast.error("Erreur lors de la suppression"); return }
+      toast.success(`Projet "${nom}" supprimé`)
+      await load()
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -266,7 +281,7 @@ export function RawDataSection() {
                 {data.projets.map((p) => {
                   const selectedId = manualSelect[p.id] ? parseInt(manualSelect[p.id]) : null
                   const selectedDbProjet = selectedId ? data.allDbProjets.find((dp) => dp.id === selectedId) : null
-                  const isUnmatched = !p.matchedById && !p.matchedByNom
+                  const canFuse = !p.matchedById
 
                   return (
                     <div key={p.id} className="rounded-md border px-3 py-2.5 text-sm space-y-2">
@@ -277,7 +292,18 @@ export function RawDataSection() {
                           <span className="ml-2 text-xs text-muted-foreground">{p.client}</span>
                         </div>
                         {p.matchedById ? (
-                          <Badge variant="success-soft">ID lié</Badge>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {p.dbProjetId && (
+                              <button
+                                onClick={() => deleteProject(p.dbProjetId!, p.nom)}
+                                disabled={deleting === p.dbProjetId}
+                                className="text-xs px-2 py-0.5 rounded border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50 transition-colors"
+                              >
+                                {deleting === p.dbProjetId ? "..." : "Supprimer"}
+                              </button>
+                            )}
+                            <Badge variant="success-soft">ID lié</Badge>
+                          </div>
                         ) : p.matchedByNom ? (
                           <Badge variant="warning-soft">Nom similaire</Badge>
                         ) : (
@@ -291,7 +317,7 @@ export function RawDataSection() {
                       </div>
 
                       {/* Suggestions + manual select (only for unmatched) */}
-                      {isUnmatched && (
+                      {canFuse && (
                         <div className="space-y-2 pt-1 border-t">
                           {/* Auto-suggestions */}
                           {p.suggestions.length > 0 && (

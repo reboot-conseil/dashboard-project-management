@@ -43,8 +43,8 @@ function DetailPanel({ log, onClose }: { log: SyncLog; onClose: () => void }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
-      <div className="fixed inset-y-0 right-0 z-50 w-[420px] max-w-full bg-background border-l shadow-2xl flex flex-col">
+      <div className="fixed inset-0 z-[99] bg-black/20" onClick={onClose} />
+      <div className="fixed inset-y-0 right-0 z-[100] w-[420px] max-w-full bg-background border-l shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
