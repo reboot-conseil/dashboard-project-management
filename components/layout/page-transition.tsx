@@ -15,13 +15,12 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
   const shouldReduce = useReducedMotion();
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       <motion.div
         key={pathname}
         variants={shouldReduce ? undefined : motionVariants}
         initial={shouldReduce ? false : "initial"}
         animate={shouldReduce ? undefined : "animate"}
-        exit={shouldReduce ? undefined : "exit"}
         transition={{ duration: 0.18, ease: "easeOut" }}
         className="flex-1 min-h-0"
       >

@@ -27,6 +27,7 @@ interface ProjetPreview {
   nom: string
   client: string
   matchedById: boolean
+  matchedByAlias: boolean
   matchedByNom: boolean
   suggestions: ProjetSuggestion[]
   dbProjetId: number | null
@@ -73,6 +74,7 @@ export function RawDataSection() {
   const [tab, setTab] = useState<"consultants" | "projets" | "entries">("consultants")
   const [creating, setCreating] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<number | null>(null)
+  const [unlinking, setUnlinking] = useState<string | null>(null)
   // Manual project selection: crakotteProjectId → selected db projetId (as string for <select>)
   const [manualSelect, setManualSelect] = useState<Record<string, string>>({})
 
@@ -141,6 +143,22 @@ export function RawDataSection() {
       await load()
     } finally {
       setCreating(null)
+    }
+  }
+
+  async function unlinkProject(crakotteProjectId: string) {
+    setUnlinking(crakotteProjectId)
+    try {
+      const res = await fetch("/api/admin/crakotte/project-alias", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ crakotteProjectId }),
+      })
+      if (!res.ok) { toast.error("Erreur lors de la décorélation"); return }
+      toast.success("Projet décorélé — vous pouvez maintenant le reconfigurer")
+      await load()
+    } finally {
+      setUnlinking(null)
     }
   }
 
@@ -293,7 +311,15 @@ export function RawDataSection() {
                         </div>
                         {p.matchedById ? (
                           <div className="flex items-center gap-2 shrink-0">
-                            {p.dbProjetId && (
+                            {p.matchedByAlias ? (
+                              <button
+                                onClick={() => unlinkProject(p.id)}
+                                disabled={unlinking === p.id}
+                                className="text-xs px-2 py-0.5 rounded border border-amber-400/60 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-50 transition-colors"
+                              >
+                                {unlinking === p.id ? "..." : "Décoreler"}
+                              </button>
+                            ) : p.dbProjetId ? (
                               <button
                                 onClick={() => deleteProject(p.dbProjetId!, p.nom)}
                                 disabled={deleting === p.dbProjetId}
@@ -301,8 +327,8 @@ export function RawDataSection() {
                               >
                                 {deleting === p.dbProjetId ? "..." : "Supprimer"}
                               </button>
-                            )}
-                            <Badge variant="success-soft">ID lié</Badge>
+                            ) : null}
+                            <Badge variant="success-soft">{p.matchedByAlias ? "Fusionné" : "ID lié"}</Badge>
                           </div>
                         ) : p.matchedByNom ? (
                           <Badge variant="warning-soft">Nom similaire</Badge>

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const crakotteProjets = await fetchCrakotteProjects(config.apiKey)
 
   const [dbProjets, dbAliases] = await Promise.all([
-    prisma.projet.findMany({ select: { id: true, crakotteProjectId: true } }),
+    prisma.projet.findMany({ select: { id: true, nom: true, crakotteProjectId: true } }),
     prisma.crakotteProjectAlias.findMany({ select: { crakotteProjectId: true } }),
   ])
   const linkedIds = new Set([
@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
 
   if (body.mode === "all") {
     let created = 0
-    const toCreate = crakotteProjets.filter((p) => !linkedIds.has(p.id))
+    const dbProjetNoms = new Set(dbProjets.map((p) => p.nom.toLowerCase()))
+    const toCreate = crakotteProjets.filter((p) => !linkedIds.has(p.id) && !dbProjetNoms.has(p.name.toLowerCase()))
     for (let i = 0; i < toCreate.length; i++) {
       const p = toCreate[i]
       await prisma.projet.create({

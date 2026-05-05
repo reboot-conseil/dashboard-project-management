@@ -51,6 +51,7 @@ export async function GET() {
   const dbByEmail = new Map(dbConsultants.map((c) => [c.email?.trim().toLowerCase() ?? "", c]))
   const dbByNom = new Map(dbConsultants.map((c) => [c.nom.toLowerCase(), c]))
 
+  const aliasedCrakotteIds = new Set(dbAliases.map((a) => a.crakotteProjectId))
   const linkedCrakotteIdToDbId = new Map<string, number>([
     ...dbProjets.filter((p) => p.crakotteProjectId).map((p) => [p.crakotteProjectId!, p.id] as [string, number]),
     ...dbAliases.map((a) => [a.crakotteProjectId, a.projetId] as [string, number]),
@@ -77,6 +78,7 @@ export async function GET() {
 
   const projets = crakotteProjets.map((p) => {
     const matchedById = linkedCrakotteIds.has(p.id)
+    const matchedByAlias = aliasedCrakotteIds.has(p.id)
     const matchedByNom = dbProjetNomSet.has(p.name.toLowerCase())
     let suggestions: { projetId: number; nom: string; score: number }[] = []
     if (!matchedById && !matchedByNom) {
@@ -88,7 +90,7 @@ export async function GET() {
     }
     const dbProjetId = linkedCrakotteIdToDbId.get(p.id) ??
       (matchedByNom ? (dbProjetNomToId.get(p.name.toLowerCase()) ?? null) : null)
-    return { id: p.id, nom: p.name, client: p.customer?.name ?? "", matchedById, matchedByNom, suggestions, dbProjetId }
+    return { id: p.id, nom: p.name, client: p.customer?.name ?? "", matchedById, matchedByAlias, matchedByNom, suggestions, dbProjetId }
   })
 
   const entries = timeSpent.items.slice(0, 50).map((e) => ({
