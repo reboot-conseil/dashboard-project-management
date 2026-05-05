@@ -26,10 +26,19 @@ interface SyncLog {
 }
 
 const STATUS_BADGE: Record<string, { variant: "success-soft" | "warning-soft" | "destructive-soft" | "neutral"; label: string }> = {
-  SUCCESS:  { variant: "success-soft",     label: "Succès"   },
-  PARTIAL:  { variant: "warning-soft",     label: "Partiel"  },
-  ERROR:    { variant: "destructive-soft", label: "Erreur"   },
-  RUNNING:  { variant: "neutral",          label: "En cours" },
+  SUCCESS:  { variant: "success-soft",     label: "Succès"       },
+  PARTIAL:  { variant: "warning-soft",     label: "Partiel"      },
+  ERROR:    { variant: "destructive-soft", label: "Erreur"       },
+  RUNNING:  { variant: "neutral",          label: "En cours"     },
+  TIMEOUT:  { variant: "destructive-soft", label: "Interrompue"  },
+}
+
+function resolveStatus(log: SyncLog) {
+  if (log.status === "RUNNING" && !log.finishedAt) {
+    const age = Date.now() - new Date(log.startedAt).getTime()
+    if (age > 5 * 60 * 1000) return "TIMEOUT"
+  }
+  return log.status
 }
 
 function parseDetail(details: unknown): SyncDetail | null {
@@ -39,7 +48,8 @@ function parseDetail(details: unknown): SyncDetail | null {
 
 function DetailPanel({ log, onClose }: { log: SyncLog; onClose: () => void }) {
   const detail = parseDetail(log.details)
-  const { variant, label } = STATUS_BADGE[log.status] ?? { variant: "neutral" as const, label: log.status }
+  const status = resolveStatus(log)
+  const { variant, label } = STATUS_BADGE[status] ?? { variant: "neutral" as const, label: status }
   const consultantCount = detail ? new Set(detail.activites.map((a) => a.consultant)).size : null
   const projetCount = detail ? new Set(detail.activites.map((a) => a.projet)).size : null
 
@@ -186,7 +196,8 @@ export function SyncLogSection({ logs }: { logs: SyncLog[] }) {
       <h2 className="text-lg font-semibold">Historique des synchronisations</h2>
       <div className="space-y-1.5">
         {logs.map((log) => {
-          const { variant, label } = STATUS_BADGE[log.status] ?? { variant: "neutral" as const, label: log.status }
+          const rowStatus = resolveStatus(log)
+          const { variant, label } = STATUS_BADGE[rowStatus] ?? { variant: "neutral" as const, label: rowStatus }
           const rowDetail = parseDetail(log.details)
           const rowConsultants = rowDetail ? new Set(rowDetail.activites.map((a) => a.consultant)).size : null
           const rowProjets = rowDetail ? new Set(rowDetail.activites.map((a) => a.projet)).size : null

@@ -76,6 +76,7 @@ export function RawDataSection() {
   const [deleting, setDeleting] = useState<number | null>(null)
   const [unlinking, setUnlinking] = useState<string | null>(null)
   const [syncingActivities, setSyncingActivities] = useState(false)
+  const [finalizing, setFinalizing] = useState(false)
   const today = format(new Date(), "yyyy-MM-dd")
   const [syncFrom, setSyncFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"))
   const [syncTo, setSyncTo] = useState(today)
@@ -197,6 +198,20 @@ export function RawDataSection() {
       await load()
     } finally {
       setSyncingActivities(false)
+    }
+  }
+
+  async function finalizeImport() {
+    setFinalizing(true)
+    try {
+      const res = await fetch("/api/admin/crakotte/finalize", { method: "POST" })
+      if (res.ok) {
+        toast.success("Import conclu — le cron nocturne reprendra depuis maintenant")
+      } else {
+        toast.error("Erreur lors de la conclusion")
+      }
+    } finally {
+      setFinalizing(false)
     }
   }
 
@@ -475,6 +490,23 @@ export function RawDataSection() {
                   {data.stats.shownEntries} / {data.stats.totalEntries} entrées affichées
                 </p>
               )}
+              </div>
+
+              {/* Conclude block */}
+              <div className="rounded-lg border border-dashed p-4 space-y-2 mt-2">
+                <p className="text-sm font-medium">Conclure l&apos;import</p>
+                <p className="text-xs text-muted-foreground">
+                  Une fois tous les projets configurés et les activités importées, cliquez ici pour valider.
+                  Le cron nocturne reprendra automatiquement depuis maintenant.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={finalizing}
+                  onClick={finalizeImport}
+                >
+                  {finalizing ? "Conclusion..." : "Conclure l’import"}
+                </Button>
               </div>
             </div>
           )}
