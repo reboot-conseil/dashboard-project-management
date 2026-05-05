@@ -35,23 +35,19 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.mode === "all") {
-    let created = 0
     const dbProjetNoms = new Set(dbProjets.map((p) => p.nom.toLowerCase()))
     const toCreate = crakotteProjets.filter((p) => !linkedIds.has(p.id) && !dbProjetNoms.has(p.name.toLowerCase()))
-    for (let i = 0; i < toCreate.length; i++) {
-      const p = toCreate[i]
-      await prisma.projet.create({
-        data: {
-          nom: p.name,
-          client: p.customer.name,
-          statut: "EN_COURS",
-          couleur: COLORS[i % COLORS.length],
-          crakotteProjectId: p.id,
-        },
-      })
-      created++
-    }
-    return NextResponse.json({ created })
+    await prisma.projet.createMany({
+      data: toCreate.map((p, i) => ({
+        nom: p.name,
+        client: p.customer.name,
+        statut: "EN_COURS" as const,
+        couleur: COLORS[i % COLORS.length],
+        crakotteProjectId: p.id,
+      })),
+      skipDuplicates: true,
+    })
+    return NextResponse.json({ created: toCreate.length })
   }
 
   const { projectId, nom, client, couleur } = body

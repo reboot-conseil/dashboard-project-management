@@ -40,6 +40,8 @@ function parseDetail(details: unknown): SyncDetail | null {
 function DetailPanel({ log, onClose }: { log: SyncLog; onClose: () => void }) {
   const detail = parseDetail(log.details)
   const { variant, label } = STATUS_BADGE[log.status] ?? { variant: "neutral" as const, label: log.status }
+  const consultantCount = detail ? new Set(detail.activites.map((a) => a.consultant)).size : null
+  const projetCount = detail ? new Set(detail.activites.map((a) => a.projet)).size : null
 
   return (
     <>
@@ -68,10 +70,12 @@ function DetailPanel({ log, onClose }: { log: SyncLog; onClose: () => void }) {
           {/* Stats */}
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: "Activités créées",    value: log.activitesCreees },
-              { label: "Conflits",            value: log.conflitsDetectes },
-              { label: "Projets en attente",  value: log.nouveauxProjets },
-              { label: "Consultants skippés", value: log.consultantsSkippes },
+              { label: "Activités créées",      value: log.activitesCreees },
+              { label: "Consultants synchronisés", value: consultantCount ?? "—" },
+              { label: "Projets synchronisés",   value: projetCount ?? "—" },
+              { label: "Conflits",               value: log.conflitsDetectes },
+              { label: "Projets en attente",     value: log.nouveauxProjets },
+              { label: "Consultants skippés",    value: log.consultantsSkippes },
             ].map(({ label: l, value }) => (
               <div key={l} className="rounded-lg border px-3 py-2">
                 <p className="text-lg font-semibold">{value}</p>
@@ -183,6 +187,9 @@ export function SyncLogSection({ logs }: { logs: SyncLog[] }) {
       <div className="space-y-1.5">
         {logs.map((log) => {
           const { variant, label } = STATUS_BADGE[log.status] ?? { variant: "neutral" as const, label: log.status }
+          const rowDetail = parseDetail(log.details)
+          const rowConsultants = rowDetail ? new Set(rowDetail.activites.map((a) => a.consultant)).size : null
+          const rowProjets = rowDetail ? new Set(rowDetail.activites.map((a) => a.projet)).size : null
           return (
             <button
               key={log.id}
@@ -196,9 +203,10 @@ export function SyncLogSection({ logs }: { logs: SyncLog[] }) {
                 </span>
               </div>
               <div className="flex gap-3 text-xs text-muted-foreground">
-                <span>{log.activitesCreees} créées</span>
+                <span>{log.activitesCreees} activités</span>
+                {rowConsultants !== null && rowConsultants > 0 && <span>{rowConsultants} consultants</span>}
+                {rowProjets !== null && rowProjets > 0 && <span>{rowProjets} projets</span>}
                 {log.conflitsDetectes > 0 && <span className="text-amber-600">{log.conflitsDetectes} conflits</span>}
-                {log.nouveauxProjets > 0 && <span>{log.nouveauxProjets} projets</span>}
                 <span className="text-muted-foreground/50">→</span>
               </div>
             </button>

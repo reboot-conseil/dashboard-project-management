@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { format } from "date-fns"
+import { format, subDays } from "date-fns"
 import { fr } from "date-fns/locale"
 import { toast } from "sonner"
 
@@ -75,6 +75,10 @@ export function RawDataSection() {
   const [creating, setCreating] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<number | null>(null)
   const [unlinking, setUnlinking] = useState<string | null>(null)
+  const [syncingActivities, setSyncingActivities] = useState(false)
+  const today = format(new Date(), "yyyy-MM-dd")
+  const [syncFrom, setSyncFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"))
+  const [syncTo, setSyncTo] = useState(today)
   // Manual project selection: crakotteProjectId → selected db projetId (as string for <select>)
   const [manualSelect, setManualSelect] = useState<Record<string, string>>({})
 
@@ -172,6 +176,27 @@ export function RawDataSection() {
       await load()
     } finally {
       setDeleting(null)
+    }
+  }
+
+  async function syncActivities() {
+    setSyncingActivities(true)
+    try {
+      const res = await fetch("/api/admin/crakotte/import-activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: syncFrom, to: syncTo }),
+      })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
+      const msg = d.activitesCreees > 0
+        ? `${d.activitesCreees} activité(s) importée(s)`
+        : "Aucune nouvelle activité (déjà synchronisées ou aucune entrée sur la période)"
+      toast.success(msg)
+      if (d.projetsEnAttente > 0) toast.warning(`${d.projetsEnAttente} projet(s) en attente de création`)
+      await load()
+    } finally {
+      setSyncingActivities(false)
     }
   }
 
@@ -395,7 +420,35 @@ export function RawDataSection() {
 
           {/* ── 3. Activités ── */}
           {tab === "entries" && (
-            <div className="space-y-1">
+            <div className="space-y-3">
+              {/* Import block */}
+              <div className="rounded-lg border p-3 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Importer les activités</p>
+                <p className="text-xs text-muted-foreground">
+                  Chaque activité est identifiée par son ID Crakotte — aucun doublon possible.
+                </p>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <input
+                    type="date"
+                    value={syncFrom}
+                    onChange={(e) => setSyncFrom(e.target.value)}
+                    className="text-xs rounded-md border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <span className="text-xs text-muted-foreground">→</span>
+                  <input
+                    type="date"
+                    value={syncTo}
+                    onChange={(e) => setSyncTo(e.target.value)}
+                    className="text-xs rounded-md border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <Button size="sm" disabled={syncingActivities} onClick={syncActivities}>
+                    {syncingActivities ? "Import en cours..." : "Importer les activités"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Entries list */}
+              <div className="space-y-1">
               {data.entries.map((e) => (
                 <div
                   key={e.id}
@@ -422,6 +475,7 @@ export function RawDataSection() {
                   {data.stats.shownEntries} / {data.stats.totalEntries} entrées affichées
                 </p>
               )}
+              </div>
             </div>
           )}
         </div>
