@@ -54,8 +54,8 @@ export function ActivitesList({
   const paginatedActivites = activites.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Stats
-  const nbConsultants = new Set(activites.map((a) => a.consultant.id)).size;
-  const nbProjets = new Set(activites.map((a) => a.projet.id)).size;
+  const nbConsultants = new Set(activites.map((a) => a.consultant?.id).filter(Boolean)).size;
+  const nbProjets = new Set(activites.map((a) => a.projet?.id).filter(Boolean)).size;
   const pctFacturable = totaux.total > 0 ? Math.round((totaux.facturable / totaux.total) * 100) : 0;
 
   // Group paginated activités by day
@@ -227,10 +227,10 @@ export function ActivitesList({
                         >
                           <TableCell className="py-1">
                             <div className="flex items-center gap-1.5">
-                              {a.projet.couleur && (
+                              {a.projet?.couleur && (
                                 <span className="w-2 h-2 shrink-0" style={{ background: a.projet.couleur, borderRadius: "3px" }} />
                               )}
-                              <span className="text-[12.5px]">{a.projet.nom}</span>
+                              <span className="text-[12.5px]">{a.projet?.nom ?? "—"}</span>
                             </div>
                           </TableCell>
                           <TableCell className="py-1 text-muted-foreground text-[12px]">

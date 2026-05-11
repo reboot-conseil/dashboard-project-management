@@ -232,7 +232,7 @@ export default function ActivitesPage() {
     setEditingActivite(a);
     setEditForm({
       consultantId: String(a.consultant.id),
-      projetId: String(a.projet.id),
+      projetId: String(a.projet?.id ?? ""),
       etapeId: a.etape ? String(a.etape.id) : "",
       date: format(new Date(a.date), "yyyy-MM-dd"),
       heures: String(Number(a.heures)),
