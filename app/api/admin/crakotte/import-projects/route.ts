@@ -54,8 +54,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.mode === "all") {
-    const dbProjetNoms = new Set(dbProjets.map((p) => p.nom.toLowerCase()))
-    const toCreate = crakotteProjets.filter((p) => !linkedIds.has(p.id) && !dbProjetNoms.has(p.name.toLowerCase()))
+    const toCreate = crakotteProjets.filter((p) => !linkedIds.has(p.id))
     await prisma.projet.createMany({
       data: toCreate.map((p, i) => ({
         nom: p.name,

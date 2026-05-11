@@ -376,7 +376,7 @@ export function RawDataSection() {
                 <Button size="sm" onClick={importAllProjects} disabled={!!creating}>
                   {creating === "all-projects"
                     ? "Création..."
-                    : `Créer tous les inconnus (${data.projets.filter((p) => !p.matchedById && !p.matchedByNom).length})`}
+                    : `Créer tous les inconnus (${data.projets.filter((p) => !p.matchedById).length})`}
                 </Button>
               </div>
               <div className="space-y-2">
@@ -415,7 +415,12 @@ export function RawDataSection() {
                             <Badge variant="success-soft">{p.matchedByAlias ? "Fusionné" : "ID lié"}</Badge>
                           </div>
                         ) : p.matchedByNom ? (
-                          <Badge variant="warning-soft">Nom similaire</Badge>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button size="xs" variant="outline" disabled={!!creating} onClick={() => importProject(p.id, p.nom, p.client)}>
+                              {creating === p.id ? "..." : "Créer"}
+                            </Button>
+                            <Badge variant="warning-soft">Nom similaire</Badge>
+                          </div>
                         ) : (
                           <div className="flex items-center gap-2 shrink-0">
                             <Button size="xs" variant="outline" disabled={!!creating} onClick={() => importProject(p.id, p.nom, p.client)}>
