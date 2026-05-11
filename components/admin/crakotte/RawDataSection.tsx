@@ -67,6 +67,13 @@ interface PreviewData {
   }
 }
 
+interface CrakotteStats {
+  activitesTotal: number
+  activitesOrphelines: number
+  projetsMappés: number
+  consultantsMappés: number
+}
+
 export function RawDataSection() {
   const [data, setData] = useState<PreviewData | null>(null)
   const [loading, setLoading] = useState(false)
@@ -77,11 +84,22 @@ export function RawDataSection() {
   const [unlinking, setUnlinking] = useState<string | null>(null)
   const [syncingActivities, setSyncingActivities] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
+  const [stats, setStats] = useState<CrakotteStats | null>(null)
+  const [fixingHours, setFixingHours] = useState(false)
   const today = format(new Date(), "yyyy-MM-dd")
   const [syncFrom, setSyncFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"))
   const [syncTo, setSyncTo] = useState(today)
   // Manual project selection: crakotteProjectId → selected db projetId (as string for <select>)
   const [manualSelect, setManualSelect] = useState<Record<string, string>>({})
+
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/crakotte/stats")
+      if (res.ok) setStats(await res.json())
+    } catch {
+      // stats are non-critical, fail silently
+    }
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -97,7 +115,21 @@ export function RawDataSection() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(); loadStats() }, [load, loadStats])
+
+  async function fixHours() {
+    if (!window.confirm("Multiplier par 7.5 toutes les heures des activités CRAKOTTE en base ? Cette action est irréversible si déjà appliquée.")) return
+    setFixingHours(true)
+    try {
+      const res = await fetch("/api/admin/crakotte/fix-hours", { method: "POST" })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
+      toast.success(`${d.updated} activité(s) corrigée(s)`)
+      await loadStats()
+    } finally {
+      setFixingHours(false)
+    }
+  }
 
   async function importConsultants(mode: "reboot" | "all" | "selected", ids?: string[]) {
     setCreating(mode === "reboot" ? "reboot" : mode === "all" ? "all-consultants" : ids?.[0] ?? "")
@@ -240,6 +272,40 @@ export function RawDataSection() {
 
   return (
     <div className="space-y-4">
+      {stats && (
+        <div className="rounded-lg border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">État de l&apos;intégration</h3>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={fixingHours}
+              onClick={fixHours}
+            >
+              {fixingHours ? "Correction..." : "Corriger les heures (×7.5)"}
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-md border p-3 text-center">
+              <p className="text-xl font-bold">{stats.activitesTotal}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Activités Crakotte</p>
+            </div>
+            <div className={`rounded-md border p-3 text-center ${stats.activitesOrphelines > 0 ? "border-amber-400/60 bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
+              <p className={`text-xl font-bold ${stats.activitesOrphelines > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>{stats.activitesOrphelines}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Orphelines (sans projet)</p>
+            </div>
+            <div className="rounded-md border p-3 text-center">
+              <p className="text-xl font-bold">{stats.projetsMappés}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Projets mappés</p>
+            </div>
+            <div className="rounded-md border p-3 text-center">
+              <p className="text-xl font-bold">{stats.consultantsMappés}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Consultants liés</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Données brutes Crakotte</h2>
         <Button onClick={load} disabled={loading} variant="outline" size="sm">

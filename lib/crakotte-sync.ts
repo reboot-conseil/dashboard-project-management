@@ -5,6 +5,7 @@ import {
   fetchCrakotteTimeSpent,
   CrakotteTimeEntry,
 } from "@/lib/crakotte"
+import { HEURES_PAR_JOUR } from "@/lib/financial"
 import { format } from "date-fns"
 
 export interface SyncDetail {
@@ -291,7 +292,7 @@ async function processTimeEntry(
       projetId,
       etapeId,
       date: new Date(item.date),
-      heures: item.time,
+      heures: item.time * HEURES_PAR_JOUR,
       description: item.step.name,
       facturable: true,
       source: "CRAKOTTE",
@@ -303,7 +304,7 @@ async function processTimeEntry(
     consultant: `${item.consultant.firstName} ${item.consultant.lastName}`,
     projet: item.project.name,
     date: item.date,
-    heures: item.time,
+    heures: item.time * HEURES_PAR_JOUR,
   })
 
   // Conflict detection from pre-loaded map — no DB call
