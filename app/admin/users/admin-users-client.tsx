@@ -259,9 +259,12 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
       )}
 
       {editingRole && (
-        <Card>
-          <CardHeader><CardTitle>Modifier — {editingRole.nom}</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setEditingRole(null)}>
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Modifier — {editingRole.nom}</h3>
+              <button onClick={() => setEditingRole(null)} className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors">✕</button>
+            </div>
             {isPlaceholderEmail(editingRole.email) && (
               <div className="space-y-1.5">
                 <Label htmlFor="edit-email">Email <span className="text-muted-foreground text-xs">(requis pour lier le compte SSO)</span></Label>
@@ -286,12 +289,12 @@ export function AdminUsersClient({ users }: { users: UserEntry[] }) {
                 <Input id="edit-cout" type="number" min={0} placeholder="350" value={editCout} onChange={(e) => setEditCout(e.target.value)} />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-1">
               <Button onClick={() => updateRole(editingRole, editRole, editEmail || undefined, editTjm, editCout)} disabled={loading}>Enregistrer</Button>
               <Button variant="outline" onClick={() => setEditingRole(null)}>Annuler</Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {confirmDelete && (
