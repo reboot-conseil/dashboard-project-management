@@ -22,6 +22,7 @@ import {
   Moon,
   LogOut,
   Search,
+  BarChart3,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -31,13 +32,14 @@ import { useAlertCount } from "@/lib/hooks/use-alert-count";
 
 // ── Types ────────────────────────────────────────────────────────
 type SidebarMode = "full" | "collapsed" | "horizontal";
-type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly?: boolean };
+type NavItem = { href: string; label: string; icon: React.ElementType; adminOnly?: boolean; hideForConsultant?: boolean };
 
 const NAV_SECTIONS = [
   {
     label: "Navigation",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/executive", label: "Vue stratégique", icon: BarChart3, hideForConsultant: true },
       { href: "/consultants", label: "Consultants", icon: Users },
       { href: "/projets", label: "Projets", icon: FolderOpen },
       { href: "/activites", label: "Activités", icon: Clock },
@@ -138,7 +140,7 @@ function SidebarVertical({
       <nav className={cn("flex-1 overflow-y-auto py-3", collapsed ? "px-1.5" : "px-3")}>
         {NAV_SECTIONS.map((section) => {
           const visibleItems = section.items.filter(
-            (item) => !item.adminOnly || session?.user?.role === "ADMIN"
+            (item) => (!item.adminOnly || session?.user?.role === "ADMIN") && (!item.hideForConsultant || session?.user?.role !== "CONSULTANT")
           );
           if (visibleItems.length === 0) return null;
 
@@ -296,7 +298,7 @@ function NavbarHorizontal({
 
       {/* Navigation (scrollable) */}
       <nav className="flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0 scrollbar-none">
-        {NAV_ITEMS.filter((item) => !item.adminOnly || session?.user?.role === "ADMIN").map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.filter((item) => (!item.adminOnly || session?.user?.role === "ADMIN") && (!item.hideForConsultant || session?.user?.role !== "CONSULTANT")).map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           const showAlertBadge = href === "/" && alertCount > 0;
           return (

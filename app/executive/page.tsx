@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   TrendingUp,
@@ -143,6 +145,15 @@ function exportCsvFacturation(data: ExecutiveData) {
 
 // ── Page ──────────────────────────────────────────────────────────
 export default function ExecutivePage() {
+  const router = useRouter();
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    if (session && (session.user as { role?: string }).role === "CONSULTANT") {
+      router.replace("/");
+    }
+  }, [session, router]);
+
   const [data, setData] = useState<ExecutiveData | null>(null);
   const [loading, setLoading] = useState(true);
   const [objectifs, setObjectifs] = useState<ObjectifsAnnuels>({ caObjectif: 0 });

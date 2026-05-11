@@ -3,6 +3,7 @@ import { HEURES_PAR_JOUR } from "@/lib/financial";
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { UserPlus, Users, Pencil, ArrowUpRight, ArrowDownRight, Download, LayoutGrid, List, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, subMonths, format, subDays } from "date-fns";
@@ -76,6 +77,8 @@ function exportCsvConsultants(consultants: Consultant[]) {
 
 export default function ConsultantsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isConsultantRole = (session?.user as { role?: string } | undefined)?.role === "CONSULTANT";
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
@@ -257,9 +260,11 @@ export default function ConsultantsPage() {
           <Button variant="outline" size="sm" onClick={() => exportCsvConsultants(consultants)}>
             <Download className="h-4 w-4 mr-1.5" />Exporter CSV
           </Button>
-          <Button size="sm" onClick={handleAdd}>
-            <UserPlus className="h-4 w-4 mr-1.5" />Nouveau consultant
-          </Button>
+          {!isConsultantRole && (
+            <Button size="sm" onClick={handleAdd}>
+              <UserPlus className="h-4 w-4 mr-1.5" />Nouveau consultant
+            </Button>
+          )}
         </div>
       </div>
 
@@ -272,24 +277,24 @@ export default function ConsultantsPage() {
                 <TableHead className="w-8" />
                 <TableHead>Consultant</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>TJM</TableHead>
+                {!isConsultantRole && <TableHead>TJM</TableHead>}
                 <TableHead>Occupation</TableHead>
-                <TableHead className="text-right">CA ce mois</TableHead>
-                <TableHead>Tendance</TableHead>
+                {!isConsultantRole && <TableHead className="text-right">CA ce mois</TableHead>}
+                {!isConsultantRole && <TableHead>Tendance</TableHead>}
                 <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {!isConsultantRole && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={isConsultantRole ? 5 : 9} className="text-center py-8 text-muted-foreground">
                     Chargement...
                   </TableCell>
                 </TableRow>
               ) : consultants.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={isConsultantRole ? 5 : 9} className="text-center py-8 text-muted-foreground">
                     Aucun consultant.
                   </TableCell>
                 </TableRow>
@@ -325,7 +330,7 @@ export default function ConsultantsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">{c.email}</TableCell>
-                      <TableCell className="font-medium">{Number(c.tjm).toLocaleString("fr-FR")} €</TableCell>
+                      {!isConsultantRole && <TableCell className="font-medium">{Number(c.tjm).toLocaleString("fr-FR")} €</TableCell>}
                       <TableCell>
                         <div className="flex items-center gap-2 min-w-[100px]">
                           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
@@ -342,72 +347,84 @@ export default function ConsultantsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        {kpi ? (
-                          <span className="text-sm font-medium">
-                            {kpi.caMois.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {kpi ? (
-                          <div className="flex items-center gap-2 min-w-[80px]">
-                            <div className="w-16 shrink-0">
-                              <KpiSparkline
-                                data={kpi.sparkline}
-                                color={tendance >= 0 ? "var(--color-success)" : "var(--color-destructive)"}
-                                height={28}
-                              />
-                            </div>
-                            <span className={`inline-flex items-center gap-0.5 text-xs font-medium shrink-0 ${tendance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
-                              {tendance >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                              {kpi.caMoisPrecedent > 0 ? `${Math.abs(Math.round((tendance / kpi.caMoisPrecedent) * 100))}%` : ""}
+                      {!isConsultantRole && (
+                        <TableCell className="text-right">
+                          {kpi ? (
+                            <span className="text-sm font-medium">
+                              {kpi.caMois.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
                             </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </TableCell>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
+                      )}
+                      {!isConsultantRole && (
+                        <TableCell>
+                          {kpi ? (
+                            <div className="flex items-center gap-2 min-w-[80px]">
+                              <div className="w-16 shrink-0">
+                                <KpiSparkline
+                                  data={kpi.sparkline}
+                                  color={tendance >= 0 ? "var(--color-success)" : "var(--color-destructive)"}
+                                  height={28}
+                                />
+                              </div>
+                              <span className={`inline-flex items-center gap-0.5 text-xs font-medium shrink-0 ${tendance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                                {tendance >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                                {kpi.caMoisPrecedent > 0 ? `${Math.abs(Math.round((tendance / kpi.caMoisPrecedent) * 100))}%` : ""}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggle(c); }}
-                          disabled={togglingId === c.id}
-                          className="cursor-pointer disabled:opacity-50"
-                        >
+                        {isConsultantRole ? (
                           <Badge variant={c.actif ? "success" : "secondary"}>
                             {c.actif ? "Actif" : "Inactif"}
                           </Badge>
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs gap-1"
-                            onClick={() => goToDashboard(c.id)}
-                            title="Voir le dashboard"
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleToggle(c); }}
+                            disabled={togglingId === c.id}
+                            className="cursor-pointer disabled:opacity-50"
                           >
-                            Dashboard <ExternalLink className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(c)}
-                            title="Modifier"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </div>
+                            <Badge variant={c.actif ? "success" : "secondary"}>
+                              {c.actif ? "Actif" : "Inactif"}
+                            </Badge>
+                          </button>
+                        )}
                       </TableCell>
+                      {!isConsultantRole && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs gap-1"
+                              onClick={() => goToDashboard(c.id)}
+                              title="Voir le dashboard"
+                            >
+                              Dashboard <ExternalLink className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(c)}
+                              title="Modifier"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>,
 
                     // Expand row
                     isExpanded && (
                       <TableRow key={`expand-${c.id}`} className="bg-muted/20 hover:bg-muted/20">
-                        <TableCell colSpan={9} className="py-4 px-6">
+                        <TableCell colSpan={isConsultantRole ? 5 : 9} className="py-4 px-6">
                           {expand?.loading ? (
                             <p className="text-sm text-muted-foreground">Chargement...</p>
                           ) : (
@@ -498,39 +515,47 @@ export default function ConsultantsPage() {
                     <p className="font-semibold text-sm truncate">{c.nom}</p>
                     <p className="text-xs text-muted-foreground truncate">{c.email}</p>
                   </div>
-                  <button
-                    onClick={() => handleToggle(c)}
-                    disabled={togglingId === c.id}
-                    className="cursor-pointer disabled:opacity-50 shrink-0"
-                  >
-                    <Badge variant={c.actif ? "success" : "secondary"} className="text-xs">
+                  {isConsultantRole ? (
+                    <Badge variant={c.actif ? "success" : "secondary"} className="text-xs shrink-0">
                       {c.actif ? "Actif" : "Inactif"}
                     </Badge>
-                  </button>
+                  ) : (
+                    <button
+                      onClick={() => handleToggle(c)}
+                      disabled={togglingId === c.id}
+                      className="cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      <Badge variant={c.actif ? "success" : "secondary"} className="text-xs">
+                        {c.actif ? "Actif" : "Inactif"}
+                      </Badge>
+                    </button>
+                  )}
                 </div>
 
-                {/* KPIs */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-muted/40 px-3 py-2">
-                    <p className="text-xs text-muted-foreground">CA ce mois</p>
-                    <p className="text-sm font-semibold mt-0.5">
-                      {kpi ? kpi.caMois.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €" : "—"}
-                    </p>
-                    {kpi && kpi.caMoisPrecedent > 0 && (
-                      <p className={`text-xs flex items-center gap-0.5 mt-0.5 ${tendance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
-                        {tendance >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                        {Math.abs(Math.round((tendance / kpi.caMoisPrecedent) * 100))}%
+                {/* KPIs — hidden for CONSULTANT role */}
+                {!isConsultantRole && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">CA ce mois</p>
+                      <p className="text-sm font-semibold mt-0.5">
+                        {kpi ? kpi.caMois.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €" : "—"}
                       </p>
-                    )}
+                      {kpi && kpi.caMoisPrecedent > 0 && (
+                        <p className={`text-xs flex items-center gap-0.5 mt-0.5 ${tendance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                          {tendance >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                          {Math.abs(Math.round((tendance / kpi.caMoisPrecedent) * 100))}%
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">TJM</p>
+                      <p className="text-sm font-semibold mt-0.5">
+                        {Number(c.tjm).toLocaleString("fr-FR")} €
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">par jour</p>
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-muted/40 px-3 py-2">
-                    <p className="text-xs text-muted-foreground">TJM</p>
-                    <p className="text-sm font-semibold mt-0.5">
-                      {Number(c.tjm).toLocaleString("fr-FR")} €
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">par jour</p>
-                  </div>
-                </div>
+                )}
 
                 {/* Occupation bar */}
                 <div>
@@ -551,8 +576,8 @@ export default function ConsultantsPage() {
                   </div>
                 </div>
 
-                {/* Sparkline */}
-                {kpi && (
+                {/* Sparkline — hidden for CONSULTANT role */}
+                {!isConsultantRole && kpi && (
                   <div className="h-8">
                     <KpiSparkline
                       data={kpi.sparkline}
@@ -562,7 +587,8 @@ export default function ConsultantsPage() {
                   </div>
                 )}
 
-                {/* Actions */}
+                {/* Actions — hidden for CONSULTANT role */}
+                {!isConsultantRole && (
                 <div className="flex gap-2 pt-1 border-t border-border">
                   <Button
                     variant="outline"
@@ -582,6 +608,7 @@ export default function ConsultantsPage() {
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </div>
+                )}
               </div>
             );
           })}
