@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         nouveauxProjets: result.nouveauxProjets,
         consultantsSkippes: result.consultantsSkippes,
         errorMessage: result.errors.length > 0 ? result.errors.join("\n") : null,
-        details: result.detail as object,
+        details: { ...result.detail, activitesRattachees: result.activitesRattachees } as object,
       },
     })
 

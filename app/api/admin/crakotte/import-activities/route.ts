@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     activitesCreees: result.activitesCreees,
+    activitesRattachees: result.activitesRattachees,
     consultantsSkippes: result.consultantsSkippes,
     projetsEnAttente: result.nouveauxProjets,
   })

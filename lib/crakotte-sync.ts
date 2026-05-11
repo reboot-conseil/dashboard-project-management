@@ -16,6 +16,7 @@ export interface SyncDetail {
 
 export interface SyncResult {
   activitesCreees: number
+  activitesRattachees: number
   conflitsDetectes: number
   nouveauxProjets: number
   consultantsSkippes: number
@@ -26,6 +27,7 @@ export interface SyncResult {
 export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Promise<SyncResult> {
   const result: SyncResult = {
     activitesCreees: 0,
+    activitesRattachees: 0,
     conflitsDetectes: 0,
     nouveauxProjets: 0,
     consultantsSkippes: 0,
@@ -45,10 +47,10 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
       prisma.consultant.findMany({ select: { id: true, nom: true, email: true, crakotteConsultantId: true } }),
       prisma.projet.findMany({ select: { id: true, nom: true, crakotteProjectId: true } }),
       prisma.crakotteProjectAlias.findMany({ select: { crakotteProjectId: true, projetId: true } }),
-      // Pre-load all existing Crakotte entry IDs — eliminates findUnique per entry
+      // Pre-load all existing Crakotte entry IDs with projetId to detect orphans
       prisma.activite.findMany({
         where: { crakotteEntryId: { not: null } },
-        select: { crakotteEntryId: true },
+        select: { crakotteEntryId: true, id: true, projetId: true },
       }),
       // Pre-load all etapes — eliminates findFirst per entry
       prisma.etape.findMany({ select: { id: true, projetId: true, nom: true } }),
@@ -56,6 +58,12 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
 
   // Build lookup maps
   const existingIds = new Set(existingActivites.map((a) => a.crakotteEntryId!))
+
+  // Track orphaned activities (projetId: null) — eligible for retroactive linking
+  const orphansByEntryId = new Map<string, number>()
+  for (const a of existingActivites) {
+    if (a.projetId === null) orphansByEntryId.set(a.crakotteEntryId!, a.id)
+  }
 
   const consultantsByEmail = new Map<string, number>()
   const consultantsByNom = new Map<string, number>()
@@ -89,14 +97,24 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
     }
   }
 
-  // Filter to new entries only, deduplicating within the API response
-  // (Crakotte sometimes returns duplicate entry.id values in the same payload)
+  // Partition entries: new vs already-seen (with orphan backfill candidates)
   const seenInBatch = new Set<string>()
-  const newItems = timeSpent.items.filter((item) => {
-    if (existingIds.has(item.entry.id) || seenInBatch.has(item.entry.id)) return false
+  const newItems: CrakotteTimeEntry[] = []
+  const backfillItems: CrakotteTimeEntry[] = []
+
+  for (const item of timeSpent.items) {
+    if (seenInBatch.has(item.entry.id)) continue
     seenInBatch.add(item.entry.id)
-    return true
-  })
+
+    if (existingIds.has(item.entry.id)) {
+      // Already in DB — if it's an orphan and we now have a project mapping, queue for backfill
+      if (orphansByEntryId.has(item.entry.id) && projetsByKrakotteId.has(item.project.id)) {
+        backfillItems.push(item)
+      }
+      continue
+    }
+    newItems.push(item)
+  }
 
   // Pre-load MANUEL activities for conflict detection (only if there are new entries)
   const manuelByKey = new Map<string, { id: number; heures: number }>()
@@ -133,7 +151,76 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
     }
   }
 
+  // Retroactively link orphaned activities now that their project is mapped
+  for (const item of backfillItems) {
+    try {
+      const projetId = projetsByKrakotteId.get(item.project.id)!
+      const activiteId = orphansByEntryId.get(item.entry.id)!
+      const etapeId = etapesByKey.get(`${projetId}:${item.step.name.toLowerCase()}`) ?? null
+      await prisma.activite.update({
+        where: { id: activiteId },
+        data: { projetId, ...(etapeId !== null ? { etapeId } : {}) },
+      })
+      result.activitesRattachees++
+    } catch (e: unknown) {
+      result.errors.push(`Backfill ${item.entry.id}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   return result
+}
+
+/**
+ * Retroactively link orphaned activities (projetId: null) for a specific Crakotte project.
+ * Called after a pending project is approved or a project alias is created, to fix all
+ * historical activities that were imported before the mapping existed.
+ */
+export async function backfillOrphanedActivitiesForProject(
+  apiKey: string,
+  crakotteProjectId: string,
+  projetId: number,
+  from: Date,
+  to: Date
+): Promise<number> {
+  const fromStr = format(from, "yyyy-MM-dd")
+  const toStr = format(to, "yyyy-MM-dd")
+
+  const timeSpent = await fetchCrakotteTimeSpent(apiKey, fromStr, toStr, { projectId: crakotteProjectId })
+  if (timeSpent.items.length === 0) return 0
+
+  const entryIds = [...new Set(timeSpent.items.map((i) => i.entry.id))]
+  const orphans = await prisma.activite.findMany({
+    where: { crakotteEntryId: { in: entryIds }, projetId: null },
+    select: { id: true, crakotteEntryId: true },
+  })
+  if (orphans.length === 0) return 0
+
+  const orphanMap = new Map<string, number>()
+  for (const o of orphans) orphanMap.set(o.crakotteEntryId!, o.id)
+
+  const etapes = await prisma.etape.findMany({
+    where: { projetId },
+    select: { id: true, nom: true },
+  })
+  const etapesByNom = new Map<string, number>()
+  for (const e of etapes) etapesByNom.set(e.nom.toLowerCase(), e.id)
+
+  let count = 0
+  const seen = new Set<string>()
+  for (const item of timeSpent.items) {
+    if (seen.has(item.entry.id)) continue
+    seen.add(item.entry.id)
+    const activiteId = orphanMap.get(item.entry.id)
+    if (!activiteId) continue
+    const etapeId = etapesByNom.get(item.step.name.toLowerCase()) ?? null
+    await prisma.activite.update({
+      where: { id: activiteId },
+      data: { projetId, ...(etapeId !== null ? { etapeId } : {}) },
+    })
+    count++
+  }
+
+  return count
 }
 
 async function processTimeEntry(
