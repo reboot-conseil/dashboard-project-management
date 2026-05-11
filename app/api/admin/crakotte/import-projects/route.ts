@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
     if (!projectId || !existingProjetId) return NextResponse.json({ error: "projectId et existingProjetId requis" }, { status: 400 })
     if (linkedIds.has(projectId)) return NextResponse.json({ error: "Déjà lié" }, { status: 409 })
     await prisma.crakotteProjectAlias.create({ data: { crakotteProjectId: projectId, projetId: existingProjetId } })
+    await prisma.crakottePendingProject.updateMany({ where: { crakotteProjectId: projectId }, data: { status: "APPROVED" } })
     const activitesRattachees = await runBackfill(projectId, existingProjetId)
     return NextResponse.json({ success: true, projetId: existingProjetId, activitesRattachees })
   }
@@ -69,6 +70,10 @@ export async function POST(req: NextRequest) {
     const created = await prisma.projet.findMany({
       where: { crakotteProjectId: { in: toCreate.map((p) => p.id) } },
       select: { id: true, crakotteProjectId: true },
+    })
+    await prisma.crakottePendingProject.updateMany({
+      where: { crakotteProjectId: { in: toCreate.map((p) => p.id) } },
+      data: { status: "APPROVED" },
     })
     let totalRattachees = 0
     for (const p of created) {
@@ -98,6 +103,7 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  await prisma.crakottePendingProject.updateMany({ where: { crakotteProjectId: projectId }, data: { status: "APPROVED" } })
   const activitesRattachees = await runBackfill(projectId, projet.id)
   return NextResponse.json({ success: true, projetId: projet.id, activitesRattachees })
 }

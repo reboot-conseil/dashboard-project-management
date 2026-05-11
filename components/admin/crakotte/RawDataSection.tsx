@@ -85,7 +85,8 @@ export function RawDataSection() {
   const [syncingActivities, setSyncingActivities] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
   const [stats, setStats] = useState<CrakotteStats | null>(null)
-  const [fixingHours, setFixingHours] = useState(false)
+  const [searchText, setSearchText] = useState<Record<string, string>>({})
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
   const today = format(new Date(), "yyyy-MM-dd")
   const [syncFrom, setSyncFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"))
   const [syncTo, setSyncTo] = useState(today)
@@ -117,19 +118,6 @@ export function RawDataSection() {
 
   useEffect(() => { load(); loadStats() }, [load, loadStats])
 
-  async function fixHours() {
-    if (!window.confirm("Multiplier par 7.5 toutes les heures des activités CRAKOTTE en base ? Cette action est irréversible si déjà appliquée.")) return
-    setFixingHours(true)
-    try {
-      const res = await fetch("/api/admin/crakotte/fix-hours", { method: "POST" })
-      const d = await res.json()
-      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
-      toast.success(`${d.updated} activité(s) corrigée(s)`)
-      await loadStats()
-    } finally {
-      setFixingHours(false)
-    }
-  }
 
   async function importConsultants(mode: "reboot" | "all" | "selected", ids?: string[]) {
     setCreating(mode === "reboot" ? "reboot" : mode === "all" ? "all-consultants" : ids?.[0] ?? "")
@@ -274,17 +262,7 @@ export function RawDataSection() {
     <div className="space-y-4">
       {stats && (
         <div className="rounded-lg border p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">État de l&apos;intégration</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={fixingHours}
-              onClick={fixHours}
-            >
-              {fixingHours ? "Correction..." : "Corriger les heures (×7.5)"}
-            </Button>
-          </div>
+          <h3 className="text-sm font-semibold">État de l&apos;intégration</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-md border p-3 text-center">
               <p className="text-xl font-bold">{stats.activitesTotal}</p>
@@ -468,20 +446,59 @@ export function RawDataSection() {
                             </div>
                           )}
 
-                          {/* Manual select */}
+                          {/* Manual select — combobox cherchable */}
                           <div className="flex gap-2 items-center">
-                            <select
-                              value={manualSelect[p.id] ?? ""}
-                              onChange={(e) => setManualSelect((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                              className="flex-1 text-xs rounded-md border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            >
-                              <option value="">Fusionner manuellement avec...</option>
-                              {data.allDbProjets.map((dp) => (
-                                <option key={dp.id} value={dp.id}>
-                                  {dp.nom} — {dp.client}
-                                </option>
-                              ))}
-                            </select>
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                value={
+                                  dropdownOpen === p.id
+                                    ? (searchText[p.id] ?? "")
+                                    : selectedDbProjet
+                                    ? `${selectedDbProjet.nom} — ${selectedDbProjet.client}`
+                                    : (searchText[p.id] ?? "")
+                                }
+                                onChange={(e) => {
+                                  setSearchText((prev) => ({ ...prev, [p.id]: e.target.value }))
+                                  setDropdownOpen(p.id)
+                                  setManualSelect((prev) => { const n = { ...prev }; delete n[p.id]; return n })
+                                }}
+                                onFocus={() => setDropdownOpen(p.id)}
+                                onBlur={() => setTimeout(() => setDropdownOpen(null), 150)}
+                                placeholder="Rechercher un projet..."
+                                className="w-full text-xs rounded-md border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                              />
+                              {dropdownOpen === p.id && (
+                                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-48 overflow-y-auto">
+                                  {data.allDbProjets
+                                    .filter((dp) => {
+                                      const q = (searchText[p.id] ?? "").toLowerCase()
+                                      return !q || dp.nom.toLowerCase().includes(q) || dp.client.toLowerCase().includes(q)
+                                    })
+                                    .sort((a, b) => a.nom.localeCompare(b.nom, "fr"))
+                                    .map((dp) => (
+                                      <button
+                                        key={dp.id}
+                                        type="button"
+                                        onMouseDown={() => {
+                                          setManualSelect((prev) => ({ ...prev, [p.id]: dp.id.toString() }))
+                                          setSearchText((prev) => ({ ...prev, [p.id]: "" }))
+                                          setDropdownOpen(null)
+                                        }}
+                                        className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent transition-colors"
+                                      >
+                                        {dp.nom} — {dp.client}
+                                      </button>
+                                    ))}
+                                  {data.allDbProjets.filter((dp) => {
+                                    const q = (searchText[p.id] ?? "").toLowerCase()
+                                    return !q || dp.nom.toLowerCase().includes(q) || dp.client.toLowerCase().includes(q)
+                                  }).length === 0 && (
+                                    <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucun résultat</div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                             <Button
                               size="xs"
                               disabled={!selectedDbProjet || !!creating}
