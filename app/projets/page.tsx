@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -138,7 +138,12 @@ export default function ProjetsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   // Search
-  const [search, setSearch] = useState("");
+  const [searchNom, setSearchNom] = useState("");
+  const [searchClient, setSearchClient] = useState("");
+  const [showNomSuggestions, setShowNomSuggestions] = useState(false);
+  const [showClientSuggestions, setShowClientSuggestions] = useState(false);
+  const nomInputRef = useRef<HTMLInputElement>(null);
+  const clientInputRef = useRef<HTMLInputElement>(null);
 
   // Sort
   const [sortKey, setSortKey] = useState<SortKey>("nom");
@@ -227,14 +232,14 @@ export default function ProjetsPage() {
   const filteredProjets = useMemo(() => {
     let result = [...projets];
 
-    // Text search
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      result = result.filter(
-        (p) =>
-          p.nom.toLowerCase().includes(q) ||
-          p.client.toLowerCase().includes(q)
-      );
+    // Text search (AND between nom and client)
+    if (searchNom.trim()) {
+      const q = searchNom.toLowerCase().trim();
+      result = result.filter((p) => p.nom.toLowerCase().includes(q));
+    }
+    if (searchClient.trim()) {
+      const q = searchClient.toLowerCase().trim();
+      result = result.filter((p) => p.client.toLowerCase().includes(q));
     }
 
     // Sort
@@ -269,7 +274,19 @@ export default function ProjetsPage() {
     });
 
     return result;
-  }, [projets, search, sortKey, sortAsc]);
+  }, [projets, searchNom, searchClient, sortKey, sortAsc]);
+
+  const suggestionsNom = useMemo(() => {
+    if (!searchNom.trim()) return [];
+    const q = searchNom.toLowerCase().trim();
+    return [...new Set(projets.map((p) => p.nom).filter((n) => n.toLowerCase().includes(q)))].slice(0, 8);
+  }, [projets, searchNom]);
+
+  const suggestionsClient = useMemo(() => {
+    if (!searchClient.trim()) return [];
+    const q = searchClient.toLowerCase().trim();
+    return [...new Set(projets.map((p) => p.client).filter((c) => c.toLowerCase().includes(q)))].slice(0, 8);
+  }, [projets, searchClient]);
 
   function handleAdd() {
     setEditingProjet(null);
@@ -341,22 +358,73 @@ export default function ProjetsPage() {
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search */}
+            {/* Search by project name */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher projet ou client..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                ref={nomInputRef}
+                placeholder="Nom du projet..."
+                value={searchNom}
+                onChange={(e) => { setSearchNom(e.target.value); setShowNomSuggestions(true); }}
+                onFocus={() => { if (searchNom.trim()) setShowNomSuggestions(true); }}
+                onBlur={() => setTimeout(() => setShowNomSuggestions(false), 150)}
                 className="pl-9"
               />
-              {search && (
+              {searchNom && (
                 <button
-                  onClick={() => setSearch("")}
+                  onClick={() => { setSearchNom(""); setShowNomSuggestions(false); nomInputRef.current?.focus(); }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
+              )}
+              {showNomSuggestions && suggestionsNom.length > 0 && (
+                <ul className="absolute z-20 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+                  {suggestionsNom.map((s) => (
+                    <li
+                      key={s}
+                      onMouseDown={() => { setSearchNom(s); setShowNomSuggestions(false); }}
+                      className="px-3 py-2 text-sm cursor-pointer hover:bg-muted truncate"
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Search by client */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={clientInputRef}
+                placeholder="Client..."
+                value={searchClient}
+                onChange={(e) => { setSearchClient(e.target.value); setShowClientSuggestions(true); }}
+                onFocus={() => { if (searchClient.trim()) setShowClientSuggestions(true); }}
+                onBlur={() => setTimeout(() => setShowClientSuggestions(false), 150)}
+                className="pl-9"
+              />
+              {searchClient && (
+                <button
+                  onClick={() => { setSearchClient(""); setShowClientSuggestions(false); clientInputRef.current?.focus(); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {showClientSuggestions && suggestionsClient.length > 0 && (
+                <ul className="absolute z-20 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+                  {suggestionsClient.map((s) => (
+                    <li
+                      key={s}
+                      onMouseDown={() => { setSearchClient(s); setShowClientSuggestions(false); }}
+                      className="px-3 py-2 text-sm cursor-pointer hover:bg-muted truncate"
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
@@ -389,7 +457,12 @@ export default function ProjetsPage() {
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>
               {filteredProjets.length} projet{filteredProjets.length > 1 ? "s" : ""} trouvé{filteredProjets.length > 1 ? "s" : ""}
-              {search && ` pour "${search}"`}
+              {(searchNom || searchClient) && (
+                <>
+                  {searchNom && ` · nom : "${searchNom}"`}
+                  {searchClient && ` · client : "${searchClient}"`}
+                </>
+              )}
             </span>
           </div>
         </CardContent>
