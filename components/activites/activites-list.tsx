@@ -36,6 +36,7 @@ interface ActivitesListProps {
   onDeleteFilter: (id: string) => void;
   onEdit: (a: Activite) => void;
   onDelete: (a: Activite) => void;
+  isConsultantRole?: boolean;
 }
 
 export function ActivitesList({
@@ -45,6 +46,7 @@ export function ActivitesList({
   onFiltreConsultant, onFiltreProjet, onFiltrePeriode,
   onToggleSavedFilters, onOpenSaveFilterDialog,
   onApplyFilter, onDeleteFilter, onEdit, onDelete,
+  isConsultantRole,
 }: ActivitesListProps) {
   const [page, setPage] = useState(1);
 
@@ -71,13 +73,15 @@ export function ActivitesList({
     <Card data-testid="activites-list">
       <CardContent className="pt-6">
         {/* Filtres — ligne 1 : selects */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-          <Select value={filtreConsultant} onChange={(e) => { onFiltreConsultant(e.target.value); setPage(1); }} aria-label="Filtrer par consultant">
-            <option value="">Tous les consultants</option>
-            {consultants.map((c) => (
-              <option key={c.id} value={c.id}>{c.nom}</option>
-            ))}
-          </Select>
+        <div className={`grid grid-cols-1 gap-3 mb-3 ${isConsultantRole ? "" : "sm:grid-cols-2"}`}>
+          {!isConsultantRole && (
+            <Select value={filtreConsultant} onChange={(e) => { onFiltreConsultant(e.target.value); setPage(1); }} aria-label="Filtrer par consultant">
+              <option value="">Tous les consultants</option>
+              {consultants.map((c) => (
+                <option key={c.id} value={c.id}>{c.nom}</option>
+              ))}
+            </Select>
+          )}
           <Select value={filtreProjet} onChange={(e) => { onFiltreProjet(e.target.value); setPage(1); }} aria-label="Filtrer par projet">
             <option value="">Tous les projets</option>
             {projets.map((p) => (
@@ -120,9 +124,9 @@ export function ActivitesList({
 
         {/* Saved filters bar */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          {(filtreConsultant || filtreProjet || filtrePeriode !== "month") && (
+          {((!isConsultantRole && filtreConsultant) || filtreProjet || filtrePeriode !== "month") && (
             <button
-              onClick={() => { onFiltreConsultant(""); onFiltreProjet(""); onFiltrePeriode("month"); setPage(1); }}
+              onClick={() => { if (!isConsultantRole) onFiltreConsultant(""); onFiltreProjet(""); onFiltrePeriode("month"); setPage(1); }}
               className="flex items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
             >
               <Trash2 className="h-3 w-3" />Effacer filtres

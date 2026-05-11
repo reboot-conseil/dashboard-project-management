@@ -43,6 +43,7 @@ function exportCsvActivites(activites: Activite[]) {
 export default function ActivitesPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const isConsultantRole = (session?.user as { role?: string } | undefined)?.role === "CONSULTANT";
   const heuresRef = useRef<HTMLInputElement>(null);
   const [saisieOpen, setSaisieOpen] = useState(false);
 
@@ -403,6 +404,7 @@ export default function ActivitesPage() {
         onDeleteFilter={deleteFilter}
         onEdit={openEdit}
         onDelete={openDelete}
+        isConsultantRole={isConsultantRole}
       />
 
       <EditDialog
