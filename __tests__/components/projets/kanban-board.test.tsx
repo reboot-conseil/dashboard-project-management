@@ -32,6 +32,7 @@ const defaultProps = {
   onEditEtape: vi.fn(),
   onDeleteEtape: vi.fn(),
   onMoveEtape: vi.fn(),
+  onDropEtape: vi.fn(),
 }
 
 describe('KanbanBoard', () => {

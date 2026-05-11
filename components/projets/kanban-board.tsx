@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { differenceInDays } from "date-fns";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -28,6 +29,7 @@ interface KanbanBoardProps {
   onEditEtape: (e: Etape) => void;
   onDeleteEtape: (e: Etape) => void;
   onMoveEtape: (e: Etape, direction: "forward" | "backward") => void;
+  onDropEtape: (e: Etape, targetStatut: "A_FAIRE" | "EN_COURS" | "VALIDEE") => void;
 }
 
 export function KanbanBoard({
@@ -39,8 +41,33 @@ export function KanbanBoard({
   onEditEtape,
   onDeleteEtape,
   onMoveEtape,
+  onDropEtape,
 }: KanbanBoardProps) {
   const shouldReduce = useReducedMotion();
+  const draggingRef = useRef<Etape | null>(null);
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [dragOverStatut, setDragOverStatut] = useState<"A_FAIRE" | "EN_COURS" | "VALIDEE" | null>(null);
+
+  function handleDragStart(etape: Etape) {
+    draggingRef.current = etape;
+    setDraggingId(etape.id);
+  }
+
+  function handleDragEnd() {
+    draggingRef.current = null;
+    setDraggingId(null);
+    setDragOverStatut(null);
+  }
+
+  function handleDrop(targetStatut: "A_FAIRE" | "EN_COURS" | "VALIDEE") {
+    const etape = draggingRef.current;
+    if (etape && etape.statut !== targetStatut) {
+      onDropEtape(etape, targetStatut);
+    }
+    draggingRef.current = null;
+    setDraggingId(null);
+    setDragOverStatut(null);
+  }
 
   return (
     <div>
@@ -48,12 +75,29 @@ export function KanbanBoard({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {KANBAN_COLS.map((col) => {
           const colEtapes = etapes.filter((e) => e.statut === col.statut);
+          const isOver = dragOverStatut === col.statut;
           return (
             <motion.div
               key={col.statut}
               layout={!shouldReduce}
-              className={`rounded-lg p-4 ${col.color} min-h-[200px]`}
+              className={`rounded-lg p-4 ${col.color} min-h-[200px] transition-all duration-150${
+                isOver ? " ring-2 ring-primary ring-offset-2" : ""
+              }`}
               data-testid={`kanban-col-${col.statut}`}
+              onDragOver={(ev) => {
+                ev.preventDefault();
+                setDragOverStatut(col.statut);
+              }}
+              onDragLeave={(ev) => {
+                const related = ev.relatedTarget as Node | null;
+                if (!related || !ev.currentTarget.contains(related)) {
+                  setDragOverStatut(null);
+                }
+              }}
+              onDrop={(ev) => {
+                ev.preventDefault();
+                handleDrop(col.statut);
+              }}
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-sm">
@@ -81,6 +125,7 @@ export function KanbanBoard({
                       initial={false}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      style={{ opacity: draggingId === e.id ? 0.4 : 1 }}
                     >
                       <KanbanCard
                         etape={e}
@@ -90,6 +135,8 @@ export function KanbanBoard({
                         onEditEtape={onEditEtape}
                         onDeleteEtape={onDeleteEtape}
                         onMoveEtape={onMoveEtape}
+                        onDragStart={() => handleDragStart(e)}
+                        onDragEnd={handleDragEnd}
                       />
                     </motion.div>
                   ))}
@@ -111,6 +158,8 @@ interface KanbanCardProps {
   onEditEtape: (e: Etape) => void;
   onDeleteEtape: (e: Etape) => void;
   onMoveEtape: (e: Etape, direction: "forward" | "backward") => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }
 
 function KanbanCard({
@@ -121,6 +170,8 @@ function KanbanCard({
   onEditEtape,
   onDeleteEtape,
   onMoveEtape,
+  onDragStart,
+  onDragEnd,
 }: KanbanCardProps) {
   const joursRestants = e.deadline
     ? differenceInDays(new Date(e.deadline), new Date())
@@ -134,8 +185,11 @@ function KanbanCard({
 
   return (
     <div
-      className="bg-card rounded-md border border-border p-3 space-y-2 shadow-sm"
+      className="bg-card rounded-md border border-border p-3 space-y-2 shadow-sm cursor-grab active:cursor-grabbing"
       data-testid={`kanban-card-${e.id}`}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
     >
       <div className="flex items-start justify-between gap-1">
         <div>

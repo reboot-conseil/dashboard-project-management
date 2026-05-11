@@ -163,20 +163,61 @@ export default function ProjetDetailPage() {
     const idx = order.indexOf(e.statut);
     const newIdx = direction === "forward" ? idx + 1 : idx - 1;
     if (newIdx < 0 || newIdx >= order.length) return;
+    const newStatut = order[newIdx];
+
+    setProjet((prev) =>
+      prev ? { ...prev, etapes: prev.etapes.map((et) => et.id === e.id ? { ...et, statut: newStatut } : et) } : null
+    );
 
     try {
       const res = await fetch(`/api/etapes/${e.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut: order[newIdx] }),
+        body: JSON.stringify({ statut: newStatut }),
       });
       if (!res.ok) {
+        setProjet((prev) =>
+          prev ? { ...prev, etapes: prev.etapes.map((et) => et.id === e.id ? { ...et, statut: e.statut } : et) } : null
+        );
         toast.error("Erreur lors du déplacement");
         return;
       }
-      toast.success(`Étape déplacée vers "${statutEtapeLabel(order[newIdx])}"`);
-      fetchProjet();
+      toast.success(`Étape déplacée vers "${statutEtapeLabel(newStatut)}"`);
+      fetchProgression();
     } catch {
+      setProjet((prev) =>
+        prev ? { ...prev, etapes: prev.etapes.map((et) => et.id === e.id ? { ...et, statut: e.statut } : et) } : null
+      );
+      toast.error("Erreur de connexion");
+    }
+  }
+
+  async function handleDropEtape(e: Etape, targetStatut: "A_FAIRE" | "EN_COURS" | "VALIDEE") {
+    if (e.statut === targetStatut) return;
+
+    setProjet((prev) =>
+      prev ? { ...prev, etapes: prev.etapes.map((et) => et.id === e.id ? { ...et, statut: targetStatut } : et) } : null
+    );
+
+    try {
+      const res = await fetch(`/api/etapes/${e.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut: targetStatut }),
+      });
+      if (!res.ok) {
+        setProjet((prev) =>
+          prev ? { ...prev, etapes: prev.etapes.map((et) => et.id === e.id ? { ...et, statut: e.statut } : et) } : null
+        );
+        toast.error("Erreur lors du déplacement");
+        return;
+      }
+      toast.success(`Étape déplacée vers "${statutEtapeLabel(targetStatut)}"`);
+      fetchProgression();
+    } catch {
+      setProjet((prev) =>
+        prev ? { ...prev, etapes: prev.etapes.map((et) => et.id === e.id ? { ...et, statut: e.statut } : et) } : null
+      );
       toast.error("Erreur de connexion");
     }
   }
@@ -362,6 +403,7 @@ export default function ProjetDetailPage() {
         onEditEtape={handleEditEtape}
         onDeleteEtape={handleDeleteEtape}
         onMoveEtape={handleMoveEtape}
+        onDropEtape={handleDropEtape}
       />
 
       <Separator />
