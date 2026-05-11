@@ -17,6 +17,7 @@ export interface Etape {
   nom: string;
   statut: "A_FAIRE" | "EN_COURS" | "VALIDEE";
   chargeEstimeeJours?: number | null;
+  heuresRealisees?: number;
 }
 
 export interface Activite {

@@ -43,9 +43,12 @@ export function SaisieRapide({
   const selectedEtape = form.etapeId ? etapes.find((e) => String(e.id) === form.etapeId) : null;
   const chargeInfo = selectedEtape?.chargeEstimeeJours
     ? (() => {
-        const heuresSur = activites
-          .filter((a) => a.etape?.id === parseInt(form.etapeId))
-          .reduce((s, a) => s + Number(a.heures), 0);
+        // Prefer heuresRealisees from API (all-time total) over filtered activites list
+        const heuresSur = selectedEtape.heuresRealisees !== undefined
+          ? selectedEtape.heuresRealisees
+          : activites
+              .filter((a) => a.etape?.id === parseInt(form.etapeId))
+              .reduce((s, a) => s + Number(a.heures), 0);
         const joursRealises = heuresSur / HEURES_PAR_JOUR;
         const restant = selectedEtape.chargeEstimeeJours! - joursRealises;
         return { joursRealises, restant, depasse: restant < 0, charge: selectedEtape.chargeEstimeeJours! };

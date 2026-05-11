@@ -48,25 +48,37 @@ export async function GET(request: NextRequest) {
         ...(activeOnly ? { statut: { in: ["A_FAIRE", "EN_COURS"] } } : {}),
       },
       orderBy: { ordre: "asc" },
-      ...(activeOnly
-        ? {
-            select: {
-              id: true,
-              nom: true,
-              statut: true,
-              deadline: true,
-              chargeEstimeeJours: true,
-            },
-          }
-        : {}),
+      select: {
+        id: true,
+        nom: true,
+        statut: true,
+        deadline: true,
+        chargeEstimeeJours: true,
+        ...(!activeOnly ? {
+          projetId: true,
+          description: true,
+          ordre: true,
+          createdAt: true,
+          updatedAt: true,
+        } : {}),
+        _count: false,
+        activites: {
+          select: { heures: true },
+        },
+      },
     });
+
+    const etapesWithHeures = etapes.map(({ activites: acts, ...e }) => ({
+      ...e,
+      heuresRealisees: acts.reduce((s: number, a: { heures: unknown }) => s + Number(a.heures), 0),
+    }));
 
     console.log('[API ETAPES] Étapes trouvées:', etapes.length);
 
     return NextResponse.json(
       activeOnly
-        ? { etapes }
-        : { success: true, projetId, projetNom: projet.nom, etapes }
+        ? { etapes: etapesWithHeures }
+        : { success: true, projetId, projetNom: projet.nom, etapes: etapesWithHeures }
     );
   } catch (error: any) {
     console.error('[API ETAPES] Erreur:', error.message);
