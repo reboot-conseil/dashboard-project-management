@@ -43,7 +43,7 @@ export default function RootLayout({
         <SessionProvider>
           <SplashScreen />
           <ClientShell>{children}</ClientShell>
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="bottom-right" />
           <ShortcutsModal />
         </SessionProvider>
       </body>

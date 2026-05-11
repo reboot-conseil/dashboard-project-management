@@ -3,7 +3,7 @@
 import { RefObject } from "react";
 import { HEURES_PAR_JOUR } from "@/lib/financial";
 import { format } from "date-fns";
-import { Save } from "lucide-react";
+import { Save, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,11 +33,12 @@ interface SaisieRapideProps {
   isConsultantRole?: boolean;
   onFormChange: (field: keyof SaisieRapideFormState, value: string | boolean) => void;
   onSave: () => void;
+  onSaveAndContinue?: () => void;
 }
 
 export function SaisieRapide({
   consultants, projets, etapes, etapesLoading, activites,
-  form, saving, heuresRef, isConsultantRole, onFormChange, onSave,
+  form, saving, heuresRef, isConsultantRole, onFormChange, onSave, onSaveAndContinue,
 }: SaisieRapideProps) {
   const selectedEtape = form.etapeId ? etapes.find((e) => String(e.id) === form.etapeId) : null;
   const chargeInfo = selectedEtape?.chargeEstimeeJours
@@ -164,6 +165,18 @@ export function SaisieRapide({
               <Save className="h-4 w-4" />
               {saving ? "Enregistrement..." : "Enregistrer"}
             </Button>
+            {onSaveAndContinue && (
+              <Button
+                variant="outline"
+                onClick={onSaveAndContinue}
+                disabled={saving}
+                title="Enregistrer et passer au jour ouvré suivant"
+                data-testid="btn-continuer"
+              >
+                <ChevronRight className="h-4 w-4" />
+                Jour suivant
+              </Button>
+            )}
           </div>
         </div>
       <p className="text-xs text-muted-foreground mt-2">

@@ -224,6 +224,44 @@ export default function ActivitesPage() {
     finally { setSaving(false); }
   }
 
+  function nextWorkingDay(dateStr: string): string {
+    const d = new Date(dateStr + "T12:00:00");
+    d.setDate(d.getDate() + 1);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    return format(d, "yyyy-MM-dd");
+  }
+
+  async function handleQuickSaveAndContinue() {
+    if (!form.consultantId || !form.projetId || !form.heures) {
+      toast.error("Remplissez consultant, projet et heures");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/activites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consultantId: parseInt(form.consultantId),
+          projetId: parseInt(form.projetId),
+          etapeId: form.etapeId ? parseInt(form.etapeId) : null,
+          date: form.date,
+          heures: parseFloat(form.heures),
+          description: form.description || null,
+          facturable: form.facturable,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); toast.error(d.error || "Erreur"); return; }
+      toast.success("Activité enregistrée !");
+      localStorage.setItem("lastConsultantId", form.consultantId);
+      localStorage.setItem("lastProjetId", form.projetId);
+      setForm((f) => ({ ...f, date: nextWorkingDay(f.date) }));
+      fetchActivites();
+      router.refresh();
+    } catch { toast.error("Erreur de connexion"); }
+    finally { setSaving(false); }
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); handleQuickSave(); }
   }
@@ -340,6 +378,7 @@ export default function ActivitesPage() {
             heuresRef={heuresRef}
             onFormChange={(field, value) => setForm((f) => ({ ...f, [field]: value }))}
             onSave={async () => { await handleQuickSave(); setSaisieOpen(false); }}
+            onSaveAndContinue={handleQuickSaveAndContinue}
           />
         </DialogContent>
       </Dialog>

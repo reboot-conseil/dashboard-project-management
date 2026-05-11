@@ -19,6 +19,7 @@ import {
   DollarSign,
   BarChart3,
   FileText,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -379,7 +380,7 @@ export default function ProjetsPage() {
                 </button>
               )}
               {showNomSuggestions && suggestionsNom.length > 0 && (
-                <ul className="absolute z-20 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+                <ul className="absolute z-50 top-full mt-1 left-0 right-0 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
                   {suggestionsNom.map((s) => (
                     <li
                       key={s}
@@ -414,7 +415,7 @@ export default function ProjetsPage() {
                 </button>
               )}
               {showClientSuggestions && suggestionsClient.length > 0 && (
-                <ul className="absolute z-20 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+                <ul className="absolute z-50 top-full mt-1 left-0 right-0 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
                   {suggestionsClient.map((s) => (
                     <li
                       key={s}
@@ -953,6 +954,13 @@ interface SaisieActiviteDialogProps {
   onSaved: () => void;
 }
 
+function nextWorkingDay(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + 1);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  return format(d, "yyyy-MM-dd");
+}
+
 function SaisieActiviteDialog({ projectId, projectName, etapes, onClose, onSaved }: SaisieActiviteDialogProps) {
   const [consultants, setConsultants] = useState<{ id: number; nom: string }[]>([]);
   const [form, setForm] = useState({
@@ -974,10 +982,10 @@ function SaisieActiviteDialog({ projectId, projectName, etapes, onClose, onSaved
     return () => controller.abort();
   }, []);
 
-  async function handleSave() {
+  async function postActivite() {
     if (!form.consultantId || !form.date || !form.heures) {
       toast.error("Consultant, date et heures sont requis");
-      return;
+      return false;
     }
     setSaving(true);
     try {
@@ -995,13 +1003,27 @@ function SaisieActiviteDialog({ projectId, projectName, etapes, onClose, onSaved
         }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Activité enregistrée");
-      onSaved();
+      return true;
     } catch {
       toast.error("Erreur lors de l'enregistrement");
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleSave() {
+    const ok = await postActivite();
+    if (!ok) return;
+    toast.success("Activité enregistrée");
+    onSaved();
+  }
+
+  async function handleSaveAndContinue() {
+    const ok = await postActivite();
+    if (!ok) return;
+    toast.success("Activité enregistrée");
+    setForm((f) => ({ ...f, date: nextWorkingDay(f.date) }));
   }
 
   return (
@@ -1105,6 +1127,15 @@ function SaisieActiviteDialog({ projectId, projectName, etapes, onClose, onSaved
             className="px-4 py-2 rounded-lg text-[12.5px] font-medium text-muted-foreground hover:bg-muted transition-colors"
           >
             Annuler
+          </button>
+          <button
+            onClick={handleSaveAndContinue}
+            disabled={saving}
+            title="Enregistrer et passer au jour ouvré suivant"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-[12.5px] font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-60"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+            Jour suivant
           </button>
           <button
             onClick={handleSave}
