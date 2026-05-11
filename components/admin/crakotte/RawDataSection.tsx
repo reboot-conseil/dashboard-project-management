@@ -85,6 +85,7 @@ export function RawDataSection() {
   const [syncingActivities, setSyncingActivities] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
   const [stats, setStats] = useState<CrakotteStats | null>(null)
+  const [backfilling, setBackfilling] = useState(false)
   const [searchText, setSearchText] = useState<Record<string, string>>({})
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
   const today = format(new Date(), "yyyy-MM-dd")
@@ -101,6 +102,19 @@ export function RawDataSection() {
       // stats are non-critical, fail silently
     }
   }, [])
+
+  async function backfillOrphans() {
+    setBackfilling(true)
+    try {
+      const res = await fetch("/api/admin/crakotte/backfill-orphans", { method: "POST" })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
+      toast.success(d.rattachees > 0 ? `${d.rattachees} activité(s) rattachée(s) à leur projet` : "Aucune activité à rattacher")
+      await loadStats()
+    } finally {
+      setBackfilling(false)
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -271,6 +285,11 @@ export function RawDataSection() {
             <div className={`rounded-md border p-3 text-center ${stats.activitesOrphelines > 0 ? "border-amber-400/60 bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
               <p className={`text-xl font-bold ${stats.activitesOrphelines > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>{stats.activitesOrphelines}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Orphelines (sans projet)</p>
+              {stats.activitesOrphelines > 0 && (
+                <Button size="xs" variant="outline" className="mt-2 text-xs" disabled={backfilling} onClick={backfillOrphans}>
+                  {backfilling ? "Rattachement..." : "Relier"}
+                </Button>
+              )}
             </div>
             <div className="rounded-md border p-3 text-center">
               <p className="text-xl font-bold">{stats.projetsMappés}</p>
