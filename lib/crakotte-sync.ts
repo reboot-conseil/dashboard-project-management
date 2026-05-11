@@ -89,8 +89,14 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
     }
   }
 
-  // Filter to new entries only — skip everything already imported
-  const newItems = timeSpent.items.filter((item) => !existingIds.has(item.entry.id))
+  // Filter to new entries only, deduplicating within the API response
+  // (Crakotte sometimes returns duplicate entry.id values in the same payload)
+  const seenInBatch = new Set<string>()
+  const newItems = timeSpent.items.filter((item) => {
+    if (existingIds.has(item.entry.id) || seenInBatch.has(item.entry.id)) return false
+    seenInBatch.add(item.entry.id)
+    return true
+  })
 
   // Pre-load MANUEL activities for conflict detection (only if there are new entries)
   const manuelByKey = new Map<string, { id: number; heures: number }>()
@@ -108,6 +114,7 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
   }
 
   // Process new entries
+  const skippedConsultantKeys = new Set<string>()
   for (const item of newItems) {
     try {
       await processTimeEntry(
@@ -118,7 +125,8 @@ export async function runCrakotteSync(apiKey: string, from: Date, to: Date): Pro
         dbProjets,
         etapesByKey,
         manuelByKey,
-        result
+        result,
+        skippedConsultantKeys
       )
     } catch (e: unknown) {
       result.errors.push(`Entry ${item.entry.id}: ${e instanceof Error ? e.message : String(e)}`)
@@ -136,7 +144,8 @@ async function processTimeEntry(
   dbProjets: { id: number; nom: string; crakotteProjectId: string | null }[],
   etapesByKey: Map<string, number>,
   manuelByKey: Map<string, { id: number; heures: number }>,
-  result: SyncResult
+  result: SyncResult,
+  skippedConsultantKeys: Set<string>
 ) {
   const fullName = `${item.consultant.firstName} ${item.consultant.lastName}`.toLowerCase()
   const fullNameRev = `${item.consultant.lastName} ${item.consultant.firstName}`.toLowerCase()
@@ -147,9 +156,13 @@ async function processTimeEntry(
 
   if (!consultantId) {
     result.consultantsSkippes++
-    result.detail.consultantsSkippes.push(
-      `${item.consultant.firstName} ${item.consultant.lastName} (${item.consultant.email})`
-    )
+    const key = item.consultant.email.trim().toLowerCase()
+    if (!skippedConsultantKeys.has(key)) {
+      skippedConsultantKeys.add(key)
+      result.detail.consultantsSkippes.push(
+        `${item.consultant.firstName} ${item.consultant.lastName} (${item.consultant.email})`
+      )
+    }
     return
   }
 
