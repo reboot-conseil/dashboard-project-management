@@ -265,6 +265,11 @@ async function processTimeEntry(
       await prisma.projet.update({ where: { id: match.id }, data: { crakotteProjectId: item.project.id } })
       projetsByKrakotteId.set(item.project.id, match.id)
       projetId = match.id
+      // Résoudre le pending correspondant s'il existe
+      await prisma.crakottePendingProject.updateMany({
+        where: { crakotteProjectId: item.project.id, status: "PENDING" },
+        data: { status: "APPROVED", resolvedAt: new Date() },
+      })
     } else {
       const pending = await prisma.crakottePendingProject.findUnique({
         where: { crakotteProjectId: item.project.id },
