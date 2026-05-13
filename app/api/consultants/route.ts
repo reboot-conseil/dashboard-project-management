@@ -10,7 +10,7 @@ const CONSULTANT_COLORS = [
 const consultantSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
   email: z.string().email("Email invalide"),
-  tjm: z.number().min(0, "Le TJM doit être positif"),
+  tjm: z.number().min(0, "Le TJM doit être positif").optional().default(400),
   coutJournalierEmployeur: z.number().min(0).nullable().optional(),
   competences: z.string().optional().default(""),
   couleur: z.string().optional(),

@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
         crakotteConsultantId: c.id,
         actif: true,
         role: "CONSULTANT",
+        tjm: 400,
       },
     })
     created++
