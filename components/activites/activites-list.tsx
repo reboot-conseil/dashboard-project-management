@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Pencil, Trash2, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight } from "lucide-react";
@@ -234,7 +235,13 @@ export function ActivitesList({
                               {a.projet?.couleur && (
                                 <span className="w-2 h-2 shrink-0" style={{ background: a.projet.couleur, borderRadius: "3px" }} />
                               )}
-                              <span className="text-[12.5px]">{a.projet?.nom ?? "—"}</span>
+                              {a.projet?.id ? (
+                                <Link href={`/projets/${a.projet.id}`} className="text-[12.5px] hover:underline hover:text-primary transition-colors">
+                                  {a.projet.nom}
+                                </Link>
+                              ) : (
+                                <span className="text-[12.5px]">—</span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="py-1 text-muted-foreground text-[12px]">
