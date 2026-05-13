@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import {
   fetchCrakotteConsultants,
   fetchCrakotteProjects,
@@ -286,19 +287,25 @@ async function processTimeEntry(
   // Etape lookup from pre-loaded map — no DB call
   const etapeId = projetId ? (etapesByKey.get(`${projetId}:${item.step.name.toLowerCase()}`) ?? null) : null
 
-  const activite = await prisma.activite.create({
-    data: {
-      consultantId,
-      projetId,
-      etapeId,
-      date: new Date(item.date),
-      heures: item.time * HEURES_PAR_JOUR,
-      description: item.step.name,
-      facturable: true,
-      source: "CRAKOTTE",
-      crakotteEntryId: item.entry.id,
-    },
-  })
+  let activite: Awaited<ReturnType<typeof prisma.activite.create>>
+  try {
+    activite = await prisma.activite.create({
+      data: {
+        consultantId,
+        projetId,
+        etapeId,
+        date: new Date(item.date),
+        heures: item.time * HEURES_PAR_JOUR,
+        description: item.step.name,
+        facturable: true,
+        source: "CRAKOTTE",
+        crakotteEntryId: item.entry.id,
+      },
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return
+    throw e
+  }
   result.activitesCreees++
   result.detail.activites.push({
     consultant: `${item.consultant.firstName} ${item.consultant.lastName}`,

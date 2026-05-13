@@ -6,6 +6,7 @@ import {
   fetchCrakotteProjects,
   fetchCrakotteTimeSpent,
 } from "@/lib/crakotte"
+import { HEURES_PAR_JOUR } from "@/lib/financial"
 import { format, subDays } from "date-fns"
 
 function strSimilarity(a: string, b: string): number {
@@ -96,7 +97,7 @@ export async function GET() {
   const entries = timeSpent.items.slice(0, 50).map((e) => ({
     id: e.entry.id,
     date: e.date,
-    heures: e.time,
+    heures: e.time * HEURES_PAR_JOUR,
     consultant: `${e.consultant.firstName} ${e.consultant.lastName}`,
     consultantEmail: e.consultant.email,
     projet: e.project.name,

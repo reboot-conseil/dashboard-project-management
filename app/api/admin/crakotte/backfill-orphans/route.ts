@@ -10,6 +10,15 @@ export async function POST() {
   const config = await prisma.crakotteConfig.findFirst()
   if (!config) return NextResponse.json({ error: "Aucune config Crakotte" }, { status: 400 })
 
+  // Auto-fix hours if activities were stored as days (heures < 2 = not yet multiplied by 7.5)
+  const maxHeures = await prisma.activite.aggregate({
+    where: { source: "CRAKOTTE" },
+    _max: { heures: true },
+  })
+  if (Number(maxHeures._max.heures ?? 0) < 2) {
+    await prisma.$executeRaw`UPDATE "Activite" SET heures = heures * 7.5 WHERE source = 'CRAKOTTE'`
+  }
+
   // Quick check — nothing to do
   const orphanCount = await prisma.activite.count({ where: { source: "CRAKOTTE", projetId: null } })
   if (orphanCount === 0) return NextResponse.json({ rattachees: 0 })
