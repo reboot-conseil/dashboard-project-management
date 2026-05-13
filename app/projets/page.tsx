@@ -143,6 +143,8 @@ export default function ProjetsPage() {
   const [searchClient, setSearchClient] = useState("");
   const [showNomSuggestions, setShowNomSuggestions] = useState(false);
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
+  const [activeNomIndex, setActiveNomIndex] = useState(-1);
+  const [activeClientIndex, setActiveClientIndex] = useState(-1);
   const nomInputRef = useRef<HTMLInputElement>(null);
   const clientInputRef = useRef<HTMLInputElement>(null);
 
@@ -278,12 +280,14 @@ export default function ProjetsPage() {
   }, [projets, searchNom, searchClient, sortKey, sortAsc]);
 
   const suggestionsNom = useMemo(() => {
+    setActiveNomIndex(-1);
     if (!searchNom.trim()) return [];
     const q = searchNom.toLowerCase().trim();
     return [...new Set(projets.map((p) => p.nom).filter((n) => n.toLowerCase().includes(q)))].slice(0, 8);
   }, [projets, searchNom]);
 
   const suggestionsClient = useMemo(() => {
+    setActiveClientIndex(-1);
     if (!searchClient.trim()) return [];
     const q = searchClient.toLowerCase().trim();
     return [...new Set(projets.map((p) => p.client).filter((c) => c.toLowerCase().includes(q)))].slice(0, 8);
@@ -369,6 +373,13 @@ export default function ProjetsPage() {
                 onChange={(e) => { setSearchNom(e.target.value); setShowNomSuggestions(true); }}
                 onFocus={() => { if (searchNom.trim()) setShowNomSuggestions(true); }}
                 onBlur={() => setTimeout(() => setShowNomSuggestions(false), 150)}
+                onKeyDown={(e) => {
+                  if (!showNomSuggestions || suggestionsNom.length === 0) return;
+                  if (e.key === "ArrowDown") { e.preventDefault(); setActiveNomIndex((i) => (i + 1) % suggestionsNom.length); }
+                  else if (e.key === "ArrowUp") { e.preventDefault(); setActiveNomIndex((i) => (i <= 0 ? suggestionsNom.length - 1 : i - 1)); }
+                  else if (e.key === "Enter" && activeNomIndex >= 0) { e.preventDefault(); setSearchNom(suggestionsNom[activeNomIndex]); setShowNomSuggestions(false); }
+                  else if (e.key === "Escape") { setShowNomSuggestions(false); }
+                }}
                 className="pl-9"
               />
               {searchNom && (
@@ -381,11 +392,11 @@ export default function ProjetsPage() {
               )}
               {showNomSuggestions && suggestionsNom.length > 0 && (
                 <ul className="absolute z-50 top-full mt-1 left-0 right-0 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
-                  {suggestionsNom.map((s) => (
+                  {suggestionsNom.map((s, i) => (
                     <li
                       key={s}
                       onMouseDown={() => { setSearchNom(s); setShowNomSuggestions(false); }}
-                      className="px-3 py-2 text-sm cursor-pointer hover:bg-muted truncate"
+                      className={`px-3 py-2 text-sm cursor-pointer truncate ${i === activeNomIndex ? "bg-muted" : "hover:bg-muted"}`}
                     >
                       {s}
                     </li>
@@ -404,6 +415,13 @@ export default function ProjetsPage() {
                 onChange={(e) => { setSearchClient(e.target.value); setShowClientSuggestions(true); }}
                 onFocus={() => { if (searchClient.trim()) setShowClientSuggestions(true); }}
                 onBlur={() => setTimeout(() => setShowClientSuggestions(false), 150)}
+                onKeyDown={(e) => {
+                  if (!showClientSuggestions || suggestionsClient.length === 0) return;
+                  if (e.key === "ArrowDown") { e.preventDefault(); setActiveClientIndex((i) => (i + 1) % suggestionsClient.length); }
+                  else if (e.key === "ArrowUp") { e.preventDefault(); setActiveClientIndex((i) => (i <= 0 ? suggestionsClient.length - 1 : i - 1)); }
+                  else if (e.key === "Enter" && activeClientIndex >= 0) { e.preventDefault(); setSearchClient(suggestionsClient[activeClientIndex]); setShowClientSuggestions(false); }
+                  else if (e.key === "Escape") { setShowClientSuggestions(false); }
+                }}
                 className="pl-9"
               />
               {searchClient && (
@@ -416,11 +434,11 @@ export default function ProjetsPage() {
               )}
               {showClientSuggestions && suggestionsClient.length > 0 && (
                 <ul className="absolute z-50 top-full mt-1 left-0 right-0 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
-                  {suggestionsClient.map((s) => (
+                  {suggestionsClient.map((s, i) => (
                     <li
                       key={s}
                       onMouseDown={() => { setSearchClient(s); setShowClientSuggestions(false); }}
-                      className="px-3 py-2 text-sm cursor-pointer hover:bg-muted truncate"
+                      className={`px-3 py-2 text-sm cursor-pointer truncate ${i === activeClientIndex ? "bg-muted" : "hover:bg-muted"}`}
                     >
                       {s}
                     </li>
