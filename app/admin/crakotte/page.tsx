@@ -4,22 +4,17 @@ import { prisma } from "@/lib/prisma"
 import { ConfigSection } from "@/components/admin/crakotte/ConfigSection"
 import { SyncLogSection } from "@/components/admin/crakotte/SyncLogSection"
 import { ConflictsSection } from "@/components/admin/crakotte/ConflictsSection"
-import { CrakotteBottomSections } from "@/components/admin/crakotte/CrakotteBottomSections"
+import { RawDataSection } from "@/components/admin/crakotte/RawDataSection"
 
 export default async function CrakottePage() {
   const session = await auth()
   if (!session || session.user.role !== "ADMIN") redirect("/")
 
-  const [config, logs, conflicts, pendingProjects] = await Promise.all([
+  const [config, logs, conflicts] = await Promise.all([
     prisma.crakotteConfig.findFirst(),
     prisma.crakotteSyncLog.findMany({ orderBy: { startedAt: "desc" }, take: 50 }),
     prisma.crakotteConflict.findMany({
       where: { resolved: false },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.crakottePendingProject.findMany({
-      where: { status: "PENDING" },
-      include: { suggestedProjet: { select: { id: true, nom: true } } },
       orderBy: { createdAt: "desc" },
     }),
   ])
@@ -84,13 +79,7 @@ export default async function CrakottePage() {
             : null,
         }))}
       />
-      <CrakotteBottomSections
-        initialPending={pendingProjects.map((p) => ({
-          ...p,
-          createdAt: p.createdAt.toISOString(),
-          resolvedAt: p.resolvedAt?.toISOString() ?? null,
-        }))}
-      />
+      <RawDataSection />
     </div>
   )
 }

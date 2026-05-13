@@ -74,7 +74,15 @@ interface CrakotteStats {
   consultantsMappés: number
 }
 
-export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => void } = {}) {
+interface PendingProject {
+  id: number
+  crakotteProjectId: string
+  crakotteProjectName: string
+  crakotteCustomerName: string
+  suggestedProjet: { id: number; nom: string } | null
+}
+
+export function RawDataSection() {
   const [data, setData] = useState<PreviewData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,8 +99,11 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
   const today = format(new Date(), "yyyy-MM-dd")
   const [syncFrom, setSyncFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"))
   const [syncTo, setSyncTo] = useState(today)
-  // Manual project selection: crakotteProjectId → selected db projetId (as string for <select>)
   const [manualSelect, setManualSelect] = useState<Record<string, string>>({})
+  const [pendingProjects, setPendingProjects] = useState<PendingProject[]>([])
+  const [approvingPending, setApprovingPending] = useState<number | null>(null)
+  const [ignoringPending, setIgnoringPending] = useState<number | null>(null)
+  const [linkingPending, setLinkingPending] = useState<number | null>(null)
 
   const loadStats = useCallback(async () => {
     try {
@@ -100,6 +111,15 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
       if (res.ok) setStats(await res.json())
     } catch {
       // stats are non-critical, fail silently
+    }
+  }, [])
+
+  const loadPending = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/crakotte/pending-projects")
+      if (res.ok) setPendingProjects(await res.json())
+    } catch {
+      // pending is non-critical, fail silently
     }
   }, [])
 
@@ -130,8 +150,7 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
     }
   }, [])
 
-  useEffect(() => { load(); loadStats() }, [load, loadStats])
-
+  useEffect(() => { load(); loadStats(); loadPending() }, [load, loadStats, loadPending])
 
   async function importConsultants(mode: "reboot" | "all" | "selected", ids?: string[]) {
     setCreating(mode === "reboot" ? "reboot" : mode === "all" ? "all-consultants" : ids?.[0] ?? "")
@@ -161,7 +180,6 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
       const d = await res.json()
       if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
       toast.success(`Projet "${nom}" créé`)
-      onProjectLinked?.()
       await load()
     } finally {
       setCreating(null)
@@ -179,7 +197,6 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
       const d = await res.json()
       if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
       toast.success(`Fusionné avec "${existingNom}"`)
-      onProjectLinked?.()
       setManualSelect((prev) => { const n = { ...prev }; delete n[projectId]; return n })
       await load()
     } finally {
@@ -232,6 +249,7 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
       toast.success(msg)
       if (d.projetsEnAttente > 0) toast.warning(`${d.projetsEnAttente} projet(s) en attente de création`)
       await load()
+      await loadPending()
     } finally {
       setSyncingActivities(false)
     }
@@ -262,10 +280,59 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
       const d = await res.json()
       if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
       toast.success(`${d.created} projet(s) créé(s)`)
-      onProjectLinked?.()
       await load()
     } finally {
       setCreating(null)
+    }
+  }
+
+  async function approvePending(id: number, nom: string, client: string) {
+    setApprovingPending(id)
+    try {
+      const res = await fetch(`/api/admin/crakotte/pending-projects/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom, client }),
+      })
+      if (!res.ok) { toast.error("Erreur lors de la création"); return }
+      toast.success(`Projet "${nom}" créé`)
+      await loadPending()
+      await load()
+    } finally {
+      setApprovingPending(null)
+    }
+  }
+
+  async function ignorePending(id: number) {
+    setIgnoringPending(id)
+    try {
+      const res = await fetch(`/api/admin/crakotte/pending-projects/${id}/ignore`, { method: "POST" })
+      if (!res.ok) { toast.error("Erreur"); return }
+      toast.success("Projet ignoré")
+      await loadPending()
+    } finally {
+      setIgnoringPending(null)
+    }
+  }
+
+  async function linkPending(pendingId: number, crakotteProjectId: string, existingProjetId: number, nom: string) {
+    setLinkingPending(pendingId)
+    const key = `pending-${pendingId}`
+    try {
+      const res = await fetch("/api/admin/crakotte/import-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "link", projectId: crakotteProjectId, existingProjetId }),
+      })
+      const d = await res.json()
+      if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
+      toast.success(`Lié à "${nom}"`)
+      setSearchText((prev) => { const n = { ...prev }; delete n[key]; return n })
+      setManualSelect((prev) => { const n = { ...prev }; delete n[key]; return n })
+      await loadPending()
+      await load()
+    } finally {
+      setLinkingPending(null)
     }
   }
 
@@ -394,6 +461,110 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
           {/* ── 2. Projets ── */}
           {tab === "projets" && (
             <div className="space-y-2">
+              {/* Pending projects section */}
+              {pendingProjects.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    À résoudre ({pendingProjects.length})
+                  </p>
+                  {pendingProjects.map((pp) => {
+                    const pendingKey = `pending-${pp.id}`
+                    const selectedPendingId = manualSelect[pendingKey] ? parseInt(manualSelect[pendingKey]) : null
+                    const selectedPendingProjet = selectedPendingId ? data.allDbProjets.find((dp) => dp.id === selectedPendingId) : null
+                    const pendingBusy = approvingPending === pp.id || ignoringPending === pp.id || linkingPending === pp.id
+
+                    return (
+                      <div key={pp.id} className="rounded-md border border-amber-400/60 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2.5 text-sm space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="font-medium">{pp.crakotteProjectName}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{pp.crakotteCustomerName}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                            {pp.suggestedProjet && (
+                              <button
+                                disabled={pendingBusy}
+                                onClick={() => linkPending(pp.id, pp.crakotteProjectId, pp.suggestedProjet!.id, pp.suggestedProjet!.nom)}
+                                className="text-xs px-2 py-0.5 rounded border border-amber-400/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 transition-colors"
+                              >
+                                {linkingPending === pp.id ? "..." : `Lier à "${pp.suggestedProjet.nom}"`}
+                              </button>
+                            )}
+                            <Button size="xs" disabled={pendingBusy} onClick={() => approvePending(pp.id, pp.crakotteProjectName, pp.crakotteCustomerName)}>
+                              {approvingPending === pp.id ? "..." : "Créer"}
+                            </Button>
+                            <Button size="xs" variant="outline" disabled={pendingBusy} onClick={() => ignorePending(pp.id)}>
+                              {ignoringPending === pp.id ? "..." : "Ignorer"}
+                            </Button>
+                          </div>
+                        </div>
+                        {/* Combobox: link to existing project */}
+                        <div className="flex gap-2 items-center pt-1 border-t border-amber-400/30">
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              value={
+                                dropdownOpen === pendingKey
+                                  ? (searchText[pendingKey] ?? "")
+                                  : selectedPendingProjet
+                                  ? `${selectedPendingProjet.nom} — ${selectedPendingProjet.client}`
+                                  : (searchText[pendingKey] ?? "")
+                              }
+                              onChange={(e) => {
+                                setSearchText((prev) => ({ ...prev, [pendingKey]: e.target.value }))
+                                setDropdownOpen(pendingKey)
+                                setManualSelect((prev) => { const n = { ...prev }; delete n[pendingKey]; return n })
+                              }}
+                              onFocus={() => setDropdownOpen(pendingKey)}
+                              onBlur={() => setTimeout(() => setDropdownOpen(null), 150)}
+                              placeholder="Rechercher un projet existant..."
+                              className="w-full text-xs rounded-md border bg-background px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            />
+                            {dropdownOpen === pendingKey && (
+                              <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-48 overflow-y-auto">
+                                {data.allDbProjets
+                                  .filter((dp) => {
+                                    const q = (searchText[pendingKey] ?? "").toLowerCase()
+                                    return !q || dp.nom.toLowerCase().includes(q) || dp.client.toLowerCase().includes(q)
+                                  })
+                                  .sort((a, b) => a.nom.localeCompare(b.nom, "fr"))
+                                  .map((dp) => (
+                                    <button
+                                      key={dp.id}
+                                      type="button"
+                                      onMouseDown={() => {
+                                        setManualSelect((prev) => ({ ...prev, [pendingKey]: dp.id.toString() }))
+                                        setSearchText((prev) => ({ ...prev, [pendingKey]: "" }))
+                                        setDropdownOpen(null)
+                                      }}
+                                      className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent transition-colors"
+                                    >
+                                      {dp.nom} — {dp.client}
+                                    </button>
+                                  ))}
+                                {data.allDbProjets.filter((dp) => {
+                                  const q = (searchText[pendingKey] ?? "").toLowerCase()
+                                  return !q || dp.nom.toLowerCase().includes(q) || dp.client.toLowerCase().includes(q)
+                                }).length === 0 && (
+                                  <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucun résultat</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            size="xs"
+                            disabled={!selectedPendingProjet || pendingBusy}
+                            onClick={() => selectedPendingProjet && linkPending(pp.id, pp.crakotteProjectId, selectedPendingProjet.id, selectedPendingProjet.nom)}
+                          >
+                            {linkingPending === pp.id ? "..." : "Lier"}
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <Button size="sm" onClick={importAllProjects} disabled={!!creating}>
                   {creating === "all-projects"
@@ -615,7 +786,7 @@ export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => vo
                   disabled={finalizing}
                   onClick={finalizeImport}
                 >
-                  {finalizing ? "Conclusion..." : "Conclure l’import"}
+                  {finalizing ? "Conclusion..." : "Conclure l'import"}
                 </Button>
               </div>
             </div>
