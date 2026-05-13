@@ -4,8 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ConfigSection } from "@/components/admin/crakotte/ConfigSection"
 import { SyncLogSection } from "@/components/admin/crakotte/SyncLogSection"
 import { ConflictsSection } from "@/components/admin/crakotte/ConflictsSection"
-import { PendingProjectsSection } from "@/components/admin/crakotte/PendingProjectsSection"
-import { RawDataSection } from "@/components/admin/crakotte/RawDataSection"
+import { CrakotteBottomSections } from "@/components/admin/crakotte/CrakotteBottomSections"
 
 export default async function CrakottePage() {
   const session = await auth()
@@ -85,14 +84,13 @@ export default async function CrakottePage() {
             : null,
         }))}
       />
-      <PendingProjectsSection
-        initial={pendingProjects.map((p) => ({
+      <CrakotteBottomSections
+        initialPending={pendingProjects.map((p) => ({
           ...p,
           createdAt: p.createdAt.toISOString(),
           resolvedAt: p.resolvedAt?.toISOString() ?? null,
         }))}
       />
-      <RawDataSection />
     </div>
   )
 }

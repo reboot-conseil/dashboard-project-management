@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
@@ -10,8 +10,16 @@ interface PendingProject {
   suggestedProjet: { id: number; nom: string } | null
 }
 
-export function PendingProjectsSection({ initial }: { initial: PendingProject[] }) {
+export function PendingProjectsSection({ initial, refreshKey }: { initial: PendingProject[], refreshKey?: number }) {
   const [pending, setPending] = useState(initial)
+
+  useEffect(() => {
+    if (!refreshKey) return
+    fetch("/api/admin/crakotte/pending-projects")
+      .then((r) => r.json())
+      .then(setPending)
+      .catch(() => {})
+  }, [refreshKey])
 
   async function approve(id: number, nom: string, client: string) {
     const res = await fetch(`/api/admin/crakotte/pending-projects/${id}/approve`, {

@@ -74,7 +74,7 @@ interface CrakotteStats {
   consultantsMappés: number
 }
 
-export function RawDataSection() {
+export function RawDataSection({ onProjectLinked }: { onProjectLinked?: () => void } = {}) {
   const [data, setData] = useState<PreviewData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -161,6 +161,7 @@ export function RawDataSection() {
       const d = await res.json()
       if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
       toast.success(`Projet "${nom}" créé`)
+      onProjectLinked?.()
       await load()
     } finally {
       setCreating(null)
@@ -178,6 +179,7 @@ export function RawDataSection() {
       const d = await res.json()
       if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
       toast.success(`Fusionné avec "${existingNom}"`)
+      onProjectLinked?.()
       setManualSelect((prev) => { const n = { ...prev }; delete n[projectId]; return n })
       await load()
     } finally {
@@ -260,6 +262,7 @@ export function RawDataSection() {
       const d = await res.json()
       if (!res.ok) { toast.error(d.error ?? "Erreur"); return }
       toast.success(`${d.created} projet(s) créé(s)`)
+      onProjectLinked?.()
       await load()
     } finally {
       setCreating(null)
